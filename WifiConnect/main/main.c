@@ -19,10 +19,33 @@ const int WIFI_CONNECTED_BIT = BIT0;
 static void wifi_event_handler(void* arg, esp_event_base_t event_base,
                               int32_t event_id, void* event_data) {
     if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_START) {
+        ESP_LOGI(TAG, "Attempting to connect to SSID: %s", WIFI_SSID);
         esp_wifi_connect();
     } else if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_DISCONNECTED) {
-        ESP_LOGI(TAG, "Disconnected. Retrying in 5 seconds...");
+        wifi_event_sta_disconnected_t* disconn = (wifi_event_sta_disconnected_t*) event_data;
+        ESP_LOGW(TAG, "Disconnected from SSID: %s, reason: %d", WIFI_SSID, disconn->reason);
+
+        switch (disconn->reason) {
+            case WIFI_REASON_AUTH_EXPIRE:
+                ESP_LOGW(TAG, "Authentication expired.");
+                break;
+            case WIFI_REASON_AUTH_FAIL:
+                ESP_LOGW(TAG, "Authentication failed. Check password.");
+                break;
+            case WIFI_REASON_NO_AP_FOUND:
+                ESP_LOGW(TAG, "AP not found. Check SSID.");
+                break;
+            case WIFI_REASON_ASSOC_LEAVE:
+                ESP_LOGW(TAG, "Station has disassociated.");
+                break;
+            default:
+                ESP_LOGW(TAG, "Other disconnect reason: %d", disconn->reason);
+                break;
+        }
+
+        ESP_LOGI(TAG, "Retrying in 5 seconds...");
         vTaskDelay(5000 / portTICK_PERIOD_MS);
+        ESP_LOGI(TAG, "Attempting to connect to SSID: %s", WIFI_SSID);
         esp_wifi_connect();
     } else if (event_base == IP_EVENT && event_id == IP_EVENT_STA_GOT_IP) {
         ip_event_got_ip_t* event = (ip_event_got_ip_t*) event_data;
