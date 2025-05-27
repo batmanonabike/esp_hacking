@@ -16,6 +16,8 @@ static const char *TAG = "WifiConnect";
 static EventGroupHandle_t wifi_event_group;
 const int WIFI_CONNECTED_BIT = BIT0;
 
+static volatile bool heartbeat_failed = false;
+
 static void wifi_event_handler(void* arg, esp_event_base_t event_base,
                               int32_t event_id, void* event_data) {
     if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_START) {
@@ -24,6 +26,9 @@ static void wifi_event_handler(void* arg, esp_event_base_t event_base,
     } else if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_DISCONNECTED) {
         wifi_event_sta_disconnected_t* disconn = (wifi_event_sta_disconnected_t*) event_data;
         ESP_LOGW(TAG, "Disconnected from SSID: %s, reason: %d", WIFI_SSID, disconn->reason);
+
+        // Clear the connected bit when disconnected
+        xEventGroupClearBits(wifi_event_group, WIFI_CONNECTED_BIT);
 
         switch (disconn->reason) {
             case WIFI_REASON_AUTH_EXPIRE:
@@ -51,6 +56,8 @@ static void wifi_event_handler(void* arg, esp_event_base_t event_base,
         ip_event_got_ip_t* event = (ip_event_got_ip_t*) event_data;
         esp_ip4_addr_t ip_addr = event->ip_info.ip;
         ESP_LOGI(TAG, "Connected, got IP: " IPSTR, IP2STR(&ip_addr));
+
+        heartbeat_failed = false;
         xEventGroupSetBits(wifi_event_group, WIFI_CONNECTED_BIT);
     }
 }
@@ -60,6 +67,7 @@ void wifi_init_sta(void) {
     ESP_ERROR_CHECK(esp_netif_init());
     ESP_ERROR_CHECK(esp_event_loop_create_default());
     esp_netif_create_default_wifi_sta();
+
     wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
     ESP_ERROR_CHECK(esp_wifi_init(&cfg));
     esp_event_handler_instance_t instance_any_id;
@@ -86,16 +94,45 @@ void wifi_init_sta(void) {
     ESP_ERROR_CHECK(esp_wifi_start());
 }
 
+void heartbeat_task(void *pvParameters) {
+    int missed_heartbeats = 0;
+    const int max_missed_heartbeats = 10;
+
+    while (1) {
+        if (xEventGroupGetBits(wifi_event_group) & WIFI_CONNECTED_BIT) {
+            ESP_LOGI(TAG, "Heartbeat: Connected to SSID: %s", WIFI_SSID);
+            missed_heartbeats = 0;
+            // heartbeat_failed = false; // Reset heartbeat_failed on successful connection
+        } else {
+            missed_heartbeats++;
+            ESP_LOGW(TAG, "Heartbeat: Not connected to SSID: %s (missed %d)", WIFI_SSID, missed_heartbeats);
+            if (missed_heartbeats >= max_missed_heartbeats) {
+                ESP_LOGE(TAG, "Heartbeat failed %d times. Marking connection as failed.", max_missed_heartbeats);
+                heartbeat_failed = true;
+            }
+        }
+        vTaskDelay(2000 / portTICK_PERIOD_MS); // 2 seconds heartbeat interval
+    }
+}
+
 void app_main(void) {
     ESP_ERROR_CHECK(nvs_flash_init());
     wifi_init_sta();
+
+    xTaskCreate(heartbeat_task, "heartbeat_task", 2048, NULL, 5, NULL);
+
+    // Stay connected until heartbeat fails
     while (1) {
-        EventBits_t bits = xEventGroupWaitBits(wifi_event_group, WIFI_CONNECTED_BIT, pdTRUE, pdFALSE, portMAX_DELAY);
+        EventBits_t bits = xEventGroupWaitBits(wifi_event_group, WIFI_CONNECTED_BIT, pdFALSE, pdFALSE, portMAX_DELAY);
         if (bits & WIFI_CONNECTED_BIT) {
-            ESP_LOGI(TAG, "Staying connected for %d seconds...", CONNECTED_TIME_SEC);
-            vTaskDelay(CONNECTED_TIME_SEC * 1000 / portTICK_PERIOD_MS);
-            ESP_LOGI(TAG, "Disconnecting...");
+            ESP_LOGI(TAG, "Connected. Monitoring heartbeat...");
+            // Wait until heartbeat_failed is set
+            while (!heartbeat_failed) {
+                vTaskDelay(500 / portTICK_PERIOD_MS);
+            }
+            ESP_LOGI(TAG, "Heartbeat failure detected. Disconnecting WiFi.");
             esp_wifi_disconnect();
+            // heartbeat_failed = false; // Reset for next connection cycle
         }
     }
 }
