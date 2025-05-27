@@ -35,3 +35,17 @@ This will reboot and start your app.
 idf.py -p COM11 monitor
 ```
 This captures output from the device for logging.
+
+## Starting new projects
+
+vscode tip: 
+1. Use the `ESP-IDF CMD' from the start menu.
+2. code .
+This ensure that all the environment variables are used.
+
+```
+mkdir mycoolproject
+cd mycoolproject
+idf.py create-project .
+idf.py create-project WifiConnect
+```
