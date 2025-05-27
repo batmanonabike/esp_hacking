@@ -1,0 +1,75 @@
+# ESP-IDF specific
+build/
+sdkconfig
+sdkconfig.old
+dependencies.lock
+managed_components/
+
+# C/C++ specific
+*.o
+*.obj
+*.elf
+*.bin
+*.map
+*.hex
+*.dis
+*.a
+*.lib
+*.out
+*.gdb_history
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# IDEs and editors
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+.settings/
+.project
+.cproject
+.pydevproject
+
+# Debug files
+.gdb_history
+
+# Hardware/toolchain specifics
+.pio/
+.pioenvs/
+.piolibdeps/
+
+# Platformio
+.pio/
+.pioenvs/
+.piolibdeps/
+.platformio/
+
+# Build artifact & firmware files
+firmware.bin
+firmware.elf
+*.bin
+*.elf
