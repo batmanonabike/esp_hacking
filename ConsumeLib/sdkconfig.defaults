@@ -1,0 +1,6 @@
+# Default to ESP32 since that's a common target
+CONFIG_IDF_TARGET="esp32"
+
+# Serial monitor configuration
+CONFIG_ESPTOOLPY_MONITOR_BAUD_115200B=y
+CONFIG_ESPTOOLPY_MONITOR_BAUD=115200
