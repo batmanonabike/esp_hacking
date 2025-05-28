@@ -13,6 +13,9 @@
             "path": "./WifiConnect"
         },
         {
+            "path": "./WifiConnect2"
+        },
+        {
             "path": "./ConsumeLib"
         }
     ],
