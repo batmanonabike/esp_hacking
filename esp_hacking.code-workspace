@@ -1,0 +1,41 @@
+{
+    "folders": [
+        {
+            "path": "."
+        },
+        {
+            "path": "./blink"
+        },
+        {
+            "path": "./hello_world"
+        },
+        {
+            "path": "./WifiConnect"
+        },
+        {
+            "path": "./ConsumeLib"
+        }
+    ],
+        
+    "settings": {
+        "C_Cpp.intelliSenseEngine": "default",
+        "idf.espIdfPathWin": "${env:IDF_PATH}",
+        "idf.pythonBinPathWin": "${env:IDF_PYTHON_ENV_PATH}\\python.exe",
+        "idf.toolsPathWin": "${env:IDF_TOOLS_PATH}",
+        "idf.customExtraPaths": "${env:PATH}",
+        "files.associations": {
+            "*.inc": "c",
+            "*.h": "c"
+        },
+        "C_Cpp.default.includePath": [
+            "${workspaceFolder}/**",
+            "${env:IDF_PATH}/components/**",
+            "${env:IDF_TOOLS_PATH}/tools/**"
+        ],
+        "C_Cpp.default.browse.path": [
+            "${workspaceFolder}",
+            "${env:IDF_PATH}/components",
+            "${env:IDF_TOOLS_PATH}/tools"
+        ]
+    }
+}

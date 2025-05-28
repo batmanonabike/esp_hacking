@@ -1,0 +1,33 @@
+{
+    "C_Cpp.intelliSenseEngine": "Default",
+    "idf.espIdfPathWin": "${env:IDF_PATH}",
+    "idf.pythonBinPathWin": "${env:IDF_PYTHON_ENV_PATH}\\python.exe",
+    "idf.toolsPathWin": "${env:IDF_TOOLS_PATH}",
+    "idf.customExtraPaths": "${env:PATH}",
+    "files.associations": {
+        "*.inc": "c",
+        "*.h": "c"
+    },
+    "C_Cpp.default.includePath": [
+        "${workspaceFolder}/**",
+        "${env:IDF_PATH}/components/**",
+        "${env:IDF_TOOLS_PATH}/tools/**"
+    ],
+    "C_Cpp.default.browse.path": [
+        "${workspaceFolder}",
+        "${env:IDF_PATH}/components",
+        "${env:IDF_TOOLS_PATH}/tools"
+    ],
+    "C_Cpp.default.compilerPath": "${env:IDF_TOOLS_PATH}/tools/xtensa-esp32-elf/esp-2021r2-patch3-8.4.0/xtensa-esp32-elf/bin/xtensa-esp32-elf-gcc.exe",
+    "C_Cpp.default.defines": [],
+    "C_Cpp.default.cStandard": "c11",
+    "C_Cpp.default.cppStandard": "c++17",
+    "C_Cpp.default.intelliSenseMode": "gcc-x64",
+    "idf.adapterTargetName": "esp32",
+    "idf.openOcdConfigs": [
+        "interface/ftdi/esp32_devkitj_v1.cfg",
+        "target/esp32.cfg"
+    ],
+    "idf.flashType": "UART",
+    "idf.portWin": "COM11"
+}
