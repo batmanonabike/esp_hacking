@@ -1,10 +1,16 @@
 #include <stdio.h>
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
+#include "esp_wifi.h"
+#include "esp_event.h"
 #include "esp_log.h"
-#include "esp_err.h"
+#include "nvs_flash.h"
+#include "esp_netif.h"
+
 #include "bitmans_lib.h"
 
 static const char *TAG = "BitmansLib";
-static const char *VERSION = "1.0.0";
+static const char *VERSION = "1.0.2";
 
 esp_err_t bitmans_lib_init(void)
 {
