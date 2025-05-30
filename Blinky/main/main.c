@@ -5,11 +5,11 @@
 #include "esp_system.h"
 #include "bitmans_lib.h"
 
-static const char *TAG = "WifiConnect2";
+static const char *TAG = "Blinky";
 
 void app_main(void)
 {
-    ESP_LOGI(TAG, "Starting WifiConnect2 application");
+    ESP_LOGI(TAG, "Starting Blinky application");
 
     esp_err_t ret = bitmans_lib_init();
     if (ret != ESP_OK) {
