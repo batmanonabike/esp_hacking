@@ -17,21 +17,41 @@ void app_main(void)
         return;
     }
 
-    // Get the ProvideLib version
     const char *version = bitmans_lib_get_version();
     ESP_LOGI(TAG, "BitmansLib version: %s", version);
 
-    bitmans_lib_log_message("Hello from WifiConnect2!");
+    bitmans_blink_init(-1);
 
-    // Main loop
-    int counter = 0;
-    while (1) {
-        char message[64];
-        snprintf(message, sizeof(message), "Counter value: %d", counter++);
+    while (1) 
+    {
+        bitmans_lib_log_message("BLINK_MODE_SLOW");
+        bitmans_set_blink_mode(BLINK_MODE_SLOW);
+        vTaskDelay(5000 / portTICK_PERIOD_MS);
+
+        bitmans_lib_log_message("BLINK_MODE_MEDIUM");
+        bitmans_set_blink_mode(BLINK_MODE_MEDIUM);
+        vTaskDelay(5000 / portTICK_PERIOD_MS);
+
+        bitmans_lib_log_message("BLINK_MODE_FAST");
+        bitmans_set_blink_mode(BLINK_MODE_FAST);
+        vTaskDelay(5000 / portTICK_PERIOD_MS);
+
+        bitmans_lib_log_message("BLINK_MODE_BASIC");
+        bitmans_set_blink_mode(BLINK_MODE_BASIC);
+        vTaskDelay(5000 / portTICK_PERIOD_MS);
         
-        // Use our shared component to log the message
-        bitmans_lib_log_message(message);
-        
-        vTaskDelay(1000 / portTICK_PERIOD_MS);
+        bitmans_lib_log_message("BLINK_MODE_BREATHING");
+        bitmans_set_blink_mode(BLINK_MODE_BREATHING);
+        vTaskDelay(10000 / portTICK_PERIOD_MS);
+
+        bitmans_lib_log_message("BLINK_MODE_ON");
+        bitmans_set_blink_mode(BLINK_MODE_ON);
+        vTaskDelay(5000 / portTICK_PERIOD_MS);
+
+        bitmans_lib_log_message("BLINK_MODE_NONE");
+        bitmans_set_blink_mode(BLINK_MODE_NONE);
+        vTaskDelay(5000 / portTICK_PERIOD_MS);
     }
+
+    bitmans_blink_term();
 }

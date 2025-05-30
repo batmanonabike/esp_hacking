@@ -49,3 +49,9 @@ cd mycoolproject
 idf.py create-project .
 idf.py create-project WifiConnect
 ```
+
+## Other commands
+```
+idf.py fullclean
+idf.py clean
+```
