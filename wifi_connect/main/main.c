@@ -1,30 +1,29 @@
 #include "esp_log.h"
 #include "bitmans_lib.h"
 
-static const char *TAG = "wifi_connect";
+static const char *TAG = "wifi_connect_app";
 
-// WiFi status callback
 void wifi_status_callback(bitmans_wifi_status_t status) 
 {
     switch (status) {
         case BITMANS_WIFI_DISCONNECTED:
-            ESP_LOGI(TAG, "WiFi Status: Disconnected");
+            ESP_LOGI(TAG, "WiFiStatus: Disconnected");
             bitmans_set_blink_mode(BLINK_MODE_NONE);
             break;
         case BITMANS_WIFI_CONNECTING:
-            ESP_LOGI(TAG, "WiFi Status: Connecting");
+            ESP_LOGI(TAG, "WiFiStatus: Connecting");
             bitmans_set_blink_mode(BLINK_MODE_FAST);
             break;
         case BITMANS_WIFI_CONNECTED:
-            ESP_LOGI(TAG, "WiFi Status: Connected");
+            ESP_LOGI(TAG, "WiFiStatus: Connected");
             bitmans_set_blink_mode(BLINK_MODE_BREATHING);
             break;
         case BITMANS_WIFI_ERROR:
-            ESP_LOGI(TAG, "WiFi Status: Error");
+            ESP_LOGI(TAG, "WiFiStatus: Error");
             bitmans_set_blink_mode(BLINK_MODE_SLOW);
             break;
         default:
-            ESP_LOGI(TAG, "WiFi Status: Unknown");
+            ESP_LOGI(TAG, "WiFiStatus: Unknown");
             bitmans_set_blink_mode(BLINK_MODE_SLOW);
             break;
     }
@@ -45,9 +44,11 @@ void app_main(void)
     ESP_ERROR_CHECK(bitmans_lib_init());
     ESP_ERROR_CHECK(bitmans_blink_init(-1));
     
-    bitmans_set_blink_mode(BLINK_MODE_NONE); 
+    bitmans_set_blink_mode(BLINK_MODE_NONE);
+
     ESP_ERROR_CHECK(bitmans_wifi_register_callback(wifi_status_callback));
     ESP_ERROR_CHECK(bitmans_wifi_init(&wifi_config));
+    ESP_ERROR_CHECK(bitmans_register_wifi_eventlog_handler());
     
     char ip_str[16];
     while (1) 

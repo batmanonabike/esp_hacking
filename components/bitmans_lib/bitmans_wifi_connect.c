@@ -11,9 +11,10 @@
 #include "esp_system.h"
 #include "nvs.h"  // Add specific NVS header
 
+#include "bitmans_wifi_logging.h"
 #include "bitmans_wifi_connect.h"
 
-static const char *TAG = "bitmans_lib:WiFi";
+static const char *TAG = "bitmans_lib:wifi_connect";
 
 // Default configuration values
 #define DEFAULT_WIFI_SSID      "Jelly Star_8503"
@@ -43,6 +44,7 @@ static void connection_monitor_task(void *pvParameters);
 static void wifi_event_handler(void* arg, esp_event_base_t event_base, int32_t event_id, void* event_data);
 
 // TODO: I think there is a bug somewhere in here that causes the WiFi connection to not retry properly.
+// https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-guides/wifi.html#esp32-wi-fi-event-description
 
 /**
  * @brief Event handler for WiFi events
@@ -54,31 +56,14 @@ static void wifi_event_handler(void* arg, esp_event_base_t event_base, int32_t e
     else if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_DISCONNECTED) 
     {
         wifi_event_sta_disconnected_t* disconn = (wifi_event_sta_disconnected_t*) event_data;
-        ESP_LOGW(TAG, "Disconnected from SSID: %s, reason: %d", wifi_config.ssid, disconn->reason);
+        const char * pszReason = bitmans_get_disconnect_reason(disconn->reason);
+        ESP_LOGW(TAG, "Disconnected from SSID: %s, reason: %d, %s", wifi_config.ssid, disconn->reason, pszReason);
 
         // Clear the connected bit when disconnected
         xEventGroupClearBits(wifi_event_group, WIFI_CONNECTED_BIT);
         current_status = BITMANS_WIFI_DISCONNECTED;
         if (user_callback) 
             user_callback(current_status);
-
-        switch (disconn->reason) {
-            case WIFI_REASON_AUTH_EXPIRE:
-                ESP_LOGW(TAG, "Authentication expired.");
-                break;
-            case WIFI_REASON_AUTH_FAIL:
-                ESP_LOGW(TAG, "Authentication failed. Check password.");
-                break;
-            case WIFI_REASON_NO_AP_FOUND:
-                ESP_LOGW(TAG, "AP not found. Check SSID.");
-                break;
-            case WIFI_REASON_ASSOC_LEAVE:
-                ESP_LOGW(TAG, "Station has disassociated.");
-                break;
-            default:
-                ESP_LOGW(TAG, "Other disconnect reason: %d", disconn->reason);
-                break;
-        }
 
         ESP_LOGI(TAG, "Retrying in 5 seconds...");
         vTaskDelay(5000 / portTICK_PERIOD_MS);

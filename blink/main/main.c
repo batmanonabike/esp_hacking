@@ -5,7 +5,7 @@
 #include "esp_system.h"
 #include "bitmans_lib.h"
 
-static const char *TAG = "blink";
+static const char *TAG = "blink_app";
 
 void app_main(void)
 {

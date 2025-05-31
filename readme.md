@@ -55,3 +55,59 @@ idf.py create-project WifiConnect
 idf.py fullclean
 idf.py clean
 ```
+
+## Filtering Log Output
+
+NOTE: **This command line isn't currently working in my environment**
+
+To filter log output to see only specific components when using `idf.py monitor`:
+
+The command is `idf.py -p <PORT> monitor --print-filter="TAG:LEVEL"`.
+
+**Example:** To see only logs from the tag `bitmans_lib:wifi_logging`:
+
+1.  **Try with a specific level first (e.g., `I` for INFO, `V` for VERBOSE):**
+    This helps identify if the `*` wildcard is causing issues with the monitor script.
+    ```bash
+    # Show INFO (and higher) logs for bitmans_lib:wifi_logging
+    idf.py -p COM11 monitor --print-filter="bitmans_lib:wifi_logging:I"
+    ```
+    ```bash
+    # Show VERBOSE (and higher) logs for bitmans_lib:wifi_logging
+    idf.py -p COM11 monitor --print-filter="bitmans_lib:wifi_logging:V"
+    ```
+
+2.  **If a specific level works, and you need all levels for that tag (equivalent to `*`):**
+    Using `V` (VERBOSE) is often equivalent to seeing all messages for that tag. If `*` specifically causes a crash in `idf_monitor.py`, using `V` is a good alternative.
+    ```bash
+    idf.py -p COM11 monitor --print-filter="bitmans_lib:wifi_logging:V"
+    ```
+
+3.  **To silence other tags and only show yours:**
+    ```bash
+    # Show only VERBOSE messages from bitmans_lib:wifi_logging, and ERROR from others
+    idf.py -p COM11 monitor --print-filter="*:E,bitmans_lib:wifi_logging:V"
+    ```
+    ```bash
+    # Show only VERBOSE messages from bitmans_lib:wifi_logging, and silence all others
+    idf.py -p COM11 monitor --print-filter="*:N,bitmans_lib:wifi_logging:V"
+    ```
+
+**If command-line filtering still causes errors in `idf_monitor.py`:**
+
+Consider setting log levels directly in your C code (e.g., in `app_main`):
+```c
+#include "esp_log.h"
+
+void app_main(void) {
+    // Set all other tags to ERROR level
+    esp_log_level_set("*", ESP_LOG_ERROR); 
+    // Set your specific tag to VERBOSE
+    esp_log_level_set("bitmans_lib:wifi_logging", ESP_LOG_VERBOSE); 
+
+    // ... rest of your app_main code
+}
+```
+This requires a recompile and flash.
+
+You can also configure log levels via `idf.py menuconfig` under `Component config` -> `Log output`.
