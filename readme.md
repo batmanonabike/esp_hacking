@@ -54,6 +54,26 @@ idf.py create-project WifiConnect
 ```
 idf.py fullclean
 idf.py clean
+idf.py reconfigure
+```
+
+## Other notes:
+If you find that compilations are missing header files and you have added the dependencies...
+
+Ensure that menuconfig is enabling the required feature in the TOP level project (e.g. BLE).  Header files can be hidden otherwise.
+```
+idf.py menuconfig
+idf.py fullclean
+idf.py build
+```
+Note that menuconfig alters `sdkconfig` which should probably be committed to source control.
+
+E.g. Enabling bluetooth in menuconfig made these changes:
+```
+CONFIG_BT_ENABLED=y
+CONFIG_BT_BLUEDROID_ENABLED=y 
+CONFIG_BT_CONTROLLER_ENABLED=y 
+CONFIG_BT_BLE_ENABLED=y
 ```
 
 ## Filtering Log Output

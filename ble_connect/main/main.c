@@ -8,6 +8,7 @@ void app_main(void)
     ESP_LOGI(TAG, "Starting application");
     
     ESP_ERROR_CHECK(bitmans_lib_init());
+    ESP_ERROR_CHECK(bitmans_ble_init());
     ESP_ERROR_CHECK(bitmans_blink_init(-1));
     bitmans_set_blink_mode(BLINK_MODE_SLOW);
 
@@ -30,4 +31,5 @@ void app_main(void)
     vTaskDelay(5000 / portTICK_PERIOD_MS);
 
     bitmans_blink_term();
+    bitmans_ble_term();
 }
