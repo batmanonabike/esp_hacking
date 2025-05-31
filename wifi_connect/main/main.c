@@ -49,6 +49,12 @@ void app_main(void)
     ESP_ERROR_CHECK(bitmans_wifi_register_callback(wifi_status_callback));
     ESP_ERROR_CHECK(bitmans_wifi_init(&wifi_config));
     ESP_ERROR_CHECK(bitmans_register_wifi_eventlog_handler());
+
+    size_t free_heap = esp_get_free_heap_size();
+    ESP_LOGI("HEAP", "Available heap: %d bytes", free_heap);
+
+    size_t min_free_heap = esp_get_minimum_free_heap_size();
+    ESP_LOGI("HEAP", "Minimum free heap since boot: %d bytes", min_free_heap); 
     
     char ip_str[16];
     while (1) 
