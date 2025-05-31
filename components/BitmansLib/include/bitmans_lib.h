@@ -2,6 +2,7 @@
 
 #include "esp_err.h"
 #include "bitmans_blink.h"
+#include "bitmans_wifi_connect.h"
 
 #ifdef __cplusplus
 extern "C" {
