@@ -113,6 +113,12 @@ static void blink_task(void *pvParameters)
                 led_state = !led_state;
                 vTaskDelay(pdMS_TO_TICKS(100));
                 break;
+
+            case BLINK_MODE_VERY_FAST:
+                gpio_set_level(led_gpio, led_state);
+                led_state = !led_state;
+                vTaskDelay(pdMS_TO_TICKS(50));
+                break;
                 
             case BLINK_MODE_BREATHING:
                 // Implement breathing effect using PWM

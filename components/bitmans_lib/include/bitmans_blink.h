@@ -15,6 +15,7 @@ typedef enum {
     BLINK_MODE_SLOW,       // Slow blinking (1000ms on, 1000ms off)
     BLINK_MODE_MEDIUM,     // Medium speed blinking (300ms on, 300ms off)
     BLINK_MODE_FAST,       // Fast blinking (100ms on, 100ms off)
+    BLINK_MODE_VERY_FAST,  // Very fast blinking (50ms on, 50ms off)
     BLINK_MODE_BREATHING,  // Gradual fade in and out,
     BLINK_MODE_ON          // LED always on
 } blink_mode_t;
