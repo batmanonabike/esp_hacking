@@ -55,6 +55,9 @@ idf.py create-project WifiConnect
 idf.py fullclean
 idf.py clean
 idf.py reconfigure
+
+idf.py size
+idf.py size-components
 ```
 
 ## Other notes:
