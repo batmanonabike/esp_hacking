@@ -8,7 +8,7 @@
 
 #include "bitmans_blink.h"
 
-static const char *TAG = "BitmansLib:Blink";
+static const char *TAG = "bitmans_lib:Blink";
 
 // Blink related variables
 static int led_gpio = GPIO_NUM_2; // Default LED pin

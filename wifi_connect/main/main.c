@@ -1,7 +1,7 @@
 #include "esp_log.h"
 #include "bitmans_lib.h"
 
-static const char *TAG = "WifiConnect";
+static const char *TAG = "wifi_connect";
 
 // WiFi status callback
 void wifi_status_callback(bitmans_wifi_status_t status) 
@@ -32,7 +32,7 @@ void wifi_status_callback(bitmans_wifi_status_t status)
 
 void app_main(void)
 {
-    ESP_LOGI(TAG, "Starting WifiConnect application");
+    ESP_LOGI(TAG, "Starting %s application", TAG);
 
     bitmans_wifi_config_t wifi_config = {
         .ssid = "Jelly Star_8503",
@@ -43,7 +43,6 @@ void app_main(void)
     };
     
     ESP_ERROR_CHECK(bitmans_lib_init());
-    ESP_LOGI(TAG, "BitmansLib version: %s", bitmans_lib_get_version());
     ESP_ERROR_CHECK(bitmans_blink_init(-1));
     
     bitmans_set_blink_mode(BLINK_MODE_NONE); 

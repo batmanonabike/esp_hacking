@@ -9,12 +9,12 @@
 
 #include "bitmans_lib.h"
 
-static const char *TAG = "BitmansLib";
+static const char *TAG = "bitmans_lib";
 static const char *VERSION = "1.0.2";
 
 esp_err_t bitmans_lib_init(void)
 {
-    ESP_LOGI(TAG, "Initializing BitmansLib version %s", VERSION);
+    ESP_LOGI(TAG, "Initializing bitmans_lib version %s", VERSION);
     
     // Initialize Non-Volatile Storage (NVS)
     esp_err_t ret = nvs_flash_init();

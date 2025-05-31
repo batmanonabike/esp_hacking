@@ -13,7 +13,7 @@
 
 #include "bitmans_wifi_connect.h"
 
-static const char *TAG = "BitmansLib:WiFi";
+static const char *TAG = "bitmans_lib:WiFi";
 
 // Default configuration values
 #define DEFAULT_WIFI_SSID      "Jelly Star_8503"
@@ -42,20 +42,15 @@ static void heartbeat_task(void *pvParameters);
 static void connection_monitor_task(void *pvParameters);
 static void wifi_event_handler(void* arg, esp_event_base_t event_base, int32_t event_id, void* event_data);
 
+// TODO: I think there is a bug somewhere in here that causes the WiFi connection to not retry properly.
+
 /**
  * @brief Event handler for WiFi events
  */
 static void wifi_event_handler(void* arg, esp_event_base_t event_base, int32_t event_id, void* event_data) 
 {
     if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_START) 
-    {
-        ESP_LOGI(TAG, "Attempting to connect to SSID: %s", wifi_config.ssid);
-        current_status = BITMANS_WIFI_CONNECTING;
-        if (user_callback) 
-            user_callback(current_status);
-
-        esp_wifi_connect();
-    } 
+        bitmans_wifi_connect();
     else if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_DISCONNECTED) 
     {
         wifi_event_sta_disconnected_t* disconn = (wifi_event_sta_disconnected_t*) event_data;
@@ -87,8 +82,7 @@ static void wifi_event_handler(void* arg, esp_event_base_t event_base, int32_t e
 
         ESP_LOGI(TAG, "Retrying in 5 seconds...");
         vTaskDelay(5000 / portTICK_PERIOD_MS);
-        ESP_LOGI(TAG, "Attempting to connect to SSID: %s", wifi_config.ssid);
-        esp_wifi_connect();
+        bitmans_wifi_connect();
     } 
     else if (event_base == IP_EVENT && event_id == IP_EVENT_STA_GOT_IP) 
     {
@@ -274,6 +268,11 @@ esp_err_t bitmans_wifi_disconnect(void)
  */
 esp_err_t bitmans_wifi_connect(void) 
 {
+    ESP_LOGI(TAG, "Attempting to connect to SSID: %s", wifi_config.ssid);
+    current_status = BITMANS_WIFI_CONNECTING;
+    if (user_callback) 
+        user_callback(current_status);
+
     return esp_wifi_connect();
 }
 

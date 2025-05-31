@@ -5,22 +5,14 @@
 #include "esp_system.h"
 #include "bitmans_lib.h"
 
-static const char *TAG = "Blinky";
+static const char *TAG = "blink";
 
 void app_main(void)
 {
-    ESP_LOGI(TAG, "Starting Blinky application");
+    ESP_LOGI(TAG, "Starting %s application", TAG);
 
-    esp_err_t ret = bitmans_lib_init();
-    if (ret != ESP_OK) {
-        ESP_LOGE(TAG, "Failed to initialize BitmansLib");
-        return;
-    }
-
-    const char *version = bitmans_lib_get_version();
-    ESP_LOGI(TAG, "BitmansLib version: %s", version);
-
-    bitmans_blink_init(-1);
+    ESP_ERROR_CHECK(bitmans_lib_init());
+    ESP_ERROR_CHECK(bitmans_blink_init(-1));
 
     while (1) 
     {
