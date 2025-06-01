@@ -25,7 +25,10 @@
         "idf.customExtraPaths": "${env:PATH}",
         "files.associations": {
             "*.inc": "c",
-            "*.h": "c"
+            "*.h": "c",
+            "regex": "c",
+            "sstream": "c",
+            "strstream": "c"
         },
         "C_Cpp.default.includePath": [
             "${workspaceFolder}/**",
