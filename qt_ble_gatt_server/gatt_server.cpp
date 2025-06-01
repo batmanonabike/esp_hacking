@@ -22,10 +22,9 @@ void GattServer::startServer()
     connect(m_controller, &QLowEnergyController::connected, this, &GattServer::handleClientConnection);
     connect(m_controller, &QLowEnergyController::disconnected, this, &GattServer::handleClientDisconnection);
     connect(m_controller, &QLowEnergyController::errorOccurred, this, &GattServer::handleError); // Qt 6
-	
-    // For Qt 5, it might be QOverload<QLowEnergyController::Error>::of(&QLowEnergyController::error)
-    connect(m_controller, &QLowEnergyController::advertisingStateChanged, this, &GattServer::handleAdvertisingStateChanged);
-
+    
+    // Remove this line - signal doesn't exist in Qt 6.9.0
+    // connect(m_controller, &QLowEnergyController::advertisingStateChanged, this, &GattServer::handleAdvertisingStateChanged);
 
     setupService();
 
@@ -71,7 +70,7 @@ void GattServer::setupService()
     m_customCharacteristic.setProperties(QLowEnergyCharacteristic::Read | QLowEnergyCharacteristic::Write | QLowEnergyCharacteristic::Notify);
     
     // Add CCCD (Client Characteristic Configuration Descriptor) for notifications
-    const QLowEnergyDescriptorData cccd(QBluetoothUuid::ClientCharacteristicConfiguration, QByteArray(2, 0));
+    const QLowEnergyDescriptorData cccd(QBluetoothUuid(QStringLiteral("2902")), QByteArray(2, 0));
     m_customCharacteristic.addDescriptor(cccd);
 
     m_serviceData.addCharacteristic(m_customCharacteristic);
@@ -79,10 +78,10 @@ void GattServer::setupService()
     // Add the service to the controller
     if (m_controller)
     {
-        const auto error = m_controller->addService(m_serviceData);
-        if (error != QLowEnergyController::NoError)
+        auto service = m_controller->addService(m_serviceData);
+        if (!service)  // Check if service pointer is valid
         {
-            qWarning() << "Could not add service:" << error;
+            qWarning() << "Could not add service";
             return;
         }
         qInfo() << "Service added with UUID:" << m_customServiceUuid.toString();
@@ -121,9 +120,9 @@ void GattServer::handleError(QLowEnergyController::Error error)
     // Consider stopping or restarting the server based on the error
 }
 
-void GattServer::handleAdvertisingStateChanged(QLowEnergyController::AdvertisingState state)
+void GattServer::handleAdvertisingStateChanged(int state)
 {
-    if (state == QLowEnergyController::AdvertisingState::Advertising)
+    if (state == 1) // 1 typically represents active advertising
     {
         m_advertising = true;
         qInfo() << "Controller now advertising.";
@@ -131,7 +130,7 @@ void GattServer::handleAdvertisingStateChanged(QLowEnergyController::Advertising
     else
     {
         m_advertising = false;
-        qInfo() << "Controller stopped advertising. State:" << static_cast<int>(state);
+        qInfo() << "Controller stopped advertising. State:" << state;
     }
 }
 

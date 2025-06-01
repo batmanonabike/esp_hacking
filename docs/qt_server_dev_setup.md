@@ -20,6 +20,8 @@ The recommended way to install Qt is using the Qt Online Installer.
         *   **Qt Version**: Select the latest stable Qt version (e.g., Qt 6.x.x).
         *   **Modules**:
             *   Under the selected Qt version, ensure you select the **"Qt Bluetooth"** module. This is essential for BLE development.
+
+                **NOTE**: This was actually part of **Qt Connectivity** under **Additional Libraries** for me!!!
             *   You may also want other common modules like "Qt Core", "Qt GUI", "Qt Widgets", "Qt QML" (if you plan to use QML for UI).
         *   **Development Tools**:
             *   **Qt Creator**: This is Qt's integrated development environment (IDE) and is highly recommended. It's usually selected by default.

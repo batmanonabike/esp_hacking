@@ -5,6 +5,7 @@
 #include <QLowEnergyController>
 #include <QLowEnergyServiceData>
 #include <QLowEnergyCharacteristicData>
+#include <QLowEnergyDescriptorData>
 #include <QLowEnergyAdvertisingData>
 #include <QLowEnergyAdvertisingParameters>
 #include <QBluetoothUuid>
@@ -27,7 +28,8 @@ private slots:
     void handleClientConnection();
     void handleClientDisconnection();
     void handleError(QLowEnergyController::Error error);
-    void handleAdvertisingStateChanged(QLowEnergyController::AdvertisingState state);
+    // Fix for Qt version compatibility
+    void handleAdvertisingStateChanged(int state);
 
 private:
     void setupService();
