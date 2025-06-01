@@ -10,13 +10,10 @@
             "path": "./hello_world"
         },
         {
-            "path": "./WifiConnect"
+            "path": "./wifi_connect"
         },
         {
-            "path": "./WifiConnect2"
-        },
-        {
-            "path": "./ConsumeLib"
+            "path": "./ble_connect"
         }
     ],
         
@@ -39,6 +36,9 @@
             "${workspaceFolder}",
             "${env:IDF_PATH}/components",
             "${env:IDF_TOOLS_PATH}/tools"
-        ]
+        ],
+        "idf.port": "COM11",
+        "idf.flashType": "UART",
+        "idf.saveScope": "Workspace"
     }
 }
