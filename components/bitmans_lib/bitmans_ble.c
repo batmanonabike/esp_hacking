@@ -22,74 +22,66 @@
 // 4. If advertiser accepts (e.g., not using a Filter Accept List or initiator is on the list), connection is established.
 static const char *TAG = "bitmans_lib:ble";
 
-static uint32_t g_scan_duration_secs = 0; 
+static uint32_t g_scan_duration_secs = 0;
 static esp_gatt_if_t g_gattc_handles[GATTC_APP4 + 1];
 
-// `GCC typeof` because the header files doesn't expose scan_rst structure directly.
+// `GCC typeof` because the header files doesn\'t expose scan_rst structure directly.
 typedef typeof(((const esp_ble_gap_cb_param_t *)0)->scan_rst) ble_scan_result_t;
+
+static void log_advertised_name(const ble_scan_result_t *pScanResult)
+{
+    // ESP_BLE_ADV_DATA_LEN_MAX is 31. Add 1 for null terminator.
+    char display_name_str[32] = {0};
+
+    if (pScanResult->adv_data_len > 0)
+    {        
+        // Try get long name, then short.
+        uint8_t adv_name_len = 0;
+        uint8_t *adv_name_ptr = esp_ble_resolve_adv_data(pScanResult->ble_adv, ESP_BLE_AD_TYPE_NAME_CMPL, &adv_name_len);
+
+        if (adv_name_ptr == NULL || adv_name_len == 0)
+            adv_name_ptr = esp_ble_resolve_adv_data(pScanResult->ble_adv, ESP_BLE_AD_TYPE_NAME_SHORT, &adv_name_len);
+
+        if (adv_name_ptr != NULL && adv_name_len > 0)
+        {
+            uint8_t copy_len = adv_name_len < (sizeof(display_name_str) - 1) ? adv_name_len : (sizeof(display_name_str) - 1);
+            memcpy(display_name_str, adv_name_ptr, copy_len);
+            display_name_str[copy_len] = '\0'; // Ensure null termination
+        }
+    }
+
+    ESP_LOGI(TAG, "  Advertised Name: %s", display_name_str);
+}
 
 static void log_ble_scan(const ble_scan_result_t *pScanResult)
 {
-    if (pScanResult == NULL) {
-        ESP_LOGE(TAG, "log_ble_scan_result_by_ptr received NULL pointer");
-        return;
-    }
+    assert(pScanResult != NULL);
 
     ESP_LOGI(TAG, "Device found (ptr): ADDR: %02x:%02x:%02x:%02x:%02x:%02x",
         pScanResult->bda[0], pScanResult->bda[1],
         pScanResult->bda[2], pScanResult->bda[3],
         pScanResult->bda[4], pScanResult->bda[5]);
-             
+
     ESP_LOGI(TAG, "  RSSI: %d dBm", pScanResult->rssi);
     ESP_LOGI(TAG, "  Address Type: %s", pScanResult->ble_addr_type == BLE_ADDR_TYPE_PUBLIC ? "Public" : "Random");
-    ESP_LOGI(TAG, "  Device Type: %s", 
+    ESP_LOGI(TAG, "  Device Type: %s",
         pScanResult->dev_type == ESP_BT_DEVICE_TYPE_BLE ? "BLE" : 
         (pScanResult->dev_type == ESP_BT_DEVICE_TYPE_DUMO ? "Dual-Mode" : "Classic"));
-        
+
     // Log advertising data
     if (pScanResult->adv_data_len > 0)
     {
         ESP_LOGI(TAG, "  Advertising Data (len %d):", pScanResult->adv_data_len);
-        esp_log_buffer_hex(TAG, pScanResult->ble_adv, pScanResult->adv_data_len);
-        return; 
-            
-        uint8_t *adv_name = esp_ble_resolve_adv_data(
-            (uint8_t *)pScanResult->ble_adv, ESP_BLE_AD_TYPE_NAME_CMPL, NULL); // Cast to uint8_t*
-        if (adv_name)
-        {
-            const uint8_t *p = pScanResult->ble_adv; 
-            uint8_t ad_len_val = 0;
-            char name_str[32] = {0}; 
-
-            while (p < pScanResult->ble_adv + pScanResult->adv_data_len)
-            {
-                uint8_t len = p[0]; 
-                uint8_t type = p[1];
-                if (len == 0)
-                        break; 
-
-                if (type == ESP_BLE_AD_TYPE_NAME_CMPL || type == ESP_BLE_AD_TYPE_NAME_SHORT)
-                {
-                    ad_len_val = len - 1; 
-                    if (ad_len_val > 0)
-                    {
-                        memcpy(name_str, &p[2], ad_len_val < sizeof(name_str) - 1 ? ad_len_val : sizeof(name_str) - 1);
-                        name_str[ad_len_val < sizeof(name_str) - 1 ? ad_len_val : sizeof(name_str) - 1] = '\0'; 
-                        ESP_LOGI(TAG, "  Advertised Name: %s", name_str);
-                        break; 
-                    }
-                }
-                p += (len + 1); 
-            }
-        }
+        // esp_log_buffer_hex(TAG, pScanResult->ble_adv, pScanResult->adv_data_len); // Temporarily commented out
+        log_advertised_name(pScanResult);
     }
 
     // Log scan response data (if present, usually for active scans)
     if (pScanResult->scan_rsp_len > 0)
-    {
+    {        
         ESP_LOGI(TAG, "  Scan Response Data (len %d):", pScanResult->scan_rsp_len);
         // The scan response data starts immediately after the advertising data in the ble_adv buffer
-        esp_log_buffer_hex(TAG, pScanResult->ble_adv + pScanResult->adv_data_len, pScanResult->scan_rsp_len);
+        // esp_log_buffer_hex(TAG, pScanResult->ble_adv + pScanResult->adv_data_len, pScanResult->scan_rsp_len); // Temporarily commented out
     }
 }
 
@@ -106,9 +98,9 @@ static void esp_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *par
         ESP_LOGI(TAG, "Scan parameters set, starting scan...");
         esp_err_t ret = esp_ble_gap_start_scanning(g_scan_duration_secs);
 
-        if (ret == ESP_OK) 
+        if (ret == ESP_OK)
         {
-            ESP_LOGI(TAG, "Scanning started for %lu seconds.", g_scan_duration_secs); 
+            ESP_LOGI(TAG, "Scanning started for %lu seconds.", g_scan_duration_secs);
         }
         else
         {
@@ -443,12 +435,12 @@ esp_err_t bitmans_ble_term()
 
 // You'll need a function to start the scanning process.
 // This could be called after bitmans_ble_init() is successful.
-esp_err_t bitmans_ble_start_scan(uint32_t scan_duration_secs) 
+esp_err_t bitmans_ble_start_scan(uint32_t scan_duration_secs)
 {
     ESP_LOGI(TAG, "Starting BLE scan for %lu seconds...", scan_duration_secs);
 
     g_scan_duration_secs = scan_duration_secs;
-    
+
     // https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/bluetooth/esp_gap_ble.html#_CPPv421esp_ble_scan_params_t
     esp_ble_scan_params_t ble_scan_params = {
         .scan_type = BLE_SCAN_TYPE_ACTIVE,
