@@ -9,6 +9,8 @@ void app_main(void)
     
     ESP_ERROR_CHECK(bitmans_lib_init());
     ESP_ERROR_CHECK(bitmans_ble_init());
+    ESP_ERROR_CHECK(bitmans_ble_register_gattc(GATTC_APP0));
+
     ESP_ERROR_CHECK(bitmans_blink_init(-1));
     bitmans_set_blink_mode(BLINK_MODE_SLOW);
 
@@ -31,5 +33,6 @@ void app_main(void)
     vTaskDelay(5000 / portTICK_PERIOD_MS);
 
     bitmans_blink_term();
+    bitmans_ble_unregister_gattc(GATTC_APP0);
     bitmans_ble_term();
 }

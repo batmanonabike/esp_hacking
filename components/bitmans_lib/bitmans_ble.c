@@ -22,6 +22,9 @@
 // 4. If advertiser accepts (e.g., not using a Filter Accept List or initiator is on the list), connection is established.
 static const char *TAG = "bitmans_lib:ble";
 
+// Handles for GATT Client applications, if more than one is needed.
+static esp_gatt_if_t g_gattc_handles[GATTC_APP4 + 1];
+
 // Handle 'Generic Access Profile' events.
 // GAP events are related to device discovery (scanning, advertising), connection management, and security.
 // https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/bluetooth/esp_gap_ble.html
@@ -76,16 +79,16 @@ static void esp_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *par
         // If you stopped scanning to connect, initiate connection here
         break;
 
-        // These two events are causing compilation errors, it might need 'menuconfig'
-        // Removing them for now.
-        //
-        // case ESP_GAP_BLE_CONNECT_EVT: // This event is for peripheral role, not central/client
-        //     ESP_LOGI(TAG, "ESP_GAP_BLE_CONNECT_EVT");
-        //     break;
+    // These two events are causing compilation errors, it might need 'menuconfig'
+    // Removing them for now.
+    //
+    // case ESP_GAP_BLE_CONNECT_EVT: // This event is for peripheral role, not central/client
+    //     ESP_LOGI(TAG, "ESP_GAP_BLE_CONNECT_EVT");
+    //     break;
 
-        // case ESP_GAP_BLE_DISCONNECT_EVT: // This event is for peripheral role
-        //     ESP_LOGI(TAG, "ESP_GAP_BLE_DISCONNECT_EVT");
-        //     break;
+    // case ESP_GAP_BLE_DISCONNECT_EVT: // This event is for peripheral role
+    //     ESP_LOGI(TAG, "ESP_GAP_BLE_DISCONNECT_EVT");
+    //     break;
 
     default:
         ESP_LOGI(TAG, "GAP Event: %d", event);
@@ -107,13 +110,12 @@ static void esp_gattc_cb(esp_gattc_cb_event_t event, esp_gatt_if_t gattc_if, esp
     case ESP_GATTC_REG_EVT:
         if (param->reg.status == ESP_GATT_OK)
         {
-            ESP_LOGI(TAG, "GATTC registered successfully, app_id %04x", param->reg.app_id);
+            g_gattc_handles[param->reg.app_id] = gattc_if;
+            ESP_LOGI(TAG, "GATTC app_id %d registered successfully, gattc_if %d stored", param->reg.app_id, gattc_if);
         }
         else
         {
-            ESP_LOGE(TAG, "GATTC registration failed, app_id %04x, status %d",
-                     param->reg.app_id,
-                     param->reg.status);
+            ESP_LOGE(TAG, "GATTC registration failed for app_id %04x, status %d", param->reg.app_id, param->reg.status);
         }
         break;
 
@@ -133,11 +135,11 @@ static void esp_gattc_cb(esp_gattc_cb_event_t event, esp_gatt_if_t gattc_if, esp
     case ESP_GATTC_OPEN_EVT:
         if (param->open.status != ESP_GATT_OK)
         {
-            ESP_LOGE(TAG, "gattc open failed, status %d, conn_id %d", param->open.status, param->open.conn_id);
+            ESP_LOGE(TAG, "GATTC open failed, status %d, conn_id %d", param->open.status, param->open.conn_id);
         }
         else
         {
-            ESP_LOGI(TAG, "gattc open success, conn_id %d, mtu %d", param->open.conn_id, param->open.mtu);
+            ESP_LOGI(TAG, "GATTC open success, conn_id %d, mtu %d", param->open.conn_id, param->open.mtu);
             ESP_LOGI(TAG, "Connected to remote device: %02x:%02x:%02x:%02x:%02x:%02x",
                      param->open.remote_bda[0], param->open.remote_bda[1], param->open.remote_bda[2],
                      param->open.remote_bda[3], param->open.remote_bda[4], param->open.remote_bda[5]);
@@ -212,9 +214,11 @@ static void esp_gattc_cb(esp_gattc_cb_event_t event, esp_gatt_if_t gattc_if, esp
 esp_err_t bitmans_ble_init()
 {
     ESP_LOGI(TAG, "Initializing BLE system");
-
     ESP_ERROR_CHECK(esp_bt_controller_mem_release(ESP_BT_MODE_CLASSIC_BT));
 
+    for (int n = GATTC_APPFIRST; n <= GATTC_APPLAST; n++)
+        g_gattc_handles[n] = ESP_GATT_IF_NONE;
+    
     esp_bt_controller_config_t bt_cfg = BT_CONTROLLER_INIT_CONFIG_DEFAULT();
     esp_err_t ret = esp_bt_controller_init(&bt_cfg);
     if (ret)
@@ -254,26 +258,48 @@ esp_err_t bitmans_ble_init()
     ret = esp_ble_gattc_register_callback(esp_gattc_cb);
     if (ret)
     {
-        ESP_LOGE(TAG, "gattc register error, error code = %x", ret);
-        return ret;
-    }
-
-    // For client functionality, you need to register an application profile
-    ret = esp_ble_gattc_app_register(0); // Using a simple app ID 0 for now
-    if (ret)
-    {
-        ESP_LOGE(TAG, "gattc app register error, error code = %x", ret);
+        ESP_LOGE(TAG, "GATTC register error, error code = %x", ret);
         return ret;
     }
 
     esp_err_t local_mtu_ret = esp_ble_gatt_set_local_mtu(500);
     if (local_mtu_ret)
     {
-        ESP_LOGE(TAG, "set local  MTU failed, error code = %x", local_mtu_ret);
+        ESP_LOGE(TAG, "set local MTU failed, error code = %x", local_mtu_ret);
     }
 
     ESP_LOGI(TAG, "BLE system initialized successfully");
     return ESP_OK;
+}
+
+esp_err_t bitmans_ble_register_gattc(gattc_app_id_t app_id)
+{
+    esp_err_t ret = esp_ble_gattc_app_register(app_id);
+    if (ret == ESP_OK) 
+        ESP_LOGI(TAG, "GATTC register ok for app_id %d.", app_id);
+    else
+        ESP_LOGE(TAG, "GATTC register error, app_id %d, error code = %x", app_id, ret);
+    return ret;
+}
+
+esp_err_t bitmans_ble_unregister_gattc(gattc_app_id_t app_id)
+{
+    if (g_gattc_handles[app_id] == ESP_GATT_IF_NONE) 
+        return ESP_OK;
+
+    esp_err_t ret = esp_ble_gattc_app_unregister(g_gattc_handles[app_id]);
+    if (ret == ESP_OK) 
+    {
+        g_gattc_handles[app_id] = ESP_GATT_IF_NONE;
+        ESP_LOGI(TAG, "GATTC unregister ok for app_id %d.", app_id);
+    }
+    else
+    {
+        ESP_LOGE(TAG, "GATTC unregister error, app_id %d, gattc_if %d, error code = %x", 
+            app_id, g_gattc_handles[app_id], ret);
+    }
+
+    return ret;
 }
 
 esp_err_t bitmans_ble_term()
@@ -291,15 +317,9 @@ esp_err_t bitmans_ble_term()
         // Continue deinitialization even if stopping scan fails
     }
 
-    // TODO:
-    // Unregister GATTC application
-    // Assuming app_id 0 was used in bitmans_ble_init
-    // You might need to store the gattc_if from ESP_GATTC_REG_EVT to unregister a specific app if multiple are used.
-    // For a single app_id 0, this might not be strictly necessary if bluedroid_deinit handles it,
-    // but explicit unregistration is good practice.
-    // However, esp_ble_gattc_app_unregister takes gattc_if, not app_id.
-    // For now, we'll rely on bluedroid_deinit to clean up app registrations.
-    // If specific unregistration is needed, gattc_if from ESP_GATTC_REG_EVT must be stored.
+    // Unregister GATTC applications
+    for (int n = GATTC_APPFIRST; n <= GATTC_APPLAST; n++)
+        bitmans_ble_unregister_gattc(n);
 
     // It's generally good practice to unregister callbacks, but deinitialization
     // of bluedroid should handle this. If issues arise, explicit unregistration
@@ -362,6 +382,7 @@ void bitmans_ble_start_scan(void)
         .scan_window = 0x30,   // N * 0.625ms
         .scan_duplicate = BLE_SCAN_DUPLICATE_DISABLE};
     esp_err_t ret = esp_ble_gap_set_scan_params(&ble_scan_params);
+
     if (ret)
     {
         ESP_LOGE(TAG, "Set scan params error, error code = %x", ret);
