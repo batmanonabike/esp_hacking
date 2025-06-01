@@ -25,72 +25,71 @@ static const char *TAG = "bitmans_lib:ble";
 static uint32_t g_scan_duration_secs = 0; 
 static esp_gatt_if_t g_gattc_handles[GATTC_APP4 + 1];
 
-static void log_ble_scan_result(const esp_ble_gap_cb_param_t *scan_result)
+// `GCC typeof` because the header files doesn't expose scan_rst structure directly.
+typedef typeof(((const esp_ble_gap_cb_param_t *)0)->scan_rst) ble_scan_result_t;
+
+static void log_ble_scan(const ble_scan_result_t *pScanResult)
 {
-    ESP_LOGI(TAG, "Device found: ADDR: %02x:%02x:%02x:%02x:%02x:%02x",
-             scan_result->scan_rst.bda[0], scan_result->scan_rst.bda[1],
-             scan_result->scan_rst.bda[2], scan_result->scan_rst.bda[3],
-             scan_result->scan_rst.bda[4], scan_result->scan_rst.bda[5]);
+    if (pScanResult == NULL) {
+        ESP_LOGE(TAG, "log_ble_scan_result_by_ptr received NULL pointer");
+        return;
+    }
 
-    return; //TODO
-
-    ESP_LOGI(TAG, "  RSSI: %d dBm", scan_result->scan_rst.rssi);
-    ESP_LOGI(TAG, "  Address Type: %s", scan_result->scan_rst.ble_addr_type == BLE_ADDR_TYPE_PUBLIC ? "Public" : "Random");
+    ESP_LOGI(TAG, "Device found (ptr): ADDR: %02x:%02x:%02x:%02x:%02x:%02x",
+        pScanResult->bda[0], pScanResult->bda[1],
+        pScanResult->bda[2], pScanResult->bda[3],
+        pScanResult->bda[4], pScanResult->bda[5]);
+             
+    ESP_LOGI(TAG, "  RSSI: %d dBm", pScanResult->rssi);
+    ESP_LOGI(TAG, "  Address Type: %s", pScanResult->ble_addr_type == BLE_ADDR_TYPE_PUBLIC ? "Public" : "Random");
     ESP_LOGI(TAG, "  Device Type: %s", 
-        scan_result->scan_rst.dev_type == ESP_BT_DEVICE_TYPE_BLE ? "BLE" : 
-        (scan_result->scan_rst.dev_type == ESP_BT_DEVICE_TYPE_DUMO ? "Dual-Mode" : "Classic"));
-
+        pScanResult->dev_type == ESP_BT_DEVICE_TYPE_BLE ? "BLE" : 
+        (pScanResult->dev_type == ESP_BT_DEVICE_TYPE_DUMO ? "Dual-Mode" : "Classic"));
+        
     // Log advertising data
-    if (scan_result->scan_rst.adv_data_len > 0)
+    if (pScanResult->adv_data_len > 0)
     {
-        ESP_LOGI(TAG, "  Advertising Data (len %d):", scan_result->scan_rst.adv_data_len);
-        esp_log_buffer_hex(TAG, scan_result->scan_rst.ble_adv, scan_result->scan_rst.adv_data_len);
-
+        ESP_LOGI(TAG, "  Advertising Data (len %d):", pScanResult->adv_data_len);
+        esp_log_buffer_hex(TAG, pScanResult->ble_adv, pScanResult->adv_data_len);
+        return; 
+            
         uint8_t *adv_name = esp_ble_resolve_adv_data(
-            (uint8_t *)scan_result->scan_rst.ble_adv, ESP_BLE_AD_TYPE_NAME_CMPL, NULL); // Cast to uint8_t*
+            (uint8_t *)pScanResult->ble_adv, ESP_BLE_AD_TYPE_NAME_CMPL, NULL); // Cast to uint8_t*
         if (adv_name)
         {
-            // This is a simplification; proper parsing of AD data length is more involved.
-            // We need to find the actual length of this AD element.
-            // The AD structure is [length_byte (of type+data)][type_byte][data...]
-            // esp_ble_resolve_adv_data returns a pointer to the data part.
-            // To get the length of this specific AD element, we need to look at the byte *before* the type byte,
-            // which is not directly given by esp_ble_resolve_adv_data.
-            // A common way is to iterate through the adv_data buffer.
-            // For now, let's try to find the length by iterating.
-            const uint8_t *p = scan_result->scan_rst.ble_adv; // Use const uint8_t*
-            uint8_t ad_len = 0;
-            char name_str[32] = {0}; // Buffer for the name
+            const uint8_t *p = pScanResult->ble_adv; 
+            uint8_t ad_len_val = 0;
+            char name_str[32] = {0}; 
 
-            while (p < scan_result->scan_rst.ble_adv + scan_result->scan_rst.adv_data_len)
+            while (p < pScanResult->ble_adv + pScanResult->adv_data_len)
             {
-                uint8_t len = p[0]; // Length of this AD structure (Type + Data)
+                uint8_t len = p[0]; 
                 uint8_t type = p[1];
                 if (len == 0)
-                    break; // End of AD structures
+                        break; 
 
                 if (type == ESP_BLE_AD_TYPE_NAME_CMPL || type == ESP_BLE_AD_TYPE_NAME_SHORT)
                 {
-                    ad_len = len - 1; // Length of data part
-                    if (ad_len > 0)
+                    ad_len_val = len - 1; 
+                    if (ad_len_val > 0)
                     {
-                        memcpy(name_str, &p[2], ad_len < sizeof(name_str) - 1 ? ad_len : sizeof(name_str) - 1);
-                        name_str[ad_len < sizeof(name_str) - 1 ? ad_len : sizeof(name_str) - 1] = '\0'; // Null-terminate
+                        memcpy(name_str, &p[2], ad_len_val < sizeof(name_str) - 1 ? ad_len_val : sizeof(name_str) - 1);
+                        name_str[ad_len_val < sizeof(name_str) - 1 ? ad_len_val : sizeof(name_str) - 1] = '\0'; 
                         ESP_LOGI(TAG, "  Advertised Name: %s", name_str);
-                        break;
+                        break; 
                     }
                 }
-                p += (len + 1); // Move to the next AD structure
+                p += (len + 1); 
             }
         }
     }
 
     // Log scan response data (if present, usually for active scans)
-    if (scan_result->scan_rst.scan_rsp_len > 0)
+    if (pScanResult->scan_rsp_len > 0)
     {
-        ESP_LOGI(TAG, "  Scan Response Data (len %d):", scan_result->scan_rst.scan_rsp_len);
-        esp_log_buffer_hex(TAG, scan_result->scan_rst.ble_adv + scan_result->scan_rst.adv_data_len, scan_result->scan_rst.scan_rsp_len);
-        // You could also parse the scan response data for a name if not found in advertising data
+        ESP_LOGI(TAG, "  Scan Response Data (len %d):", pScanResult->scan_rsp_len);
+        // The scan response data starts immediately after the advertising data in the ble_adv buffer
+        esp_log_buffer_hex(TAG, pScanResult->ble_adv + pScanResult->adv_data_len, pScanResult->scan_rsp_len);
     }
 }
 
@@ -135,7 +134,7 @@ static void esp_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *par
         switch (scan_result->scan_rst.search_evt)
         {
         case ESP_GAP_SEARCH_INQ_RES_EVT:
-            log_ble_scan_result(scan_result);
+            log_ble_scan(&scan_result->scan_rst);
 
             // Here you would check if this is the server you want to connect to
             // For example, by checking the advertised name or service UUID
