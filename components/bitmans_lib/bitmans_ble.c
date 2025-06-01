@@ -22,8 +22,77 @@
 // 4. If advertiser accepts (e.g., not using a Filter Accept List or initiator is on the list), connection is established.
 static const char *TAG = "bitmans_lib:ble";
 
-// Handles for GATT Client applications, if more than one is needed.
+static uint32_t g_scan_duration_secs = 0; 
 static esp_gatt_if_t g_gattc_handles[GATTC_APP4 + 1];
+
+static void log_ble_scan_result(const esp_ble_gap_cb_param_t *scan_result)
+{
+    ESP_LOGI(TAG, "Device found: ADDR: %02x:%02x:%02x:%02x:%02x:%02x",
+             scan_result->scan_rst.bda[0], scan_result->scan_rst.bda[1],
+             scan_result->scan_rst.bda[2], scan_result->scan_rst.bda[3],
+             scan_result->scan_rst.bda[4], scan_result->scan_rst.bda[5]);
+
+    return; //TODO
+
+    ESP_LOGI(TAG, "  RSSI: %d dBm", scan_result->scan_rst.rssi);
+    ESP_LOGI(TAG, "  Address Type: %s", scan_result->scan_rst.ble_addr_type == BLE_ADDR_TYPE_PUBLIC ? "Public" : "Random");
+    ESP_LOGI(TAG, "  Device Type: %s", 
+        scan_result->scan_rst.dev_type == ESP_BT_DEVICE_TYPE_BLE ? "BLE" : 
+        (scan_result->scan_rst.dev_type == ESP_BT_DEVICE_TYPE_DUMO ? "Dual-Mode" : "Classic"));
+
+    // Log advertising data
+    if (scan_result->scan_rst.adv_data_len > 0)
+    {
+        ESP_LOGI(TAG, "  Advertising Data (len %d):", scan_result->scan_rst.adv_data_len);
+        esp_log_buffer_hex(TAG, scan_result->scan_rst.ble_adv, scan_result->scan_rst.adv_data_len);
+
+        uint8_t *adv_name = esp_ble_resolve_adv_data(
+            (uint8_t *)scan_result->scan_rst.ble_adv, ESP_BLE_AD_TYPE_NAME_CMPL, NULL); // Cast to uint8_t*
+        if (adv_name)
+        {
+            // This is a simplification; proper parsing of AD data length is more involved.
+            // We need to find the actual length of this AD element.
+            // The AD structure is [length_byte (of type+data)][type_byte][data...]
+            // esp_ble_resolve_adv_data returns a pointer to the data part.
+            // To get the length of this specific AD element, we need to look at the byte *before* the type byte,
+            // which is not directly given by esp_ble_resolve_adv_data.
+            // A common way is to iterate through the adv_data buffer.
+            // For now, let's try to find the length by iterating.
+            const uint8_t *p = scan_result->scan_rst.ble_adv; // Use const uint8_t*
+            uint8_t ad_len = 0;
+            char name_str[32] = {0}; // Buffer for the name
+
+            while (p < scan_result->scan_rst.ble_adv + scan_result->scan_rst.adv_data_len)
+            {
+                uint8_t len = p[0]; // Length of this AD structure (Type + Data)
+                uint8_t type = p[1];
+                if (len == 0)
+                    break; // End of AD structures
+
+                if (type == ESP_BLE_AD_TYPE_NAME_CMPL || type == ESP_BLE_AD_TYPE_NAME_SHORT)
+                {
+                    ad_len = len - 1; // Length of data part
+                    if (ad_len > 0)
+                    {
+                        memcpy(name_str, &p[2], ad_len < sizeof(name_str) - 1 ? ad_len : sizeof(name_str) - 1);
+                        name_str[ad_len < sizeof(name_str) - 1 ? ad_len : sizeof(name_str) - 1] = '\0'; // Null-terminate
+                        ESP_LOGI(TAG, "  Advertised Name: %s", name_str);
+                        break;
+                    }
+                }
+                p += (len + 1); // Move to the next AD structure
+            }
+        }
+    }
+
+    // Log scan response data (if present, usually for active scans)
+    if (scan_result->scan_rst.scan_rsp_len > 0)
+    {
+        ESP_LOGI(TAG, "  Scan Response Data (len %d):", scan_result->scan_rst.scan_rsp_len);
+        esp_log_buffer_hex(TAG, scan_result->scan_rst.ble_adv + scan_result->scan_rst.adv_data_len, scan_result->scan_rst.scan_rsp_len);
+        // You could also parse the scan response data for a name if not found in advertising data
+    }
+}
 
 // Handle 'Generic Access Profile' events.
 // GAP events are related to device discovery (scanning, advertising), connection management, and security.
@@ -36,9 +105,16 @@ static void esp_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *par
     case ESP_GAP_BLE_SCAN_PARAM_SET_COMPLETE_EVT:
     {
         ESP_LOGI(TAG, "Scan parameters set, starting scan...");
-        // The duration of the scan, 0 means scan continuously
-        uint32_t duration = 30; // Scan for 30 seconds
-        esp_ble_gap_start_scanning(duration);
+        esp_err_t ret = esp_ble_gap_start_scanning(g_scan_duration_secs);
+
+        if (ret == ESP_OK) 
+        {
+            ESP_LOGI(TAG, "Scanning started for %lu seconds.", g_scan_duration_secs); 
+        }
+        else
+        {
+            ESP_LOGE(TAG, "esp_ble_gap_start_scanning failed, error code = %x", ret);
+        }
         break;
     }
 
@@ -59,10 +135,8 @@ static void esp_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *par
         switch (scan_result->scan_rst.search_evt)
         {
         case ESP_GAP_SEARCH_INQ_RES_EVT:
-            ESP_LOGI(TAG, "Device found: ADDR: %02x:%02x:%02x:%02x:%02x:%02x",
-                     scan_result->scan_rst.bda[0], scan_result->scan_rst.bda[1],
-                     scan_result->scan_rst.bda[2], scan_result->scan_rst.bda[3],
-                     scan_result->scan_rst.bda[4], scan_result->scan_rst.bda[5]);
+            log_ble_scan_result(scan_result);
+
             // Here you would check if this is the server you want to connect to
             // For example, by checking the advertised name or service UUID
             // If it is, you would call esp_ble_gap_stop_scanning() and then esp_ble_gattc_open()
@@ -79,16 +153,16 @@ static void esp_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *par
         // If you stopped scanning to connect, initiate connection here
         break;
 
-    // These two events are causing compilation errors, it might need 'menuconfig'
-    // Removing them for now.
-    //
-    // case ESP_GAP_BLE_CONNECT_EVT: // This event is for peripheral role, not central/client
-    //     ESP_LOGI(TAG, "ESP_GAP_BLE_CONNECT_EVT");
-    //     break;
+        // These two events are causing compilation errors, it might need 'menuconfig'
+        // Removing them for now.
+        //
+        // case ESP_GAP_BLE_CONNECT_EVT: // This event is for peripheral role, not central/client
+        //     ESP_LOGI(TAG, "ESP_GAP_BLE_CONNECT_EVT");
+        //     break;
 
-    // case ESP_GAP_BLE_DISCONNECT_EVT: // This event is for peripheral role
-    //     ESP_LOGI(TAG, "ESP_GAP_BLE_DISCONNECT_EVT");
-    //     break;
+        // case ESP_GAP_BLE_DISCONNECT_EVT: // This event is for peripheral role
+        //     ESP_LOGI(TAG, "ESP_GAP_BLE_DISCONNECT_EVT");
+        //     break;
 
     default:
         ESP_LOGI(TAG, "GAP Event: %d", event);
@@ -177,21 +251,21 @@ static void esp_gattc_cb(esp_gattc_cb_event_t event, esp_gatt_if_t gattc_if, esp
         // esp_ble_gattc_get_char_by_uuid(...);
         break;
 
-    // This events are causing compilation errors, it might need 'menuconfig'
-    // Removing them for now.
-    // case ESP_GATTC_GET_CHAR_EVT:
-    //     if (param->get_char.status != ESP_GATT_OK)
-    //     {
-    //         ESP_LOGE(TAG, "get char failed, error status = %x", param->get_char.status);
-    //         break;
-    //     }
-    //     ESP_LOGI(TAG, "ESP_GATTC_GET_CHAR_EVT: char uuid: %04x, char handle %d",
-    //              param->get_char.char_id.uuid.uuid.uuid16, // Assuming 16-bit UUID
-    //              param->get_char.char_handle);
-    //     // If this is the characteristic for IP/port, you can read it or register for notifications
-    //     // esp_ble_gattc_read_char(...);
-    //     // esp_ble_gattc_register_for_notify(...);
-    //     break;
+        // This events are causing compilation errors, it might need 'menuconfig'
+        // Removing them for now.
+        // case ESP_GATTC_GET_CHAR_EVT:
+        //     if (param->get_char.status != ESP_GATT_OK)
+        //     {
+        //         ESP_LOGE(TAG, "get char failed, error status = %x", param->get_char.status);
+        //         break;
+        //     }
+        //     ESP_LOGI(TAG, "ESP_GATTC_GET_CHAR_EVT: char uuid: %04x, char handle %d",
+        //              param->get_char.char_id.uuid.uuid.uuid16, // Assuming 16-bit UUID
+        //              param->get_char.char_handle);
+        //     // If this is the characteristic for IP/port, you can read it or register for notifications
+        //     // esp_ble_gattc_read_char(...);
+        //     // esp_ble_gattc_register_for_notify(...);
+        //     break;
 
     case ESP_GATTC_READ_CHAR_EVT:
         if (param->read.status != ESP_GATT_OK)
@@ -218,7 +292,7 @@ esp_err_t bitmans_ble_init()
 
     for (int n = GATTC_APPFIRST; n <= GATTC_APPLAST; n++)
         g_gattc_handles[n] = ESP_GATT_IF_NONE;
-    
+
     esp_bt_controller_config_t bt_cfg = BT_CONTROLLER_INIT_CONFIG_DEFAULT();
     esp_err_t ret = esp_bt_controller_init(&bt_cfg);
     if (ret)
@@ -275,7 +349,7 @@ esp_err_t bitmans_ble_init()
 esp_err_t bitmans_ble_register_gattc(gattc_app_id_t app_id)
 {
     esp_err_t ret = esp_ble_gattc_app_register(app_id);
-    if (ret == ESP_OK) 
+    if (ret == ESP_OK)
         ESP_LOGI(TAG, "GATTC register ok for app_id %d.", app_id);
     else
         ESP_LOGE(TAG, "GATTC register error, app_id %d, error code = %x", app_id, ret);
@@ -284,19 +358,19 @@ esp_err_t bitmans_ble_register_gattc(gattc_app_id_t app_id)
 
 esp_err_t bitmans_ble_unregister_gattc(gattc_app_id_t app_id)
 {
-    if (g_gattc_handles[app_id] == ESP_GATT_IF_NONE) 
+    if (g_gattc_handles[app_id] == ESP_GATT_IF_NONE)
         return ESP_OK;
 
     esp_err_t ret = esp_ble_gattc_app_unregister(g_gattc_handles[app_id]);
-    if (ret == ESP_OK) 
+    if (ret == ESP_OK)
     {
         g_gattc_handles[app_id] = ESP_GATT_IF_NONE;
         ESP_LOGI(TAG, "GATTC unregister ok for app_id %d.", app_id);
     }
     else
     {
-        ESP_LOGE(TAG, "GATTC unregister error, app_id %d, gattc_if %d, error code = %x", 
-            app_id, g_gattc_handles[app_id], ret);
+        ESP_LOGE(TAG, "GATTC unregister error, app_id %d, gattc_if %d, error code = %x",
+                 app_id, g_gattc_handles[app_id], ret);
     }
 
     return ret;
@@ -311,7 +385,7 @@ esp_err_t bitmans_ble_term()
     // For simplicity, this example doesn't manage active connections during termination
     esp_err_t ret = esp_ble_gap_stop_scanning();
     if (ret != ESP_OK && ret != ESP_ERR_INVALID_STATE)
-    { 
+    {
         // ESP_ERR_INVALID_STATE if not scanning
         ESP_LOGE(TAG, "Failed to stop BLE scanning: %s", esp_err_to_name(ret));
         // Continue deinitialization even if stopping scan fails
@@ -370,10 +444,13 @@ esp_err_t bitmans_ble_term()
 
 // You'll need a function to start the scanning process.
 // This could be called after bitmans_ble_init() is successful.
-void bitmans_ble_start_scan(void)
+esp_err_t bitmans_ble_start_scan(uint32_t scan_duration_secs) 
 {
-    ESP_LOGI(TAG, "Starting BLE scan...");
-    // Configure scan parameters
+    ESP_LOGI(TAG, "Starting BLE scan for %lu seconds...", scan_duration_secs);
+
+    g_scan_duration_secs = scan_duration_secs;
+    
+    // https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/bluetooth/esp_gap_ble.html#_CPPv421esp_ble_scan_params_t
     esp_ble_scan_params_t ble_scan_params = {
         .scan_type = BLE_SCAN_TYPE_ACTIVE,
         .own_addr_type = BLE_ADDR_TYPE_PUBLIC,
@@ -383,10 +460,37 @@ void bitmans_ble_start_scan(void)
         .scan_duplicate = BLE_SCAN_DUPLICATE_DISABLE};
     esp_err_t ret = esp_ble_gap_set_scan_params(&ble_scan_params);
 
-    if (ret)
+    if (ret == ESP_OK)
+    {
+        // The actual scan will start with: ESP_GAP_BLE_SCAN_PARAM_SET_COMPLETE_EVT
+        ESP_LOGI(TAG, "Set scan params Ok");
+    }
+    else
     {
         ESP_LOGE(TAG, "Set scan params error, error code = %x", ret);
     }
-    // Note: The actual scan will start in the ESP_GAP_BLE_SCAN_PARAM_SET_COMPLETE_EVT
-    // in the esp_gap_cb callback.
+
+    return ret;
+}
+
+esp_err_t bitmans_ble_stop_scan()
+{
+    ESP_LOGI(TAG, "Stopping BLE scan...");
+    esp_err_t ret = esp_ble_gap_stop_scanning();
+    if (ret == ESP_OK)
+    {
+        ESP_LOGI(TAG, "Scan stop command sent successfully.");
+        // The actual confirmation that the scan has stopped will come via the
+        // ESP_GAP_BLE_SCAN_STOP_COMPLETE_EVT in the esp_gap_cb callback.
+    }
+    else if (ret == ESP_ERR_INVALID_STATE)
+    {
+        ESP_LOGW(TAG, "Scan stop command failed: No scan in progress or already stopping. Status: %s", esp_err_to_name(ret));
+        return ESP_OK;
+    }
+    else
+    {
+        ESP_LOGE(TAG, "Failed to send scan stop command, error code = %x (%s)", ret, esp_err_to_name(ret));
+    }
+    return ret;
 }

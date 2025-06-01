@@ -19,10 +19,10 @@ typedef enum {
 
 esp_err_t bitmans_ble_init();
 esp_err_t bitmans_ble_term();
+esp_err_t bitmans_ble_stop_scan();
 esp_err_t bitmans_ble_register_gattc(gattc_app_id_t app_id);
 esp_err_t bitmans_ble_unregister_gattc(gattc_app_id_t app_id);
-
-void bitmans_ble_start_scan(void);
+esp_err_t bitmans_ble_start_scan(uint32_t scan_duration_secs);
 
 #ifdef __cplusplus
 }

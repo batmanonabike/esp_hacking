@@ -15,14 +15,16 @@ void app_main(void)
     bitmans_set_blink_mode(BLINK_MODE_SLOW);
 
     ESP_LOGI(TAG, "Initialising application");
-    vTaskDelay(5000 / portTICK_PERIOD_MS);
+    vTaskDelay(2000 / portTICK_PERIOD_MS);
 
     bitmans_set_blink_mode(BLINK_MODE_BREATHING);
+    ESP_ERROR_CHECK(bitmans_ble_start_scan(30));
     for (int counter = 20; counter > 0; counter--) 
     {
         ESP_LOGI(TAG, "Running application: %d", counter);
         vTaskDelay(1000 / portTICK_PERIOD_MS);
     }
+    ESP_ERROR_CHECK(bitmans_ble_stop_scan());
 
     bitmans_set_blink_mode(BLINK_MODE_FAST);
     ESP_LOGI(TAG, "Uninitialising application");
