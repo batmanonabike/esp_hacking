@@ -11,6 +11,8 @@
 #include "esp_gattc_api.h"
 #include "esp_bt_main.h"
 #include "esp_gatt_common_api.h"
+#include "esp_bt_defs.h"
+#include "esp_gatt_defs.h" // Added for ESP_UUID_LEN_XX and potentially esp_bt_uuid_t resolution
 
 #include "bitmans_ble.h"
 
@@ -25,9 +27,6 @@ static const char *TAG = "bitmans_lib:ble";
 static uint32_t g_scan_duration_secs = 0;
 static esp_gatt_if_t g_gattc_handles[GATTC_APP4 + 1];
 
-// `GCC typeof` because the header files doesn\'t expose scan_rst structure directly.
-typedef typeof(((const esp_ble_gap_cb_param_t *)0)->scan_rst) ble_scan_result_t;
-
 #define ADVERTISED_NAME_BUFFER_LEN 32
 
 typedef struct
@@ -35,7 +34,10 @@ typedef struct
     char name[ADVERTISED_NAME_BUFFER_LEN];
 } advertised_name_t;
 
-static bool get_advertised_name(const ble_scan_result_t *pScanResult, advertised_name_t *pAdvertisedName)
+// `GCC typeof` because the header files doesn\'t expose scan_rst structure directly.
+typedef typeof(((const esp_ble_gap_cb_param_t *)0)->scan_rst) ble_scan_result_t;
+
+static bool get_advertised_name(const ble_scan_result_t *pScanResult, advertised_name_t *pAdvertisedName) // Changed type to esp_ble_scan_result_evt_param_t
 {
     assert(pScanResult != NULL);
     assert(pAdvertisedName != NULL);
@@ -63,14 +65,14 @@ static bool get_advertised_name(const ble_scan_result_t *pScanResult, advertised
     return pAdvertisedName->name[0] != '\0';
 }
 
-static void log_ble_scan(const ble_scan_result_t *pScanResult, bool ignoreNoAdvertisedName)
+static void log_ble_scan(const ble_scan_result_t *pScanResult, bool ignoreNoAdvertisedName) // Changed type to esp_ble_scan_result_evt_param_t
 {
     assert(pScanResult != NULL);
 
     advertised_name_t advertised_name;
     if (!get_advertised_name(pScanResult, &advertised_name) && ignoreNoAdvertisedName)
         return;
-    
+
     ESP_LOGI(TAG, "Device found (ptr): ADDR: %02x:%02x:%02x:%02x:%02x:%02x",
              pScanResult->bda[0], pScanResult->bda[1],
              pScanResult->bda[2], pScanResult->bda[3],
@@ -84,7 +86,77 @@ static void log_ble_scan(const ble_scan_result_t *pScanResult, bool ignoreNoAdve
     // Log advertising data
     ESP_LOGI(TAG, "  Advertising Data (len %d):", pScanResult->adv_data_len);
     ESP_LOGI(TAG, "  Advertised Name: %s", advertised_name.name);
-    
+
+    // Log advertised service UUIDs
+    uint8_t *uuid_data_ptr = NULL;
+    uint8_t uuid_data_len = 0;
+
+    // --- 16-bit Service UUIDs ---
+    // Complete list
+    uuid_data_ptr = esp_ble_resolve_adv_data(pScanResult->ble_adv, ESP_BLE_AD_TYPE_16SRV_CMPL, &uuid_data_len);
+    if (uuid_data_ptr != NULL && uuid_data_len > 0 && (uuid_data_len % ESP_UUID_LEN_16 == 0)) {
+        ESP_LOGI(TAG, "  Complete 16-bit Service UUIDs (count %d):", uuid_data_len / ESP_UUID_LEN_16);
+        for (int i = 0; i < uuid_data_len; i += ESP_UUID_LEN_16) {
+            uint16_t service_uuid = (uuid_data_ptr[i+1] << 8) | uuid_data_ptr[i]; // BLE UUIDs are Little Endian
+            ESP_LOGI(TAG, "    - 0x%04x", service_uuid);
+        }
+    }
+    // Partial list
+    uuid_data_ptr = esp_ble_resolve_adv_data(pScanResult->ble_adv, ESP_BLE_AD_TYPE_16SRV_PART, &uuid_data_len);
+    if (uuid_data_ptr != NULL && uuid_data_len > 0 && (uuid_data_len % ESP_UUID_LEN_16 == 0)) {
+        ESP_LOGI(TAG, "  Incomplete 16-bit Service UUIDs (count %d):", uuid_data_len / ESP_UUID_LEN_16);
+        for (int i = 0; i < uuid_data_len; i += ESP_UUID_LEN_16) {
+            uint16_t service_uuid = (uuid_data_ptr[i+1] << 8) | uuid_data_ptr[i]; // BLE UUIDs are Little Endian
+            ESP_LOGI(TAG, "    - 0x%04x", service_uuid);
+        }
+    }
+
+    // --- 32-bit Service UUIDs ---
+    // Complete list
+    uuid_data_ptr = esp_ble_resolve_adv_data(pScanResult->ble_adv, ESP_BLE_AD_TYPE_32SRV_CMPL, &uuid_data_len);
+    if (uuid_data_ptr != NULL && uuid_data_len > 0 && (uuid_data_len % ESP_UUID_LEN_32 == 0)) {
+        ESP_LOGI(TAG, "  Complete 32-bit Service UUIDs (count %d):", uuid_data_len / ESP_UUID_LEN_32);
+        for (int i = 0; i < uuid_data_len; i += ESP_UUID_LEN_32) {
+            uint32_t service_uuid = ((uint32_t)uuid_data_ptr[i+3] << 24) | ((uint32_t)uuid_data_ptr[i+2] << 16) | ((uint32_t)uuid_data_ptr[i+1] << 8) | (uint32_t)uuid_data_ptr[i]; // BLE UUIDs are Little Endian
+            ESP_LOGI(TAG, "    - 0x%08lx", (unsigned long)service_uuid);
+        }
+    }
+    // Partial list
+    uuid_data_ptr = esp_ble_resolve_adv_data(pScanResult->ble_adv, ESP_BLE_AD_TYPE_32SRV_PART, &uuid_data_len);
+    if (uuid_data_ptr != NULL && uuid_data_len > 0 && (uuid_data_len % ESP_UUID_LEN_32 == 0)) {
+        ESP_LOGI(TAG, "  Incomplete 32-bit Service UUIDs (count %d):", uuid_data_len / ESP_UUID_LEN_32);
+        for (int i = 0; i < uuid_data_len; i += ESP_UUID_LEN_32) {
+            uint32_t service_uuid = ((uint32_t)uuid_data_ptr[i+3] << 24) | ((uint32_t)uuid_data_ptr[i+2] << 16) | ((uint32_t)uuid_data_ptr[i+1] << 8) | (uint32_t)uuid_data_ptr[i]; // BLE UUIDs are Little Endian
+            ESP_LOGI(TAG, "    - 0x%08lx", (unsigned long)service_uuid);
+        }
+    }
+
+    // --- 128-bit Service UUIDs ---
+    // Complete list
+    uuid_data_ptr = esp_ble_resolve_adv_data(pScanResult->ble_adv, ESP_BLE_AD_TYPE_128SRV_CMPL, &uuid_data_len);
+    if (uuid_data_ptr != NULL && uuid_data_len > 0 && (uuid_data_len % ESP_UUID_LEN_128 == 0)) {
+        ESP_LOGI(TAG, "  Complete 128-bit Service UUIDs (count %d):", uuid_data_len / ESP_UUID_LEN_128);
+        for (int i = 0; i < uuid_data_len; i += ESP_UUID_LEN_128) {
+            ESP_LOGI(TAG, "    - %02x%02x%02x%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x%02x%02x%02x%02x",
+                     uuid_data_ptr[i+15], uuid_data_ptr[i+14], uuid_data_ptr[i+13], uuid_data_ptr[i+12],
+                     uuid_data_ptr[i+11], uuid_data_ptr[i+10], uuid_data_ptr[i+9], uuid_data_ptr[i+8],
+                     uuid_data_ptr[i+7], uuid_data_ptr[i+6], uuid_data_ptr[i+5], uuid_data_ptr[i+4],
+                     uuid_data_ptr[i+3], uuid_data_ptr[i+2], uuid_data_ptr[i+1], uuid_data_ptr[i+0]);
+        }
+    }
+    // Partial list
+    uuid_data_ptr = esp_ble_resolve_adv_data(pScanResult->ble_adv, ESP_BLE_AD_TYPE_128SRV_PART, &uuid_data_len);
+    if (uuid_data_ptr != NULL && uuid_data_len > 0 && (uuid_data_len % ESP_UUID_LEN_128 == 0)) {
+        ESP_LOGI(TAG, "  Incomplete 128-bit Service UUIDs (count %d):", uuid_data_len / ESP_UUID_LEN_128);
+        for (int i = 0; i < uuid_data_len; i += ESP_UUID_LEN_128) {
+            ESP_LOGI(TAG, "    - %02x%02x%02x%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x%02x%02x%02x%02x",
+                     uuid_data_ptr[i+15], uuid_data_ptr[i+14], uuid_data_ptr[i+13], uuid_data_ptr[i+12],
+                     uuid_data_ptr[i+11], uuid_data_ptr[i+10], uuid_data_ptr[i+9], uuid_data_ptr[i+8],
+                     uuid_data_ptr[i+7], uuid_data_ptr[i+6], uuid_data_ptr[i+5], uuid_data_ptr[i+4],
+                     uuid_data_ptr[i+3], uuid_data_ptr[i+2], uuid_data_ptr[i+1], uuid_data_ptr[i+0]);
+        }
+    }
+
     // Log scan response data (if present, usually for active scans)
     if (pScanResult->scan_rsp_len > 0)
     {
@@ -234,7 +306,27 @@ static void esp_gattc_cb(esp_gattc_cb_event_t event, esp_gatt_if_t gattc_if, esp
     case ESP_GATTC_SEARCH_RES_EVT:
     {
         ESP_LOGI(TAG, "ESP_GATTC_SEARCH_RES_EVT: conn_id = %x, is_primary = %d", param->search_res.conn_id, param->search_res.is_primary);
-        ESP_LOGI(TAG, "SERVICE UUID: %04x", param->search_res.srvc_id.uuid.uuid.uuid16); // Assuming 16-bit UUID
+        esp_bt_uuid_t *srvc_uuid = &param->search_res.srvc_id.uuid;
+        if (srvc_uuid->len == ESP_UUID_LEN_16)
+        {
+            ESP_LOGI(TAG, "SERVICE UUID (16-bit): 0x%04x", srvc_uuid->uuid.uuid16);
+        }
+        else if (srvc_uuid->len == ESP_UUID_LEN_32)
+        {
+            ESP_LOGI(TAG, "SERVICE UUID (32-bit): 0x%08lx", (unsigned long)srvc_uuid->uuid.uuid32); // Use lx for uint32_t
+        }
+        else if (srvc_uuid->len == ESP_UUID_LEN_128)
+        {
+            ESP_LOGI(TAG, "SERVICE UUID (128-bit): %02x%02x%02x%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x%02x%02x%02x%02x",
+                     srvc_uuid->uuid.uuid128[0], srvc_uuid->uuid.uuid128[1], srvc_uuid->uuid.uuid128[2], srvc_uuid->uuid.uuid128[3],
+                     srvc_uuid->uuid.uuid128[4], srvc_uuid->uuid.uuid128[5], srvc_uuid->uuid.uuid128[6], srvc_uuid->uuid.uuid128[7],
+                     srvc_uuid->uuid.uuid128[8], srvc_uuid->uuid.uuid128[9], srvc_uuid->uuid.uuid128[10], srvc_uuid->uuid.uuid128[11],
+                     srvc_uuid->uuid.uuid128[12], srvc_uuid->uuid.uuid128[13], srvc_uuid->uuid.uuid128[14], srvc_uuid->uuid.uuid128[15]);
+        }
+        else
+        {
+            ESP_LOGW(TAG, "SERVICE UUID: Unknown length %d", srvc_uuid->len);
+        }
         // Store or check the service UUID. If it's the one you're looking for,
         // you can then get its characteristics.
         break;

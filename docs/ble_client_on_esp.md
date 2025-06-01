@@ -23,10 +23,12 @@ This document outlines the typical steps a BLE client needs to perform to scan f
 3.  **Process Scan Results**:
     *   The `esp_gap_cb` callback function is where GAP-related events are handled.
     *   When a BLE advertisement or scan response is received from a nearby device, the `ESP_GAP_BLE_SCAN_RESULT_EVT` event is triggered.
-    *   Within the handler for this event, you can access information about the discovered device, most importantly its Bluetooth Device Address (BDA) via `scan_result->scan_rst.bda`. Other information like advertising data and RSSI is also available.
+    *   Within the handler for this event, you can access information about the discovered device, most importantly its Bluetooth Device Address (BDA) via `scan_result->scan_rst.bda`. Other information like advertising data (device name, service UUIDs, manufacturer data) and RSSI is also available.
     *   **Action**: Implement logic within the `ESP_GAP_BLE_SCAN_RESULT_EVT` case in `esp_gap_cb` to:
-        *   Parse advertising data (e.g., device name, service UUIDs).
-        *   Decide if the discovered device is the one you want to connect to.
+        *   Parse advertising data. This is the **primary and most efficient opportunity to check for your designated Service UUID(s)**. Peripherals often include their main Service UUIDs in the advertising packet or scan response.
+        *   By identifying the target Service UUID during the scan, the client can avoid unnecessary connections to irrelevant devices, saving time and energy.
+        *   Decide if the discovered device (based on its advertised Service UUIDs, name, or other data) is the one you want to connect to.
+    *   If the peripheral does not advertise the specific service UUID you are looking for, you might need to connect and then perform service discovery (see step 5). However, checking during the advertising phase is preferred if the UUID is available.
 
 4.  **Connect to a Device (Optional, after scanning and identifying a target)**:
     *   If your scanning logic identifies a target peripheral:
