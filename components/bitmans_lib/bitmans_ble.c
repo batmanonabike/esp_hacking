@@ -14,35 +14,18 @@
 
 #include "bitmans_ble.h"
 
+// See: /docs/ble_intro.md
+// Connection Process:
+// 1.  Advertiser sends advertising packets.
+// 2. Scanner detects advertiser.
+// 3. If connectable and desired, scanner (now initiator) sends a Connection Request.
+// 4. If advertiser accepts (e.g., not using a Filter Accept List or initiator is on the list), connection is established.
 static const char *TAG = "bitmans_lib:ble";
 
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// BLE (Bluetooth Low Energy) operates by allowing devices to discover each other through advertising and scanning.
-// A peripheral device advertises its presence using specific data packets, while a central device scans for these advertisements.
-// Once discovered, the central device can initiate a connection to the peripheral, enabling data exchange.
-// The connection process involves establishing a GATT (Generic Attribute Profile) session, where services and characteristics
-// are discovered and accessed for communication.
-// GAP (Generic Access Profile) defines how BLE devices advertise, scan, and connect to each other.
-// It handles device discovery, connection establishment, and security settings.
-//
-// BLE discovery and connection process:
-// 1. Peripheral devices advertise their presence using specific data packets.
-// 2. Central devices scan for these advertisements to discover peripherals.
-// 3. Once a desired peripheral is found, the central device stops scanning and initiates a connection.
-// 4. After connection, a GATT session is established for data exchange, including service and characteristic discovery.
-//
-// https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-guides/ble/get-started/ble-introduction.html
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-// GAP (Generic Access Profile) Event Handler
-//
-// This function is a callback that gets invoked by the ESP-IDF BLE stack
-// whenever a GAP event occurs. GAP events are related to device discovery (scanning, advertising),
-// connection management, and security.
-//
-// For more information on GAP API and events, refer to the ESP-IDF documentation:
+// Handle 'Generic Access Profile' events.
+// GAP events are related to device discovery (scanning, advertising), connection management, and security.
 // https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/bluetooth/esp_gap_ble.html
-//
+// https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-guides/ble/get-started/ble-introduction.html
 static void esp_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *param)
 {
     switch (event)
@@ -110,16 +93,10 @@ static void esp_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *par
     }
 }
 
-// GATT Client (GATTC) Event Handler
-//
-// This function is a callback that gets invoked by the ESP-IDF BLE stack
-// whenever a GATT Client event occurs. GATT Client operations include
-// connecting to a peripheral, discovering services, reading/writing
+// Handle `Generic Attribute Profile` events.
+// GATT Client operations include connecting to a peripheral, discovering services, reading/writing
 // characteristics, and handling notifications/indications.
-//
-// For more information on GATTC API and events, refer to the ESP-IDF documentation:
 // https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/bluetooth/esp_gattc.html
-//
 static void esp_gattc_cb(esp_gattc_cb_event_t event, esp_gatt_if_t gattc_if, esp_ble_gattc_cb_param_t *param)
 {
     ESP_LOGI(TAG, "GATTC Event: %d, gattc_if %d", event, gattc_if);

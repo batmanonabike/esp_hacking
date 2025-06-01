@@ -79,6 +79,10 @@ CONFIG_BT_CONTROLLER_ENABLED=y
 CONFIG_BT_BLE_ENABLED=y
 ```
 
+## Project Documentation
+
+- [BLE Introduction](./docs/ble_intro.md)
+
 ## Filtering Log Output
 
 NOTE: **This command line isn't currently working in my environment**
