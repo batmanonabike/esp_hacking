@@ -208,6 +208,7 @@ static void esp_gattc_cb(esp_gattc_cb_event_t event, esp_gatt_if_t gattc_if, esp
     }
 }
 
+// See: /docs/ble_client_on_esp.md
 esp_err_t bitmans_ble_init()
 {
     ESP_LOGI(TAG, "Initializing BLE system");

@@ -55,7 +55,10 @@ GATT and ATT define how data is structured and exchanged over a BLE connection u
     *   **GATT Server**: Device that stores and manages characteristics.
     *   **GATT Client**: Device that accesses characteristics on a GATT Server.
 
-## Links
+## Project Links
+*   [ESP32 BLE Client Workflow](./ble_client_on_esp.md)
+
+## General Links
 *   [ESP-IDF BLE Introduction](https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-guides/ble/get-started/ble-introduction.html)
 *   [Bluetooth SIG Assigned Numbers (for UUIDs)](https://www.bluetooth.com/specifications/assigned-numbers/)
 *   [ESP-IDF Device Discovery](https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-guides/ble/get-started/ble-device-discovery.html)
