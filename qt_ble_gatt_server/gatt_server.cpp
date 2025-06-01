@@ -41,6 +41,15 @@ void GattServer::startServer()
                                  advertisingData); // Second advertisingData is for scan response
     m_advertising = true;
     qInfo() << "GATT Server started, advertising...";
+    
+    // Add this code to log the Bluetooth address
+    QBluetoothLocalDevice localDevice;
+    if (localDevice.isValid()) {
+        QBluetoothAddress localAddress = localDevice.address();
+        qInfo() << "Server Bluetooth address:" << localAddress.toString();
+    } else {
+        qWarning() << "Could not get local Bluetooth adapter address";
+    }
 }
 
 void GattServer::stopServer()
@@ -69,26 +78,63 @@ void GattServer::setupService()
     m_customCharacteristic.setValue(QByteArray("InitialValue"));
     m_customCharacteristic.setProperties(QLowEnergyCharacteristic::Read | QLowEnergyCharacteristic::Write | QLowEnergyCharacteristic::Notify);
     
-    // Add CCCD (Client Characteristic Configuration Descriptor) for notifications
-    const QLowEnergyDescriptorData cccd(QBluetoothUuid(QStringLiteral("2902")), QByteArray(2, 0));
+    // Add CCCD for notifications - use the correct UUID for CCCD (0x2902)
+    QLowEnergyDescriptorData cccd;
+    cccd.setUuid(QBluetoothUuid(QUuid("00002902-0000-1000-8000-00805f9b34fb")));
+    cccd.setValue(QByteArray(2, 0)); // Initial value (notifications disabled)
     m_customCharacteristic.addDescriptor(cccd);
+    qDebug() << "Adding CCCD with UUID:" << cccd.uuid().toString();
 
     m_serviceData.addCharacteristic(m_customCharacteristic);
 
     // Add the service to the controller
     if (m_controller)
     {
-        auto service = m_controller->addService(m_serviceData);
-        if (!service)  // Check if service pointer is valid
+        // https://doc.qt.io/qt-6/qlowenergycontroller.html#addService
+        QLowEnergyService * service = m_controller->addService(m_serviceData);
+        if (service == nullptr)
         {
-            qWarning() << "Could not add service";
+            qWarning() << "Could not add service - implementation may be missing";
+            qWarning() << "Error: Your Bluetooth adapter likely doesn't support peripheral/advertising mode";
+            qWarning() << "This is a common limitation with Windows PC Bluetooth adapters";
             return;
         }
-        qInfo() << "Service added with UUID:" << m_customServiceUuid.toString();
+
+        if (service->error() != QLowEnergyService::NoError)
+        {
+            QString error = GattServer::ServiceErrorToString(service->error());
+            qWarning() << "Service is not valid. Error:" << error;
+            return;
+        }
+
+        qInfo() << "Service Name:" << service->serviceName();
+        qInfo() << "Service UUID:" << service->serviceUuid().toString();
+        qInfo() << "Custom Service UUID:" << m_customServiceUuid.toString();
     }
     else
     {
         qWarning() << "Controller not initialized, cannot add service.";
+    }
+}
+
+QString GattServer::ServiceErrorToString(QLowEnergyService::ServiceError error)
+{
+    switch (error) {
+        case QLowEnergyService::NoError:
+            return "NoError";
+        case QLowEnergyService::OperationError:
+            return "OperationError - Generic operation failure";
+        case QLowEnergyService::CharacteristicWriteError:
+            return "CharacteristicWriteError - Failed to write characteristic";
+        case QLowEnergyService::DescriptorWriteError:
+            return "DescriptorWriteError - Failed to write descriptor";
+        case QLowEnergyService::CharacteristicReadError:
+            return "CharacteristicReadError - Failed to read characteristic";
+        case QLowEnergyService::DescriptorReadError:
+            return "DescriptorReadError - Failed to read descriptor";
+        case QLowEnergyService::UnknownError:
+        default:
+            return "UnknownError";
     }
 }
 
@@ -116,8 +162,42 @@ void GattServer::handleClientDisconnection()
 
 void GattServer::handleError(QLowEnergyController::Error error)
 {
+    // Note: Windows requires admin privileges for BLE advertising!!
+
     qWarning() << "Controller Error:" << error;
-    // Consider stopping or restarting the server based on the error
+    
+    switch (error) {
+    case QLowEnergyController::AdvertisingError:
+    {
+        qWarning() << "Failed to start advertising. Possible causes:";
+        qWarning() << "- Bluetooth adapter is off or unavailable";
+        qWarning() << "- Another application is using Bluetooth advertising";
+        qWarning() << "- Insufficient permissions or hardware limitations";
+        
+        // Check if Bluetooth is available and powered on
+        QBluetoothLocalDevice localDevice;
+        if (!localDevice.isValid()) {
+            qWarning() << "No valid Bluetooth adapter found!";
+        } else if (localDevice.hostMode() == QBluetoothLocalDevice::HostPoweredOff) {
+            qWarning() << "Bluetooth adapter is powered off. Please enable Bluetooth.";
+        } else {
+            qWarning() << "Bluetooth adapter appears to be on, but advertising failed.";
+        }
+        
+        // Attempt recovery - wait and try again
+        QTimer::singleShot(3000, this, [this]() {
+            qInfo() << "Attempting to restart advertising...";
+            stopServer();
+            startServer();
+        });
+
+    }
+    break;
+        
+    default:
+        qWarning() << "Unhandled Bluetooth error. Check hardware and permissions.";
+        break;
+    }
 }
 
 void GattServer::handleAdvertisingStateChanged(int state)

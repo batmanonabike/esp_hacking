@@ -23,6 +23,9 @@ The recommended way to install Qt is using the Qt Online Installer.
 
                 **NOTE**: This was actually part of **Qt Connectivity** under **Additional Libraries** for me!!!
             *   You may also want other common modules like "Qt Core", "Qt GUI", "Qt Widgets", "Qt QML" (if you plan to use QML for UI).
+            *   Include "CDB Debugger Support".
+            *   Include "Debug Symbols".
+            *   Include "Debugging Tools for <Your OS>" if it's there.
         *   **Development Tools**:
             *   **Qt Creator**: This is Qt's integrated development environment (IDE) and is highly recommended. It's usually selected by default.
             *   **Compilers**: The installer will typically suggest appropriate compilers for your system (e.g., MinGW on Windows, or it will prompt you to have MSVC, GCC, or Clang installed). For mobile development:
@@ -88,3 +91,8 @@ While Qt Creator is the standard, you can also use Visual Studio Code for Qt dev
 *   Consult the official Qt Bluetooth documentation for detailed API references.
 
 This setup will provide a robust environment for creating BLE GATT server applications on various platforms to interact with your ESP32 devices.
+
+## Noting some isses for Bluetooth on Windows...
+
+Most Windows Bluetooth adapters don't support peripheral mode (which QtBleGatServer is currently using).
+Consider using a dedicated BLE dongle with peripheral support or test with Android/Linux which have better peripheral mode support.

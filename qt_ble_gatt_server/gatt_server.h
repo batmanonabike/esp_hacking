@@ -2,6 +2,7 @@
 #define GATT_SERVER_H
 
 #include <QObject>
+#include <QTimer>
 #include <QLowEnergyController>
 #include <QLowEnergyServiceData>
 #include <QLowEnergyCharacteristicData>
@@ -9,6 +10,7 @@
 #include <QLowEnergyAdvertisingData>
 #include <QLowEnergyAdvertisingParameters>
 #include <QBluetoothUuid>
+#include <QBluetoothLocalDevice>
 #include <QDebug>
 
 // Forward declaration
@@ -33,6 +35,7 @@ private slots:
 
 private:
     void setupService();
+    static QString ServiceErrorToString(QLowEnergyService::ServiceError error);
 
     QLowEnergyController *m_controller = nullptr;
     QLowEnergyServiceData m_serviceData;

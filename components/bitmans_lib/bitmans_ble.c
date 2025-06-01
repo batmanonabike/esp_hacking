@@ -226,7 +226,7 @@ static void esp_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *par
         switch (scan_result->scan_rst.search_evt)
         {
         case ESP_GAP_SEARCH_INQ_RES_EVT:
-            log_ble_scan(&scan_result->scan_rst, true);
+            log_ble_scan(&scan_result->scan_rst, false);
 
             // Here you would check if this is the server you want to connect to
             // For example, by checking the advertised name or service UUID
