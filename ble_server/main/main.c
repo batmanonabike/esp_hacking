@@ -13,7 +13,7 @@ void app_main(void)
     ESP_ERROR_CHECK(bitmans_ble_server_register_gatts());
 
     ESP_LOGI(TAG, "BLE server running");
-    for (int counter = 20; counter > 0; counter--) 
+    for (int counter = 200; counter > 0; counter--) 
     {
         ESP_LOGI(TAG, "Running BLE server: %d", counter);
         vTaskDelay(1000 / portTICK_PERIOD_MS);

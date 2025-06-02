@@ -185,11 +185,18 @@ static bool find_custom_service_uuid(const ble_scan_result_t *scan_rst)
     return false;
 }
 
-// Handle 'Generic Access Profile' events.
-// GAP events are related to device discovery (scanning, advertising), connection management, and security.
-// https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/bluetooth/esp_gap_ble.html
-// https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-guides/ble/get-started/ble-introduction.html
-static void esp_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *param)
+// GAP (Generic Access Profile) events notify about BLE advertising, scanning, connection management, and security events. 
+// Common events include:
+// - ESP_GAP_BLE_SCAN_PARAM_SET_COMPLETE_EVT: Scan parameters set, ready to start scanning.
+// - ESP_GAP_BLE_SCAN_START_COMPLETE_EVT: Scanning has started.
+// - ESP_GAP_BLE_SCAN_RESULT_EVT: Scan result received (device found).
+// - ESP_GAP_BLE_SCAN_STOP_COMPLETE_EVT: Scanning has stopped.
+// - ESP_GAP_BLE_ADV_START_COMPLETE_EVT: Advertising has started (for peripheral/server roles).
+// - ESP_GAP_BLE_ADV_STOP_COMPLETE_EVT: Advertising has stopped.
+// - ESP_GAP_BLE_UPDATE_CONN_PARAMS_EVT: Connection parameters updated.
+// - ESP_GAP_BLE_SEC_REQ_EVT: Security request from peer device.
+// https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/bluetooth/esp_gap_ble.html#_CPPv426esp_gap_ble_cb_event_t
+static void bitmans_gap_event_handler(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *param)
 {
     switch (event)
     {
@@ -283,11 +290,19 @@ static void esp_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *par
     }
 }
 
-// Handle `Generic Attribute Profile` events.
-// GATT Client operations include connecting to a peripheral, discovering services, reading/writing
-// characteristics, and handling notifications/indications.
-// https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/bluetooth/esp_gattc.html
-static void esp_gattc_cb(esp_gattc_cb_event_t event, esp_gatt_if_t gattc_if, esp_ble_gattc_cb_param_t *param)
+// GATTC (GATT Client) events notify about important BLE client events. 
+// These include:
+// - ESP_GATTC_REG_EVT: GATT client profile registered, usually where you start scanning or initiate connection.
+// - ESP_GATTC_CONNECT_EVT: BLE physical link established (not GATT yet).
+// - ESP_GATTC_OPEN_EVT: GATT connection established, ready for service discovery.
+// - ESP_GATTC_DISCONNECT_EVT: GATT connection closed.
+// - ESP_GATTC_SEARCH_RES_EVT: Service discovered on the server.
+// - ESP_GATTC_SEARCH_CMPL_EVT: Service discovery complete.
+// - ESP_GATTC_READ_CHAR_EVT: Characteristic value read from the server.
+// - ESP_GATTC_WRITE_CHAR_EVT: Write operation to a characteristic completed.
+// - ESP_GATTC_NOTIFY_EVT: Notification received from the server.
+// https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/bluetooth/esp_gattc.html#_CPPv426esp_gattc_cb_event_t
+static void bitmans_gattc_event_handler(esp_gattc_cb_event_t event, esp_gatt_if_t gattc_if, esp_ble_gattc_cb_param_t *param)
 {
     ESP_LOGI(TAG, "GATTC Event: %d, gattc_if %d", event, gattc_if);
 
@@ -455,14 +470,14 @@ esp_err_t bitmans_ble_client_init()
         return ret;
     }
 
-    ret = esp_ble_gap_register_callback(esp_gap_cb);
+    ret = esp_ble_gap_register_callback(bitmans_gap_event_handler);
     if (ret)
     {
         ESP_LOGE(TAG, "gap register error, error code = %x", ret);
         return ret;
     }
 
-    ret = esp_ble_gattc_register_callback(esp_gattc_cb);
+    ret = esp_ble_gattc_register_callback(bitmans_gattc_event_handler);
     if (ret)
     {
         ESP_LOGE(TAG, "GATTC register error, error code = %x", ret);
@@ -614,7 +629,7 @@ esp_err_t bitmans_ble_client_stop_scan()
     {
         ESP_LOGI(TAG, "Scan stop command sent successfully.");
         // The actual confirmation that the scan has stopped will come via the
-        // ESP_GAP_BLE_SCAN_STOP_COMPLETE_EVT in the esp_gap_cb callback.
+        // ESP_GAP_BLE_SCAN_STOP_COMPLETE_EVT in the bitmans_gap_event_handler callback.
     }
     else if (ret == ESP_ERR_INVALID_STATE)
     {
