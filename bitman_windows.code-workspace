@@ -14,6 +14,9 @@
         },
         {
             "path": "./ble_client"
+        },
+        {
+            "path": "./ble_server"
         }
     ],
         

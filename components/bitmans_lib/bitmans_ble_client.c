@@ -22,7 +22,7 @@
 // 2. Scanner detects advertiser.
 // 3. If connectable and desired, scanner (now initiator) sends a Connection Request.
 // 4. If advertiser accepts (e.g., not using a Filter Accept List or initiator is on the list), connection is established.
-static const char *TAG = "bitmans_lib:ble";
+static const char *TAG = "bitmans_lib:ble_client";
 
 static uint32_t g_scan_duration_secs = 0;
 static esp_gatt_if_t g_gattc_handles[GATTC_APPLAST + 1];
