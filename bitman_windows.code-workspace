@@ -13,7 +13,7 @@
             "path": "./wifi_connect"
         },
         {
-            "path": "./ble_connect"
+            "path": "./ble_client"
         }
     ],
         

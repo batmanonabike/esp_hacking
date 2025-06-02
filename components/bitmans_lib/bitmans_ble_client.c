@@ -14,7 +14,7 @@
 #include "esp_bt_defs.h"
 #include "esp_gatt_defs.h" // Added for ESP_UUID_LEN_XX and potentially esp_bt_uuid_t resolution
 
-#include "bitmans_ble.h"
+#include "bitmans_ble_client.h"
 
 // See: /docs/ble_intro.md
 // Connection Process:
@@ -40,7 +40,7 @@ static void log_ble_scan(const ble_scan_result_t *pScanResult, bool ignoreNoAdve
     assert(pScanResult != NULL);
 
     advertised_name_t advertised_name;
-    if ((bitmans_ble_get_advertised_name(pScanResult, &advertised_name) != ESP_OK) && ignoreNoAdvertisedName)
+    if ((bitmans_ble_client_get_advertised_name(pScanResult, &advertised_name) != ESP_OK) && ignoreNoAdvertisedName)
         return;
 
     ESP_LOGI(TAG, "Device found (ptr): ADDR: %02x:%02x:%02x:%02x:%02x:%02x",
@@ -226,7 +226,7 @@ static void esp_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *par
         switch (scan_result->scan_rst.search_evt)
         {
         case ESP_GAP_SEARCH_INQ_RES_EVT:
-            log_ble_scan(&scan_result->scan_rst, false);
+            log_ble_scan(&scan_result->scan_rst, true);
 
             // Here you would check if this is the server you want to connect to
             // For example, by checking the advertised name or service UUID
@@ -418,7 +418,7 @@ static void esp_gattc_cb(esp_gattc_cb_event_t event, esp_gatt_if_t gattc_if, esp
 }
 
 // See: /docs/ble_client_on_esp.md
-esp_err_t bitmans_ble_init()
+esp_err_t bitmans_ble_client_init()
 {
     ESP_LOGI(TAG, "Initializing BLE system");
     ESP_ERROR_CHECK(esp_bt_controller_mem_release(ESP_BT_MODE_CLASSIC_BT));
@@ -479,7 +479,7 @@ esp_err_t bitmans_ble_init()
     return ESP_OK;
 }
 
-esp_err_t bitmans_ble_register_gattc(gattc_app_id_t app_id)
+esp_err_t bitmans_ble_client_register_gattc(gattc_app_id_t app_id)
 {
     esp_err_t ret = esp_ble_gattc_app_register(app_id);
     if (ret == ESP_OK)
@@ -489,7 +489,7 @@ esp_err_t bitmans_ble_register_gattc(gattc_app_id_t app_id)
     return ret;
 }
 
-esp_err_t bitmans_ble_unregister_gattc(gattc_app_id_t app_id)
+esp_err_t bitmans_ble_client_unregister_gattc(gattc_app_id_t app_id)
 {
     if (g_gattc_handles[app_id] == ESP_GATT_IF_NONE)
         return ESP_OK;
@@ -509,7 +509,7 @@ esp_err_t bitmans_ble_unregister_gattc(gattc_app_id_t app_id)
     return ret;
 }
 
-esp_err_t bitmans_ble_term()
+esp_err_t bitmans_ble_client_term()
 {
     ESP_LOGI(TAG, "Terminating BLE system");
 
@@ -526,7 +526,7 @@ esp_err_t bitmans_ble_term()
 
     // Unregister GATTC applications
     for (int n = GATTC_APPFIRST; n <= GATTC_APPLAST; n++)
-        bitmans_ble_unregister_gattc(n);
+        bitmans_ble_client_unregister_gattc(n);
 
     // It's generally good practice to unregister callbacks, but deinitialization
     // of bluedroid should handle this. If issues arise, explicit unregistration
@@ -577,7 +577,7 @@ esp_err_t bitmans_ble_term()
 
 // You'll need a function to start the scanning process.
 // This could be called after bitmans_ble_init() is successful.
-esp_err_t bitmans_ble_start_scan(uint32_t scan_duration_secs)
+esp_err_t bitmans_ble_client_start_scan(uint32_t scan_duration_secs)
 {
     ESP_LOGI(TAG, "Starting BLE scan for %lu seconds...", scan_duration_secs);
 
@@ -606,7 +606,7 @@ esp_err_t bitmans_ble_start_scan(uint32_t scan_duration_secs)
     return ret;
 }
 
-esp_err_t bitmans_ble_stop_scan()
+esp_err_t bitmans_ble_client_stop_scan()
 {
     ESP_LOGI(TAG, "Stopping BLE scan...");
     esp_err_t ret = esp_ble_gap_stop_scanning();
@@ -628,7 +628,7 @@ esp_err_t bitmans_ble_stop_scan()
     return ret;
 }
 
-esp_err_t bitmans_ble_get_advertised_name(const ble_scan_result_t *pScanResult, advertised_name_t *pAdvertisedName) 
+esp_err_t bitmans_ble_client_get_advertised_name(const ble_scan_result_t *pScanResult, advertised_name_t *pAdvertisedName) 
 {
     assert(pScanResult != NULL);
     assert(pAdvertisedName != NULL);
@@ -669,7 +669,7 @@ esp_err_t bitmans_ble_get_advertised_name(const ble_scan_result_t *pScanResult, 
  * @param out_struct Pointer to a service_uuid_t struct where the converted UUID will be stored.
  * @return true if conversion was successful, false otherwise (e.g., invalid format, null pointers).
  */
-esp_err_t bitmans_ble_uuid_to_service_uuid_t(const char *pszUUID, service_uuid_t *pServiceUUID)
+esp_err_t bitmans_ble_client_uuid_to_service_uuid_t(const char *pszUUID, service_uuid_t *pServiceUUID)
 {
     if (pszUUID == NULL || pServiceUUID == NULL)
     {

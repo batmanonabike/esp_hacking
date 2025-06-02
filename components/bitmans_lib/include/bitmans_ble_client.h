@@ -33,14 +33,14 @@ typedef struct
 // `GCC typeof` because the header files doesn\'t expose scan_rst structure directly.
 typedef typeof(((const esp_ble_gap_cb_param_t *)0)->scan_rst) ble_scan_result_t;
 
-esp_err_t bitmans_ble_init();
-esp_err_t bitmans_ble_term();
-esp_err_t bitmans_ble_stop_scan();
-esp_err_t bitmans_ble_register_gattc(gattc_app_id_t app_id);
-esp_err_t bitmans_ble_unregister_gattc(gattc_app_id_t app_id);
-esp_err_t bitmans_ble_start_scan(uint32_t scan_duration_secs);
-esp_err_t bitmans_ble_uuid_to_service_uuid_t(const char *pszUUID, service_uuid_t *out_struct);
-esp_err_t bitmans_ble_get_advertised_name(const ble_scan_result_t *pScanResult, advertised_name_t *pAdvertisedName);
+esp_err_t bitmans_ble_client_init();
+esp_err_t bitmans_ble_client_term();
+esp_err_t bitmans_ble_client_stop_scan();
+esp_err_t bitmans_ble_client_register_gattc(gattc_app_id_t app_id);
+esp_err_t bitmans_ble_client_unregister_gattc(gattc_app_id_t app_id);
+esp_err_t bitmans_ble_client_start_scan(uint32_t scan_duration_secs);
+esp_err_t bitmans_ble_client_uuid_to_service_uuid_t(const char *pszUUID, service_uuid_t *out_struct);
+esp_err_t bitmans_ble_client_get_advertised_name(const ble_scan_result_t *pScanResult, advertised_name_t *pAdvertisedName);
 
 #ifdef __cplusplus
 }

@@ -1,15 +1,15 @@
 #include "esp_log.h"
 #include "bitmans_lib.h"
 
-static const char *TAG = "ble_connect_app";
+static const char *TAG = "ble_client_app";
 
 void app_main(void)
 {
     ESP_LOGI(TAG, "Starting application");
     
     ESP_ERROR_CHECK(bitmans_lib_init());
-    ESP_ERROR_CHECK(bitmans_ble_init());
-    ESP_ERROR_CHECK(bitmans_ble_register_gattc(GATTC_APP0));
+    ESP_ERROR_CHECK(bitmans_ble_client_init());
+    ESP_ERROR_CHECK(bitmans_ble_client_register_gattc(GATTC_APP0));
 
     ESP_ERROR_CHECK(bitmans_blink_init(-1));
     bitmans_set_blink_mode(BLINK_MODE_SLOW);
@@ -18,13 +18,13 @@ void app_main(void)
     vTaskDelay(2000 / portTICK_PERIOD_MS);
 
     bitmans_set_blink_mode(BLINK_MODE_BREATHING);
-    ESP_ERROR_CHECK(bitmans_ble_start_scan(30));
+    ESP_ERROR_CHECK(bitmans_ble_client_start_scan(30));
     for (int counter = 20; counter > 0; counter--) 
     {
         ESP_LOGI(TAG, "Running application: %d", counter);
         vTaskDelay(1000 / portTICK_PERIOD_MS);
     }
-    ESP_ERROR_CHECK(bitmans_ble_stop_scan());
+    ESP_ERROR_CHECK(bitmans_ble_client_stop_scan());
 
     bitmans_set_blink_mode(BLINK_MODE_FAST);
     ESP_LOGI(TAG, "Uninitialising application");
@@ -35,6 +35,6 @@ void app_main(void)
     vTaskDelay(5000 / portTICK_PERIOD_MS);
 
     bitmans_blink_term();
-    bitmans_ble_unregister_gattc(GATTC_APP0);
-    bitmans_ble_term();
+    bitmans_ble_client_unregister_gattc(GATTC_APP0);
+    bitmans_ble_client_term();
 }
