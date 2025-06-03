@@ -34,20 +34,7 @@ static esp_ble_adv_params_t adv_params = {
     .adv_filter_policy = ADV_FILTER_ALLOW_SCAN_ANY_CON_ANY,
 };
 
-bitmans_gatts_callbacks_t bitmans_gatts_default_callbacks = {
-    .service_handle = 0,
-    .on_reg = bitman_gatt_no_op,
-    .on_create = bitman_gatt_no_op,
-    .on_add_char = bitman_gatt_no_op,
-    .on_start = bitman_gatt_no_op,
-    .on_connect = bitman_gatt_no_op,
-    .on_disconnect = bitman_gatt_no_op,
-    .on_read = bitman_gatt_no_op,
-    .on_write = bitman_gatt_no_op,
-    .on_unreg = bitman_gatt_no_op
-};
-
-void bitman_gatt_no_op(bitmans_gatts_callbacks_t * pCb, esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t * pParam)
+void bitman_gatts_no_op(bitmans_gatts_callbacks_t * pCb, esp_ble_gatts_cb_param_t * pParam)
 {
 }
 
@@ -110,6 +97,8 @@ static bitmans_gatts_callbacks_t *bitmans_gatts_callbacks_create_mapping(
         if (err == ESP_OK)
         {
             ESP_LOGI(TAG, "Callback registered for appId: %d, gatts_if: %d", app_id, gatts_if);
+            pCallbacks->service_handle = 0; 
+            pCallbacks->gatts_if = gatts_if;
             return pCallbacks;
         }
     }
@@ -239,7 +228,6 @@ esp_err_t bitmans_gatts_create_characteristic(
 // ESP_GATTS_START_EVT: The service is started. Now start advertising.
 static void bitmans_gatts_event_handler(esp_gatts_cb_event_t event, esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *pParam)
 {
-    esp_err_t err = ESP_OK;
     bitmans_gatts_callbacks_t *pCallbacks = NULL;
 
     switch (event)
@@ -249,7 +237,7 @@ static void bitmans_gatts_event_handler(esp_gatts_cb_event_t event, esp_gatt_if_
         ESP_LOGI(TAG, "ESP_GATTS_REG_EVT, Service registered, gatts_if=%d, app_id=%d", gatts_if, pParam->reg.app_id);
         pCallbacks = bitmans_gatts_callbacks_create_mapping(gatts_if, pParam->reg.app_id);
         if (pCallbacks != NULL)
-            pCallbacks->on_reg(pCallbacks, gatts_if, pParam);
+            pCallbacks->on_reg(pCallbacks, pParam);
     }
     break;
 
@@ -260,7 +248,7 @@ static void bitmans_gatts_event_handler(esp_gatts_cb_event_t event, esp_gatt_if_
         if (pCallbacks != NULL)
         {
             pCallbacks->service_handle = pParam->create.service_handle;
-            pCallbacks->on_create(pCallbacks, gatts_if, pParam);            
+            pCallbacks->on_create(pCallbacks, pParam);            
         }
         break;
     }
@@ -269,14 +257,14 @@ static void bitmans_gatts_event_handler(esp_gatts_cb_event_t event, esp_gatt_if_
         ESP_LOGI(TAG, "ESP_GATTS_ADD_CHAR_EVT, Characteristic added, char_handle=%d", pParam->add_char.attr_handle);
         pCallbacks = bitmans_gatts_callbacks_lookup(gatts_if);
         if (pCallbacks != NULL)
-            pCallbacks->on_add_char(pCallbacks, gatts_if, pParam);            
+            pCallbacks->on_add_char(pCallbacks, pParam);            
         break;
 
     case ESP_GATTS_START_EVT:
         ESP_LOGI(TAG, "ESP_GATTS_START_EVT, Service started, gatts_if=%d", gatts_if);
         pCallbacks = bitmans_gatts_callbacks_lookup(gatts_if);
         if (pCallbacks != NULL)
-            pCallbacks->on_start(pCallbacks, gatts_if, pParam);    
+            pCallbacks->on_start(pCallbacks, pParam);    
         break;
 
     //////

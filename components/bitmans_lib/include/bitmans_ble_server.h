@@ -11,27 +11,22 @@ typedef uint16_t bitmans_gatts_app_id;
 
 typedef struct bitmans_gatts_callbacks_t
 {
+    esp_gatt_if_t gatts_if;
     uint16_t service_handle;
 
-    void (*on_reg)(struct bitmans_gatts_callbacks_t *, esp_gatt_if_t, esp_ble_gatts_cb_param_t *);
-    void (*on_create)(struct bitmans_gatts_callbacks_t *, esp_gatt_if_t, esp_ble_gatts_cb_param_t *);
-    void (*on_add_char)(struct bitmans_gatts_callbacks_t *, esp_gatt_if_t, esp_ble_gatts_cb_param_t *);
-    void (*on_start)(struct bitmans_gatts_callbacks_t *, esp_gatt_if_t, esp_ble_gatts_cb_param_t *);
-    void (*on_connect)(struct bitmans_gatts_callbacks_t *, esp_gatt_if_t, esp_ble_gatts_cb_param_t *);
-    void (*on_disconnect)(struct bitmans_gatts_callbacks_t *, esp_gatt_if_t, esp_ble_gatts_cb_param_t *);
-    void (*on_read)(struct bitmans_gatts_callbacks_t *, esp_gatt_if_t, esp_ble_gatts_cb_param_t *);
-    void (*on_write)(struct bitmans_gatts_callbacks_t *, esp_gatt_if_t, esp_ble_gatts_cb_param_t *);
-    void (*on_unreg)(struct bitmans_gatts_callbacks_t *, esp_gatt_if_t, esp_ble_gatts_cb_param_t *);
+    void (*on_reg)(struct bitmans_gatts_callbacks_t *, esp_ble_gatts_cb_param_t *);
+    void (*on_create)(struct bitmans_gatts_callbacks_t *, esp_ble_gatts_cb_param_t *);
+    void (*on_add_char)(struct bitmans_gatts_callbacks_t *, esp_ble_gatts_cb_param_t *);
+    void (*on_start)(struct bitmans_gatts_callbacks_t *, esp_ble_gatts_cb_param_t *);
+    void (*on_connect)(struct bitmans_gatts_callbacks_t *, esp_ble_gatts_cb_param_t *);
+    void (*on_disconnect)(struct bitmans_gatts_callbacks_t *, esp_ble_gatts_cb_param_t *);
+    void (*on_read)(struct bitmans_gatts_callbacks_t *, esp_ble_gatts_cb_param_t *);
+    void (*on_write)(struct bitmans_gatts_callbacks_t *, esp_ble_gatts_cb_param_t *);
+    void (*on_unreg)(struct bitmans_gatts_callbacks_t *, esp_ble_gatts_cb_param_t *);
 
 } bitmans_gatts_callbacks_t;
 
-/**
- * @brief Empty GATT server callbacks structure.
- *
- * This can be used as a default value when no callbacks are needed.
- */
-extern bitmans_gatts_callbacks_t bitmans_gatts_default_callbacks;
-void bitman_gatt_no_op(bitmans_gatts_callbacks_t *, esp_gatt_if_t, esp_ble_gatts_cb_param_t *);
+void bitman_gatts_no_op(bitmans_gatts_callbacks_t *, esp_ble_gatts_cb_param_t *);
 
 esp_err_t bitmans_ble_server_init();
 esp_err_t bitmans_ble_server_term();
