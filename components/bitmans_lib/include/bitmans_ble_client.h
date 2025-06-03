@@ -25,11 +25,6 @@ typedef struct
     char name[ADVERTISED_NAME_BUFFER_LEN];
 } advertised_name_t;
 
-typedef struct
-{
-    char service_uuid[ESP_UUID_LEN_128];
-} service_uuid_t;
-
 // `GCC typeof` because the header files doesn\'t expose scan_rst structure directly.
 typedef typeof(((const esp_ble_gap_cb_param_t *)0)->scan_rst) ble_scan_result_t;
 
@@ -39,7 +34,6 @@ esp_err_t bitmans_ble_client_stop_scan();
 esp_err_t bitmans_ble_client_register_gattc(gattc_app_id_t app_id);
 esp_err_t bitmans_ble_client_unregister_gattc(gattc_app_id_t app_id);
 esp_err_t bitmans_ble_client_start_scan(uint32_t scan_duration_secs);
-esp_err_t bitmans_ble_client_uuid_to_service_uuid_t(const char *pszUUID, service_uuid_t *out_struct);
 esp_err_t bitmans_ble_client_get_advertised_name(const ble_scan_result_t *pScanResult, advertised_name_t *pAdvertisedName);
 
 #ifdef __cplusplus

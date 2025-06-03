@@ -2,6 +2,7 @@
 
 #include "esp_err.h"
 #include "bitmans_blink.h"
+#include "bitmans_ble.h"
 #include "bitmans_ble_client.h"
 #include "bitmans_ble_server.h"
 #include "bitmans_wifi_logging.h"

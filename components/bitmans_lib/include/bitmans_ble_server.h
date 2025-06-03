@@ -28,8 +28,13 @@ extern bitmans_gatts_callbacks_t bitmans_gatts_default_callbacks;
 
 esp_err_t bitmans_ble_server_init();
 esp_err_t bitmans_ble_server_term();
-esp_err_t bitmans_ble_server_unregister_gatts(bitmans_gatts_app_id app_id);
-esp_err_t bitmans_ble_server_register_gatts(bitmans_gatts_app_id app_id, bitmans_gatts_callbacks_t *);
+esp_err_t bitmans_ble_gatts_unregister(bitmans_gatts_app_id app_id);
+esp_err_t bitmans_ble_gatts_register(bitmans_gatts_app_id app_id, bitmans_gatts_callbacks_t *);
+esp_err_t bitmans_gatts_create_service(esp_gatt_if_t gatts_if, bitmans_ble_uuid_t *pServiceUUID);
+esp_err_t bitmans_gatts_advertise(const char *pszAdvertisedName, bitmans_ble_uuid_t *pServiceUUID);
+esp_err_t bitmans_gatts_create_characteristic(
+    esp_gatt_if_t gatts_if, uint16_t service_handle, 
+    bitmans_ble_uuid_t *pCharUUID, esp_gatt_char_prop_t properties);
 
 #ifdef __cplusplus
 }
