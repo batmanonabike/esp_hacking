@@ -104,6 +104,17 @@ static void bitmans_gap_event_handler(esp_gap_ble_cb_event_t event, esp_ble_gap_
     }
 }
 
+static bitmans_gatts_callbacks_t *gatts_cb_table[GATTS_APPCOUNT] = {0};
+
+const bitmans_gatts_callbacks_t bitmans_gatts_callbacks_empty = {
+    .on_reg = NULL,
+    .on_create = NULL,
+    .on_connect = NULL,
+    .on_read = NULL,
+    .on_write = NULL,
+    // Add more fields as needed
+};
+
 // GATTS (GATT Server) events notify about BLE server events.
 // These include:
 // - ESP_GATTS_REG_EVT: GATT server profile registered, usually where you create your service.
@@ -194,8 +205,78 @@ static void bitmans_gatts_event_handler(esp_gatts_cb_event_t event, esp_gatt_if_
     }
 }
 
+#define MAX_GATTS_IF 16
+//#define INVALID_GATT
+
+// Safe assumptions *on ESP32*.
+static gatts_app_id_t gatts_if_to_app_id[MAX_GATTS_IF] = {0};
+
+// static gatts_app_id_t bitmans_gatts_app_id_from_if(esp_gatt_if_t gatts_if)
+// {
+
+
+//     if (gatts_if >= MAX_GATTS_IF && gatts_if_to_app_id[gatts_if] != 0) {
+//         *app_id = gatts_if_to_app_id[gatts_if];
+//     } else {
+//         *app_id = GATTS_APP0; // Default to first app if not found
+//     }
+// }
+
+// static void bitmans_gatts_event_handler_todo(esp_gatts_cb_event_t event, esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param)
+// {
+//     uint8_t app_id = 0xFF;
+//     switch (event) {
+//         case ESP_GATTS_REG_EVT:
+//             app_id = param->reg.app_id;
+//             break;
+//         case ESP_GATTS_CREATE_EVT:
+//             app_id = param->create.app_id;
+//             break;
+//         case ESP_GATTS_CONNECT_EVT:
+//             app_id = param->connect.app_id;
+//             break;
+//         case ESP_GATTS_READ_EVT:
+//             app_id = param->read.app_id;
+//             break;
+//         case ESP_GATTS_WRITE_EVT:
+//             app_id = param->write.app_id;
+//             break;
+//         // ...handle other events as needed
+//         default:
+//             break;
+//     }
+//     if (app_id < GATTS_APPCOUNT && gatts_cb_table[app_id]) {
+//         switch (event) {
+//             case ESP_GATTS_REG_EVT:
+//                 if (gatts_cb_table[app_id]->on_reg)
+//                     gatts_cb_table[app_id]->on_reg(gatts_if, param);
+//                 break;
+//             case ESP_GATTS_CREATE_EVT:
+//                 if (gatts_cb_table[app_id]->on_create)
+//                     gatts_cb_table[app_id]->on_create(gatts_if, param);
+//                 break;
+//             case ESP_GATTS_CONNECT_EVT:
+//                 if (gatts_cb_table[app_id]->on_connect)
+//                     gatts_cb_table[app_id]->on_connect(gatts_if, param);
+//                 break;
+//             case ESP_GATTS_READ_EVT:
+//                 if (gatts_cb_table[app_id]->on_read)
+//                     gatts_cb_table[app_id]->on_read(gatts_if, param);
+//                 break;
+//             case ESP_GATTS_WRITE_EVT:
+//                 if (gatts_cb_table[app_id]->on_write)
+//                     gatts_cb_table[app_id]->on_write(gatts_if, param);
+//                 break;
+//             // ...other events
+//             default:
+//                 break;
+//         }
+//     }
+// }
+
 esp_err_t bitmans_ble_server_init()
 {
+    //ESP_APP_ID_MAX
     ESP_LOGI(TAG, "Initializing BLE GATT server");
 
     esp_bt_controller_config_t bt_cfg = BT_CONTROLLER_INIT_CONFIG_DEFAULT();
@@ -225,10 +306,14 @@ esp_err_t bitmans_ble_server_term()
     return ESP_OK;
 }
 
-esp_err_t bitmans_ble_server_register_gatts()
+esp_err_t bitmans_ble_server_register_gatts(gatts_app_id_t app_id, bitmans_gatts_callbacks_t *callbacks)
 {
     ESP_LOGI(TAG, "Registering GATT server");
 
+    if (callbacks == NULL)
+        callbacks = &bitmans_gatts_callbacks_empty;
+
+    gatts_cb_table[app_id] = callbacks;
     esp_ble_gatts_register_callback(bitmans_gatts_event_handler);
     esp_ble_gap_register_callback(bitmans_gap_event_handler);
     esp_ble_gatts_app_register(BITMANS_APP_ID);

@@ -10,7 +10,7 @@ void app_main(void)
     
     ESP_ERROR_CHECK(bitmans_lib_init());
     ESP_ERROR_CHECK(bitmans_ble_server_init());
-    ESP_ERROR_CHECK(bitmans_ble_server_register_gatts());
+    ESP_ERROR_CHECK(bitmans_ble_server_register_gatts(GATTS_APP0, NULL));
 
     ESP_LOGI(TAG, "BLE server running");
     for (int counter = 200; counter > 0; counter--) 
