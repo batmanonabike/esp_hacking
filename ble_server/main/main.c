@@ -10,7 +10,9 @@ void app_main(void)
     
     ESP_ERROR_CHECK(bitmans_lib_init());
     ESP_ERROR_CHECK(bitmans_ble_server_init());
-    ESP_ERROR_CHECK(bitmans_ble_server_register_gatts(GATTS_APP0, NULL));
+
+    #define BITMANS_APP_ID 0x55
+    ESP_ERROR_CHECK(bitmans_ble_server_register_gatts(BITMANS_APP_ID, &bitmans_gatts_default_callbacks));
 
     ESP_LOGI(TAG, "BLE server running");
     for (int counter = 200; counter > 0; counter--) 
@@ -20,6 +22,6 @@ void app_main(void)
     }
 
     ESP_LOGI(TAG, "Uninitialising BLE server");
-    bitmans_ble_server_unregister_gatts();
+    bitmans_ble_server_unregister_gatts(BITMANS_APP_ID);
     bitmans_ble_server_term();
 }
