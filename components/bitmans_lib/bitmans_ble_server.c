@@ -279,7 +279,7 @@ static void bitmans_gatts_event_handler(esp_gatts_cb_event_t event, esp_gatt_if_
         ESP_LOGI(TAG, "ESP_GATTS_DISCONNECT_EVT, Client disconnected, restarting advertising");
         pCallbacks = bitmans_gatts_callbacks_lookup(gatts_if);
 
-        esp_ble_gap_start_advertising(&adv_params);
+        // esp_ble_gap_start_advertising(&adv_params);
         break;
 
     case ESP_GATTS_READ_EVT:
@@ -308,6 +308,9 @@ static void bitmans_gatts_event_handler(esp_gatts_cb_event_t event, esp_gatt_if_
     case ESP_GATTS_UNREG_EVT:
         ESP_LOGI(TAG, "ESP_GATTS_UNREG_EVT, unregistering app");
         pCallbacks = bitmans_gatts_callbacks_lookup(gatts_if);
+        if (pCallbacks != NULL)
+            pCallbacks->on_unreg(pCallbacks, pParam);    
+
         bitmans_hash_table_remove(&gatts_cb_table, gatts_if);
         break;
     
@@ -336,7 +339,15 @@ esp_err_t bitmans_ble_server_init()
     ret = esp_bluedroid_enable();
     if (ret)
         return ret;
+    
+    ret = esp_ble_gatts_register_callback(bitmans_gatts_event_handler);
+    if (ret)
+        return ret;
 
+    ret = esp_ble_gap_register_callback(bitmans_gap_event_handler);
+    if (ret)
+        return ret;
+        
     // Initialize hash tables for GATT callbacks
     ret = bitmans_hash_table_init(&gatts_cb_table, 16, NULL, NULL);
     if (ret)
@@ -348,6 +359,12 @@ esp_err_t bitmans_ble_server_init()
 esp_err_t bitmans_ble_server_term()
 {
     ESP_LOGI(TAG, "Terminating BLE GATT server");
+
+    esp_err_t ret = esp_ble_gap_stop_advertising();
+    if (ret != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to stop advertising: %s", esp_err_to_name(ret));
+        return ret;
+    }
 
     esp_bluedroid_disable();
     esp_bluedroid_deinit();
@@ -361,20 +378,12 @@ esp_err_t bitmans_ble_server_term()
 
 esp_err_t bitmans_ble_gatts_register(bitmans_gatts_app_id app_id, bitmans_gatts_callbacks_t *pCallbacks)
 {
-    ESP_LOGI(TAG, "Registering GATT server");
+    ESP_LOGI(TAG, "Registering GATT server: %d", app_id);
 
     if (pCallbacks == NULL)
         return ESP_ERR_INVALID_ARG;
 
     esp_err_t ret = bitmans_hash_table_set(&app_cb_table, app_id, pCallbacks);
-    if (ret)
-        return ret;
-
-    ret = esp_ble_gatts_register_callback(bitmans_gatts_event_handler);
-    if (ret)
-        return ret;
-
-    ret = esp_ble_gap_register_callback(bitmans_gap_event_handler);
     if (ret)
         return ret;
 
@@ -390,7 +399,15 @@ esp_err_t bitmans_ble_gatts_register(bitmans_gatts_app_id app_id, bitmans_gatts_
 
 esp_err_t bitmans_ble_gatts_unregister(bitmans_gatts_app_id app_id)
 {
-    ESP_LOGI(TAG, "Unregistering GATT server");
-    ESP_ERROR_CHECK(bitmans_hash_table_remove(&gatts_cb_table, app_id));
-    return ESP_OK;
+    ESP_LOGI(TAG, "Unregistering GATT server: %d", app_id);
+
+    esp_err_t ret = esp_ble_gatts_app_unregister(app_id);    
+    if (ret != ESP_OK) 
+    {
+        ESP_LOGE(TAG, "Failed to unregister GATT application: %s", esp_err_to_name(ret));
+        return ret;
+    }
+    
+    return bitmans_hash_table_remove(&app_cb_table, app_id);
 }
+    
