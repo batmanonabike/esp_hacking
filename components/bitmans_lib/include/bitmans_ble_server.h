@@ -9,14 +9,20 @@ extern "C" {
 
 typedef uint16_t bitmans_gatts_app_id;
 
-typedef struct
+typedef struct bitmans_gatts_callbacks_t
 {
-    void (*on_reg)(esp_gatt_if_t, esp_ble_gatts_cb_param_t *);
-    void (*on_read)(esp_gatt_if_t, esp_ble_gatts_cb_param_t *);
-    void (*on_write)(esp_gatt_if_t, esp_ble_gatts_cb_param_t *);
-    void (*on_create)(esp_gatt_if_t, esp_ble_gatts_cb_param_t *);
-    void (*on_connect)(esp_gatt_if_t, esp_ble_gatts_cb_param_t *);
-    // ...add more as needed
+    uint16_t service_handle;
+
+    void (*on_reg)(struct bitmans_gatts_callbacks_t *, esp_gatt_if_t, esp_ble_gatts_cb_param_t *);
+    void (*on_create)(struct bitmans_gatts_callbacks_t *, esp_gatt_if_t, esp_ble_gatts_cb_param_t *);
+    void (*on_add_char)(struct bitmans_gatts_callbacks_t *, esp_gatt_if_t, esp_ble_gatts_cb_param_t *);
+    void (*on_start)(struct bitmans_gatts_callbacks_t *, esp_gatt_if_t, esp_ble_gatts_cb_param_t *);
+    void (*on_connect)(struct bitmans_gatts_callbacks_t *, esp_gatt_if_t, esp_ble_gatts_cb_param_t *);
+    void (*on_disconnect)(struct bitmans_gatts_callbacks_t *, esp_gatt_if_t, esp_ble_gatts_cb_param_t *);
+    void (*on_read)(struct bitmans_gatts_callbacks_t *, esp_gatt_if_t, esp_ble_gatts_cb_param_t *);
+    void (*on_write)(struct bitmans_gatts_callbacks_t *, esp_gatt_if_t, esp_ble_gatts_cb_param_t *);
+    void (*on_unreg)(struct bitmans_gatts_callbacks_t *, esp_gatt_if_t, esp_ble_gatts_cb_param_t *);
+
 } bitmans_gatts_callbacks_t;
 
 /**
@@ -25,6 +31,7 @@ typedef struct
  * This can be used as a default value when no callbacks are needed.
  */
 extern bitmans_gatts_callbacks_t bitmans_gatts_default_callbacks;
+void bitman_gatt_no_op(bitmans_gatts_callbacks_t *, esp_gatt_if_t, esp_ble_gatts_cb_param_t *);
 
 esp_err_t bitmans_ble_server_init();
 esp_err_t bitmans_ble_server_term();

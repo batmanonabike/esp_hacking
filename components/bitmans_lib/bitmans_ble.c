@@ -1,18 +1,32 @@
-#include <string.h> 
+#include <string.h>
 #include "esp_log.h"
 #include "bitmans_ble.h"
 
 static const char *TAG = "bitmans_lib:ble";
 
+static int8_t bitmans_ble_hex_value(char c)
+{
+    if (c >= '0' && c <= '9')
+        return c - '0';
+    if (c >= 'A' && c <= 'F')
+        return c - 'A' + 10;
+    if (c >= 'a' && c <= 'f')
+        return c - 'a' + 10;
+    return -1; // Invalid hex character
+}
+
 static esp_err_t bitmans_ble_parse_uuid(const char *psz, uint8_t *pValue)
 {
-    char *pszEnd;
-    unsigned long val = strtol(psz, &pszEnd, 16);
+    int8_t high = bitmans_ble_hex_value(psz[0]);
+    int8_t low = bitmans_ble_hex_value(psz[1]);
 
-    if (val > 255 || pszEnd == psz || (pszEnd - psz) != 2)
-        return ESP_ERR_INVALID_STATE;
+    if (high == -1 || low == -1)
+    {
+        ESP_LOGE(TAG, "Invalid hexadecimal characters: %c%c", psz[0], psz[1]);
+        return ESP_ERR_INVALID_ARG;
+    }
 
-    *pValue = (uint8_t)val;
+    *pValue = (high << 4) | low;
     return ESP_OK;
 }
 

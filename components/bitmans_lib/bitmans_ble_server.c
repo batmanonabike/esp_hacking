@@ -19,20 +19,11 @@
 // GATT Server implementation for Bitman's BLE server
 static const char *TAG = "bitmans_lib:ble_server";
 
-#define BITMANS_CHAR_UUID 0x5678
-#define BITMANS_SERVICE_UUID 0x1234
-
 static uint16_t bitmans_conn_id = 0;
-static uint16_t bitmans_service_handle = 0;
 
-static const uint8_t bitmans_service_uuid128[16] = {
-    0xf0, 0xde, 0xbc, 0x9a, 0x78, 0x56, 0x34, 0x12,
-    0x34, 0x12, 0x78, 0x56, 0x34, 0x12, 0x56, 0x12};
-static const uint8_t bitmans_char_uuid128[16] = {
-    0xf0, 0xde, 0xbc, 0x9a, 0x34, 0x12, 0x78, 0x56,
-    0x34, 0x12, 0x78, 0x56, 0x01, 0xef, 0xcd, 0xab};
-
-static const char *BITMANS_ADV_NAME = "BitmansBLE";
+// The GATTS interface is a unique identifier for each GATT server instance, we get that during registration.
+static bitmans_hash_table_t app_cb_table;   // Hash table to map app IDs to GATTS callbacks.
+static bitmans_hash_table_t gatts_cb_table; // Hash table to map GATTS interfaces to callbacks.
 
 static esp_ble_adv_params_t adv_params = {
     .adv_int_min = 0x20,
@@ -44,17 +35,21 @@ static esp_ble_adv_params_t adv_params = {
 };
 
 bitmans_gatts_callbacks_t bitmans_gatts_default_callbacks = {
-    .on_reg = NULL,
-    .on_read = NULL,
-    .on_write = NULL,
-    .on_create = NULL,
-    .on_connect = NULL,
-    // Add more fields as needed
+    .service_handle = 0,
+    .on_reg = bitman_gatt_no_op,
+    .on_create = bitman_gatt_no_op,
+    .on_add_char = bitman_gatt_no_op,
+    .on_start = bitman_gatt_no_op,
+    .on_connect = bitman_gatt_no_op,
+    .on_disconnect = bitman_gatt_no_op,
+    .on_read = bitman_gatt_no_op,
+    .on_write = bitman_gatt_no_op,
+    .on_unreg = bitman_gatt_no_op
 };
 
-// The GATTS interface is a unique identifier for each GATT server instance, we get that during registration.
-static bitmans_hash_table_t app_cb_table;   // Hash table to map app IDs to GATTS callbacks.
-static bitmans_hash_table_t gatts_cb_table; // Hash table to map GATTS interfaces to callbacks.
+void bitman_gatt_no_op(bitmans_gatts_callbacks_t * pCb, esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t * pParam)
+{
+}
 
 // GAP (Generic Access Profile) events to about BLE advertising, scanning, connection, and security events.
 // Common events include:
@@ -73,6 +68,7 @@ static void bitmans_gap_event_handler(esp_gap_ble_cb_event_t event, esp_ble_gap_
         ESP_LOGI(TAG, "Advertising data set, starting advertising");
         esp_ble_gap_start_advertising(&adv_params);
         break;
+
     case ESP_GAP_BLE_ADV_START_COMPLETE_EVT:
         if (param->adv_start_cmpl.status == ESP_BT_STATUS_SUCCESS)
         {
@@ -241,7 +237,7 @@ esp_err_t bitmans_gatts_create_characteristic(
 // ESP_GATTS_CREATE_EVT: The service is created. Now add the characteristic.
 // ESP_GATTS_ADD_CHAR_EVT: The characteristic is added. Now start the service.
 // ESP_GATTS_START_EVT: The service is started. Now start advertising.
-static void bitmans_gatts_event_handler(esp_gatts_cb_event_t event, esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param)
+static void bitmans_gatts_event_handler(esp_gatts_cb_event_t event, esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *pParam)
 {
     esp_err_t err = ESP_OK;
     bitmans_gatts_callbacks_t *pCallbacks = NULL;
@@ -250,69 +246,45 @@ static void bitmans_gatts_event_handler(esp_gatts_cb_event_t event, esp_gatt_if_
     {
     case ESP_GATTS_REG_EVT:
     {
-        ESP_LOGI(TAG, "ESP_GATTS_REG_EVT, creating service");
-        pCallbacks = bitmans_gatts_callbacks_create_mapping(gatts_if, param->reg.app_id);
-
-        bitmans_ble_uuid_t *pServiceUUID = (bitmans_ble_uuid_t *)&bitmans_service_uuid128;
-        err  = bitmans_gatts_create_service(gatts_if, pServiceUUID);
-        if (err != ESP_OK) 
-        {
-            ESP_LOGE(TAG, "Failed to create service: %s", esp_err_to_name(err));
-        }
+        ESP_LOGI(TAG, "ESP_GATTS_REG_EVT, Service registered, gatts_if=%d, app_id=%d", gatts_if, pParam->reg.app_id);
+        pCallbacks = bitmans_gatts_callbacks_create_mapping(gatts_if, pParam->reg.app_id);
+        if (pCallbacks != NULL)
+            pCallbacks->on_reg(pCallbacks, gatts_if, pParam);
     }
     break;
 
     case ESP_GATTS_CREATE_EVT:
     {
-        ESP_LOGI(TAG, "ESP_GATTS_CREATE_EVT, Service created");
-
+        ESP_LOGI(TAG, "ESP_GATTS_CREATE_EVT, Service created, service_handle=%d", pParam->create.service_handle);
         pCallbacks = bitmans_gatts_callbacks_lookup(gatts_if);
-        bitmans_service_handle = param->create.service_handle;
-
-        // One or more characteristics can be created here.
-        err = bitmans_gatts_create_characteristic(
-            gatts_if, param->create.service_handle,
-            (bitmans_ble_uuid_t *)&bitmans_char_uuid128,
-            ESP_GATT_CHAR_PROP_BIT_READ | ESP_GATT_CHAR_PROP_BIT_WRITE);
-        if (err != ESP_OK)
+        if (pCallbacks != NULL)
         {
-            ESP_LOGE(TAG, "Failed to create characteristic: %s", esp_err_to_name(err));
+            pCallbacks->service_handle = pParam->create.service_handle;
+            pCallbacks->on_create(pCallbacks, gatts_if, pParam);            
         }
-
         break;
     }
 
     case ESP_GATTS_ADD_CHAR_EVT:
-        ESP_LOGI(TAG, "ESP_GATTS_ADD_CHAR_EVT, Characteristic added, starting service");
+        ESP_LOGI(TAG, "ESP_GATTS_ADD_CHAR_EVT, Characteristic added, char_handle=%d", pParam->add_char.attr_handle);
         pCallbacks = bitmans_gatts_callbacks_lookup(gatts_if);
-
-        err = esp_ble_gatts_start_service(bitmans_service_handle);
-        if (err != ESP_OK)
-        {
-            ESP_LOGE(TAG, "Failed to start service: %s", esp_err_to_name(err));
-        }
+        if (pCallbacks != NULL)
+            pCallbacks->on_add_char(pCallbacks, gatts_if, pParam);            
         break;
 
     case ESP_GATTS_START_EVT:
-        ESP_LOGI(TAG, "ESP_GATTS_START_EVT, Service started");
+        ESP_LOGI(TAG, "ESP_GATTS_START_EVT, Service started, gatts_if=%d", gatts_if);
         pCallbacks = bitmans_gatts_callbacks_lookup(gatts_if);
-
-        // Start advertising *after* the service is created
-        bitmans_ble_uuid_t *pServiceUUID = (bitmans_ble_uuid_t *)&bitmans_service_uuid128;
-        err = bitmans_gatts_advertise(BITMANS_ADV_NAME, pServiceUUID);
-        if (err != ESP_OK) 
-        {
-            ESP_LOGE(TAG, "Failed to start advertising: %s", esp_err_to_name(err));
-        }
-        // Advertising is now started in ADV_DATA_SET_COMPLETE event
+        if (pCallbacks != NULL)
+            pCallbacks->on_start(pCallbacks, gatts_if, pParam);    
         break;
 
     //////
     case ESP_GATTS_CONNECT_EVT:
-        ESP_LOGI(TAG, "ESP_GATTS_CONNECT_EVT, Client connected");
+        ESP_LOGI(TAG, "ESP_GATTS_CONNECT_EVT, Client connected, gatts_if=%d, conn_id=%d", gatts_if, pParam->connect.conn_id);
         pCallbacks = bitmans_gatts_callbacks_lookup(gatts_if);
 
-        bitmans_conn_id = param->connect.conn_id;
+        bitmans_conn_id = pParam->connect.conn_id;
         break;
 
     case ESP_GATTS_DISCONNECT_EVT:
@@ -330,19 +302,19 @@ static void bitmans_gatts_event_handler(esp_gatts_cb_event_t event, esp_gatt_if_
         {
             uint8_t value[4] = {0x42, 0x43, 0x44, 0x45};
             esp_gatt_rsp_t rsp = {0};
-            rsp.attr_value.handle = param->read.handle;
+            rsp.attr_value.handle = pParam->read.handle;
             rsp.attr_value.len = 4;
             memcpy(rsp.attr_value.value, value, 4);
-            esp_ble_gatts_send_response(gatts_if, param->read.conn_id, param->read.trans_id, ESP_GATT_OK, &rsp);
+            esp_ble_gatts_send_response(gatts_if, pParam->read.conn_id, pParam->read.trans_id, ESP_GATT_OK, &rsp);
         }
         break;
 
     case ESP_GATTS_WRITE_EVT:
-        ESP_LOGI(TAG, "ESP_GATTS_WRITE_EVT, Write event, len=%d", param->write.len);
+        ESP_LOGI(TAG, "ESP_GATTS_WRITE_EVT, Write event, len=%d", pParam->write.len);
         pCallbacks = bitmans_gatts_callbacks_lookup(gatts_if);
 
         // Optionally process param->write.value
-        esp_ble_gatts_send_response(gatts_if, param->write.conn_id, param->write.trans_id, ESP_GATT_OK, NULL);
+        esp_ble_gatts_send_response(gatts_if, pParam->write.conn_id, pParam->write.trans_id, ESP_GATT_OK, NULL);
         break;
     
     case ESP_GATTS_UNREG_EVT:
