@@ -1,4 +1,5 @@
 {
-    "idf.portWin": "COM15",
-    "idf.flashType": "JTAG"
+    "idf.portWin": "COM13",
+    "idf.flashType": "JTAG",
+    "idf.launchMonitorOnDebugSession": true
 }

@@ -166,4 +166,5 @@ File: `settings.json` and `idf.openOcdConfigs` <-- I'm not sure if this was need
 https://medium.com/@manuel.bl/low-cost-esp32-in-circuit-debugging-dbbee39e508b
 https://docs.espressif.com/projects/esp-iot-solution/en/latest/hw-reference/ESP-Prog_guide.html
 
-
+Also note that *monitoring* works over the UART (COM port) not JTAG (which doesn't use a COM port).
+To permit both debugging and monitoring, you need two usb cables connected. One to the ESP Prog and one to the ESP32 UART.
