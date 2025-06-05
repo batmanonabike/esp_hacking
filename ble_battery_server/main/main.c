@@ -120,9 +120,19 @@ static void app_context_init(app_gatts_context *pContext)
     ESP_ERROR_CHECK(bitmans_ble_string4_to_uuid128("180F", &pContext->battery_service_uuid));
 }
 
-#define BITMANS_APP_ID 0x56
+////////////////////////////////////////////////////////////////////////////////////////////
+// As it stands: this  is a correct, minimal, read-only fake battery service.
+// Testable with Bluetooth LE Explorer (Windows) or similar app.
+// TODO: To be “fully functioning pretend battery”:
+// Add a simulated battery level that changes over time.
+// Implement notification logic and CCCD write handling.
+// Add a timer to update the battery level and send notifications if a client is subscribed.
+// Handle client connection/pairing.
+////////////////////////////////////////////////////////////////////////////////////////////
 void app_main(void)
 {
+#define BITMANS_APP_ID 0x56
+
     app_gatts_context appContext;
     bitmans_gatts_callbacks_t callbacks = {
         .on_reg = app_on_reg,
@@ -133,9 +143,10 @@ void app_main(void)
         .on_connect = app_on_connect,
         .on_add_char = app_on_add_char,
         .on_disconnect = app_on_disconnect,
+        .on_add_char_descr = app_on_add_char_desc,
     };
 
-    ESP_LOGI(TAG, "Starting application");
+    ESP_LOGI(TAG, "App starting");
 
     ESP_ERROR_CHECK(bitmans_lib_init());
     ESP_ERROR_CHECK(bitmans_ble_server_init());
@@ -145,14 +156,14 @@ void app_main(void)
     ESP_LOGI(TAG, "Register Gatts");
     ESP_ERROR_CHECK(bitmans_ble_gatts_register(BITMANS_APP_ID, &callbacks, &appContext));
 
-    ESP_LOGI(TAG, "Server running");
+    ESP_LOGI(TAG, "App running");
     for (int counter = 180; counter > 0; counter--)
     {
-        ESP_LOGI(TAG, "Server counter: %d", counter);
+        ESP_LOGI(TAG, "App counter: %d", counter);
         vTaskDelay(1000 / portTICK_PERIOD_MS);
     }
 
-    ESP_LOGI(TAG, "Server running");
+    ESP_LOGI(TAG, "App running");
     vTaskDelay(10000 / portTICK_PERIOD_MS);
 
     ESP_LOGI(TAG, "Stop advertising");
@@ -167,5 +178,5 @@ void app_main(void)
     bitmans_ble_server_term();
 
     app_context_term(&appContext);
-    ESP_LOGI(TAG, "Application terminated");
+    ESP_LOGI(TAG, "App terminated");
 }

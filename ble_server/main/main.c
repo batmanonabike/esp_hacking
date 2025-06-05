@@ -79,9 +79,14 @@ void app_context_init(app_gatts_context *pContext)
     ESP_ERROR_CHECK(bitmans_ble_string36_to_uuid128(pszServerUUID, &pContext->service_uuid));
 }
 
-#define BITMANS_APP_ID 0x55
+////////////////////////////////////////////////////////////////////////////////////////
+// TODO: Come back to this example.  The issue is that the BLE server does not restart 
+// advertising after the first time it is unregistered.
+////////////////////////////////////////////////////////////////////////////////////////
 void app_main(void)
 {
+#define BITMANS_APP_ID 0x55
+
     app_gatts_context appContext;
     bitmans_gatts_callbacks_t callbacks = {
         .on_reg = app_on_reg,
@@ -91,7 +96,7 @@ void app_main(void)
         .on_add_char = app_on_add_char,
     };
 
-    ESP_LOGI(TAG, "Starting Application");
+    ESP_LOGI(TAG, "App starting");
 
     ESP_ERROR_CHECK(bitmans_lib_init());
     ESP_ERROR_CHECK(bitmans_ble_server_init());
@@ -101,11 +106,7 @@ void app_main(void)
     ESP_LOGI(TAG, "Register Gatts (1)");
     ESP_ERROR_CHECK(bitmans_ble_gatts_register(BITMANS_APP_ID, &callbacks, &appContext));
 
-    ////////////////////////////////////////////////////////////////////////////////////////
-    // TODO: Come back to this example.  The issue is that the BLE server does not restart 
-    // advertising after the first time it is unregistered.
-    ////////////////////////////////////////////////////////////////////////////////////////
-    ESP_LOGI(TAG, "Server running");
+    ESP_LOGI(TAG, "App running");
     vTaskDelay(10000 / portTICK_PERIOD_MS);
 
     ESP_LOGI(TAG, "Stop advertising");
@@ -140,5 +141,5 @@ void app_main(void)
     bitmans_ble_server_term();
 
     app_context_term(&appContext);
-    ESP_LOGI(TAG, "Application terminated");
+    ESP_LOGI(TAG, "App terminated");
 }
