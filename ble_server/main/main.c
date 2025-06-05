@@ -33,9 +33,10 @@ static void bitman_gatts_on_create(bitmans_gatts_callbacks_t *pCb, esp_ble_gatts
 {
     // One or more characteristics can be created here.
     bitmans_gatts_context *pAppContext = (bitmans_gatts_context *)pCb->pContext;
-    esp_err_t err = bitmans_gatts_create_characteristic(
-        pCb->gatts_if, pCb->service_handle, &pAppContext->service_uuid,
-        ESP_GATT_CHAR_PROP_BIT_READ | ESP_GATT_CHAR_PROP_BIT_WRITE);
+    esp_err_t err = bitmans_gatts_create_char128(
+        pCb->gatts_if, pCb->service_handle, &pAppContext->char_uuid,
+        ESP_GATT_CHAR_PROP_BIT_READ | ESP_GATT_CHAR_PROP_BIT_WRITE,
+        ESP_GATT_PERM_READ | ESP_GATT_PERM_WRITE);
 
     if (err != ESP_OK)
     {
@@ -69,16 +70,6 @@ static void bitman_gatts_on_unreg(bitmans_gatts_callbacks_t *pCb, esp_ble_gatts_
     xEventGroupSetBits(pAppContext->ble_events, pAppContext->UNREGISTER_BIT);
 }
 
-void bitmans_gatts_context_init(bitmans_gatts_context *pContext,
-    const char *pszAdvName, const char *pszServerUUID, const char *pszCharUUID)
-{
-    pContext->UNREGISTER_BIT = BIT0;
-    pContext->pszAdvName = pszAdvName;
-    pContext->ble_events = xEventGroupCreate();
-    bitmans_ble_string_to_uuid128(pszCharUUID, &pContext->char_uuid);
-    bitmans_ble_string_to_uuid128(pszServerUUID, &pContext->service_uuid);
-}
-
 void bitmans_gatts_context_term(bitmans_gatts_context *pContext)
 {
     pContext->pszAdvName = NULL;
@@ -87,9 +78,19 @@ void bitmans_gatts_context_term(bitmans_gatts_context *pContext)
         vEventGroupDelete(pContext->ble_events);
         pContext->ble_events = NULL;
     }
-
+    
     memset(&pContext->char_uuid, 0, sizeof(pContext->char_uuid));
     memset(&pContext->service_uuid, 0, sizeof(pContext->service_uuid));
+}
+
+void bitmans_gatts_context_init(bitmans_gatts_context *pContext,
+    const char *pszAdvName, const char *pszServerUUID, const char *pszCharUUID)
+{
+    pContext->UNREGISTER_BIT = BIT0;
+    pContext->pszAdvName = pszAdvName;
+    pContext->ble_events = xEventGroupCreate();
+    bitmans_ble_string_to_uuid128(pszCharUUID, &pContext->char_uuid);
+    bitmans_ble_string_to_uuid128(pszServerUUID, &pContext->service_uuid);
 }
 
 void app_main(void)

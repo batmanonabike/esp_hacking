@@ -10,16 +10,16 @@ static const char *TAG = "ble_battery_server_app";
 
 typedef struct bitmans_gatts_context
 {
-    const char *pszAdvName;   // Advertised name for the BLE device
-    bitmans_ble_uuid128_t char_uuid;
-    bitmans_ble_uuid128_t service_uuid;
+    const char *pszAdvName;
+    bitmans_ble_uuid16_t char_uuid; 
+    bitmans_ble_uuid16_t service_uuid; 
 
 } bitmans_gatts_context;
 
 static void bitman_gatts_on_reg(bitmans_gatts_callbacks_t *pCb, esp_ble_gatts_cb_param_t *pParam)
 {
     bitmans_gatts_context *pAppContext = (bitmans_gatts_context *)pCb->pContext;
-    esp_err_t err = bitmans_gatts_create_service128(pCb->gatts_if, &pAppContext->service_uuid);
+    esp_err_t err = bitmans_gatts_create_service16(pCb->gatts_if, pAppContext->service_uuid);
     if (err != ESP_OK)
     {
         ESP_LOGE(TAG, "Failed to create service: %s", esp_err_to_name(err));
@@ -28,11 +28,12 @@ static void bitman_gatts_on_reg(bitmans_gatts_callbacks_t *pCb, esp_ble_gatts_cb
 
 static void bitman_gatts_on_create(bitmans_gatts_callbacks_t *pCb, esp_ble_gatts_cb_param_t *pParam)
 {
-    // One or more characteristics can be created here.
+    // Here we create the characteristic for the battery level.
     bitmans_gatts_context *pAppContext = (bitmans_gatts_context *)pCb->pContext;
-    esp_err_t err = bitmans_gatts_create_characteristic(
-        pCb->gatts_if, pCb->service_handle, &pAppContext->service_uuid,
-        ESP_GATT_CHAR_PROP_BIT_READ | ESP_GATT_CHAR_PROP_BIT_WRITE);
+    esp_err_t err = bitmans_gatts_create_char16(
+        pCb->gatts_if, pCb->service_handle, pAppContext->char_uuid,
+        ESP_GATT_CHAR_PROP_BIT_READ | ESP_GATT_CHAR_PROP_BIT_WRITE,
+        ESP_GATT_PERM_READ | ESP_GATT_PERM_WRITE);
 
     if (err != ESP_OK)
     {
@@ -53,7 +54,7 @@ static void bitman_gatts_on_add_char(bitmans_gatts_callbacks_t *pCb, esp_ble_gat
 static void bitman_gatts_on_start(bitmans_gatts_callbacks_t *pCb, esp_ble_gatts_cb_param_t *pParam)
 {
     bitmans_gatts_context *pAppContext = (bitmans_gatts_context *)pCb->pContext;
-    esp_err_t err = bitmans_gatts_advertise128(pAppContext->pszAdvName, &pAppContext->service_uuid);
+    esp_err_t err = bitmans_gatts_advertise16(pAppContext->pszAdvName, pAppContext->service_uuid);
     if (err != ESP_OK)
     {
         ESP_LOGE(TAG, "Failed to start advertising: %s", esp_err_to_name(err));
@@ -75,19 +76,20 @@ static void bitman_gatts_on_unreg(bitmans_gatts_callbacks_t *pCb, esp_ble_gatts_
     bitmans_gatts_context *pAppContext = (bitmans_gatts_context *)pCb->pContext;
 }
 
-void bitmans_gatts_context_init(bitmans_gatts_context *pContext,
-    const char *pszAdvName, const char *pszServerUUID, const char *pszCharUUID)
-{
-    pContext->pszAdvName = pszAdvName;
-    bitmans_ble_string_to_uuid128(pszCharUUID, &pContext->char_uuid);
-    bitmans_ble_string_to_uuid128(pszServerUUID, &pContext->service_uuid);
-}
-
 void bitmans_gatts_context_term(bitmans_gatts_context *pContext)
 {
+    pContext->char_uuid = 0;
+    pContext->service_uuid = 0;
     pContext->pszAdvName = NULL;
-    memset(&pContext->char_uuid, 0, sizeof(pContext->char_uuid));
-    memset(&pContext->service_uuid, 0, sizeof(pContext->service_uuid));
+}
+
+void bitmans_gatts_context_init(bitmans_gatts_context *pContext, const char *pszAdvName)
+{
+    pContext->pszAdvName = pszAdvName;
+
+    // https://www.bluetooth.com/specifications/gatt/characteristics/
+    pContext->char_uuid = 0x2A19; // Battery Level
+    pContext->service_uuid = 0x180F; // Battery Service
 }
 
 void app_main(void)
@@ -101,18 +103,13 @@ void app_main(void)
         .on_add_char = bitman_gatts_on_add_char,
     };
 
-    const char *pszCharUUID = "2A19";   // Battery Level
-    const char *pszServerUUID = "180F"; // Battery Service
     const char *pszAdvName = "Bitmans Battery";;
-    //const char *pszCharUUID = "f0debc9a-3412-7856-1234-56785601efcd";
-    //const char *pszServerUUID = "f0debc9a-7856-3412-1234-567856125612";
-
     ESP_LOGI(TAG, "Starting BLE server application");
 
     ESP_ERROR_CHECK(bitmans_lib_init());
     ESP_ERROR_CHECK(bitmans_ble_server_init());
     bitmans_ble_gatts_callbacks_init(&appCallbacks, &appContext);
-    bitmans_gatts_context_init(&appContext, pszAdvName, pszServerUUID, pszCharUUID);
+    bitmans_gatts_context_init(&appContext, pszAdvName);
 
 #define BITMANS_APP_ID 0x56
     ESP_LOGI(TAG, "Register BLE server");
