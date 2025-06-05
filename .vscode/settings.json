@@ -24,10 +24,6 @@
     "C_Cpp.default.cppStandard": "c++17",
     "C_Cpp.default.intelliSenseMode": "gcc-x64",
     "idf.adapterTargetName": "esp32",
-    "idf.openOcdConfigs": [
-        "interface/ftdi/esp32_devkitj_v1.cfg",
-        "target/esp32.cfg"
-    ],
-    "idf.flashType": "UART",
+    "idf.flashType": "JTAG",
     "idf.portWin": "COM11"
 }
