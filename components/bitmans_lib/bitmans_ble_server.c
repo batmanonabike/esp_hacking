@@ -105,7 +105,7 @@ static bitmans_gatts_callbacks_t *bitmans_gatts_callbacks_create_mapping(
     return NULL;
 }
 
-static esp_err_t bitmans_gatts_advertise(const char *pszAdvertisedName, const uint8_t *pId, uint8_t idLen)
+static esp_err_t bitmans_gatts_begin_advertise(const char *pszAdvertisedName, const uint8_t *pId, uint8_t idLen)
 {
     esp_err_t err = ESP_OK;
     if (pszAdvertisedName != NULL)
@@ -144,9 +144,9 @@ static esp_err_t bitmans_gatts_advertise(const char *pszAdvertisedName, const ui
     return ESP_OK;
 }
 
-esp_err_t bitmans_gatts_advertise128(const char *pszAdvertisedName, bitmans_ble_uuid128_t *pId)
+esp_err_t bitmans_gatts_begin_advertise128(const char *pszAdvertisedName, bitmans_ble_uuid128_t *pId)
 {
-    return bitmans_gatts_advertise(pszAdvertisedName, pId->uuid, ESP_UUID_LEN_128);
+    return bitmans_gatts_begin_advertise(pszAdvertisedName, pId->uuid, ESP_UUID_LEN_128);
 }
 
 static esp_err_t bitmans_gatts_create_service(esp_gatt_if_t gatts_if, esp_gatt_id_t *pId)
@@ -242,6 +242,33 @@ esp_err_t bitmans_gatts_start_service(bitmans_gatts_service_handle service_handl
     return ESP_OK;
 }
 
+esp_err_t bitmans_gatts_send_response(
+    esp_gatt_if_t gatts_if, uint16_t conn_id, uint32_t trans_id,
+    esp_gatt_status_t status, esp_gatt_rsp_t *pResponse)
+{
+    esp_err_t err = esp_ble_gatts_send_response(gatts_if, conn_id, trans_id, status, pResponse);
+    if (err != ESP_OK)
+    {
+        ESP_LOGE(TAG, "Failed to send response: %s", esp_err_to_name(err));
+    }
+    else
+    {
+        ESP_LOGI(TAG, "Response sent successfully");
+    }
+    return ESP_OK;
+}
+
+esp_err_t bitmans_gatts_send_uint8(
+    esp_gatt_if_t gatts_if, uint16_t handle, uint16_t conn_id, uint32_t trans_id,
+    esp_gatt_status_t status, uint8_t value)
+{
+    esp_gatt_rsp_t response = {0};
+    response.attr_value.len = 1;
+    response.attr_value.handle = handle;
+    response.attr_value.value[0] = value;
+    return bitmans_gatts_send_response(gatts_if, conn_id, trans_id, status, &response);
+}
+
 // GATTS (GATT Server) events notify about BLE server events.
 // These include:
 // - ESP_GATTS_REG_EVT: GATT server profile registered, usually where you create your service.
@@ -312,7 +339,8 @@ static void bitmans_gatts_event_handler(esp_gatts_cb_event_t event, esp_gatt_if_
         ESP_LOGI(TAG, "ESP_GATTS_DISCONNECT_EVT, Client disconnected, restarting advertising");
         pCallbacks = bitmans_gatts_callbacks_lookup(gatts_if);
 
-        // esp_ble_gap_start_advertising(&adv_params);
+        if (pCallbacks != NULL)
+            pCallbacks->on_disconnect(pCallbacks, pParam);
         break;
 
     case ESP_GATTS_READ_EVT:
@@ -412,7 +440,7 @@ esp_err_t bitmans_ble_server_term()
     esp_bluedroid_deinit();
     esp_bt_controller_disable();
     esp_bt_controller_deinit();
-    
+
     bitmans_hash_table_cleanup(&app_cb_table);
     bitmans_hash_table_cleanup(&gatts_cb_table);
 

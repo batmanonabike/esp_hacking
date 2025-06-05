@@ -39,10 +39,17 @@ void bitmans_ble_gatts_callbacks_init(bitmans_gatts_callbacks_t *, void * pConte
 
 esp_err_t bitmans_gatts_stop_advertising();
 esp_err_t bitmans_gatts_start_service(bitmans_gatts_service_handle);
-esp_err_t bitmans_gatts_advertise128(const char *pszAdvertisedName, bitmans_ble_uuid128_t *pId);
+esp_err_t bitmans_gatts_begin_advertise128(const char *, bitmans_ble_uuid128_t *pId);
 esp_err_t bitmans_gatts_create_service128(esp_gatt_if_t gatts_if, bitmans_ble_uuid128_t *pId);
 esp_err_t bitmans_gatts_create_char128(esp_gatt_if_t, bitmans_gatts_service_handle, 
-    bitmans_ble_uuid128_t *pId, esp_gatt_char_prop_t, esp_gatt_perm_t);
+    bitmans_ble_uuid128_t *, esp_gatt_char_prop_t, esp_gatt_perm_t);
+
+esp_err_t bitmans_gatts_send_response(
+    esp_gatt_if_t gatts_if, uint16_t conn_id, uint32_t trans_id,
+    esp_gatt_status_t status, esp_gatt_rsp_t *pResponse);
+esp_err_t bitmans_gatts_send_uint8(
+    esp_gatt_if_t gatts_if, uint16_t handle, uint16_t conn_id, uint32_t trans_id,
+    esp_gatt_status_t status, uint8_t value);
     
 #ifdef __cplusplus
 }

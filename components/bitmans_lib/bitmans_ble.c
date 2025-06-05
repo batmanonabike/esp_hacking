@@ -135,3 +135,53 @@ esp_err_t bitmans_ble_string4_to_uuid128(const char *psz, bitmans_ble_uuid128_t 
     uint16_t uuid16 = (high_byte << 8) | low_byte;
     return bitmans_ble_uuid16_to_uuid128(uuid16, pId);
 }
+
+esp_err_t bitmans_ble_uuid_match(const esp_bt_uuid_t *pEspId, const bitmans_ble_uuid128_t *pUuid, bool *pResult)
+{
+    *pResult = false;
+    if (pEspId == NULL || pUuid == NULL || pResult == NULL)
+    {
+        ESP_LOGE(TAG, "Null pointer provided");
+        return ESP_ERR_INVALID_ARG;
+    }
+
+    // Handle 128-bit UUID direct comparison
+    if (pEspId->len == ESP_UUID_LEN_128)
+    {
+        *pResult = (memcmp(pEspId->uuid.uuid128, pUuid->uuid, ESP_UUID_LEN_128) == 0);
+        return ESP_OK;
+    }
+
+    // Handle 16-bit UUID conversion and comparison
+    if (pEspId->len == ESP_UUID_LEN_16)
+    {
+        bitmans_ble_uuid128_t temp_uuid;
+        esp_err_t err = bitmans_ble_uuid16_to_uuid128(pEspId->uuid.uuid16, &temp_uuid);
+
+        if (err != ESP_OK)
+        {
+            ESP_LOGE(TAG, "Failed to convert 16-bit UUID to 128-bit");
+            return err;
+        }
+
+        *pResult = (memcmp(temp_uuid.uuid, pUuid->uuid, ESP_UUID_LEN_128) == 0);
+        return ESP_OK;
+    }
+
+    // Handle 32-bit UUID (not implemented yet)
+    if (pEspId->len == ESP_UUID_LEN_32)
+    {
+        ESP_LOGW(TAG, "32-bit UUID comparison not implemented");
+        return ESP_ERR_NOT_SUPPORTED;
+    }
+
+    ESP_LOGE(TAG, "Invalid UUID length: %d", pEspId->len);
+    return ESP_ERR_INVALID_SIZE;
+}
+
+bool bitmans_ble_uuid_try_match(const esp_bt_uuid_t *pEspId, const bitmans_ble_uuid128_t *pUuid)
+{
+    bool result = false;
+    bitmans_ble_uuid_match(pEspId, pUuid, &result);
+    return result;
+}   

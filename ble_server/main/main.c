@@ -44,7 +44,7 @@ static void bitman_gatts_on_add_char(bitmans_gatts_callbacks_t *pCb, esp_ble_gat
 static void bitman_gatts_on_start(bitmans_gatts_callbacks_t *pCb, esp_ble_gatts_cb_param_t *pParam)
 {
     bitmans_gatts_context *pAppContext = (bitmans_gatts_context *)pCb->pContext;
-    esp_err_t err = bitmans_gatts_advertise128(pAppContext->pszAdvName, &pAppContext->service_uuid);
+    esp_err_t err = bitmans_gatts_begin_advertise128(pAppContext->pszAdvName, &pAppContext->service_uuid);
 }
 
 static void bitman_gatts_on_unreg(bitmans_gatts_callbacks_t *pCb, esp_ble_gatts_cb_param_t *pParam)
