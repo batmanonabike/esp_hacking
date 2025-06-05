@@ -37,6 +37,8 @@ esp_err_t bitmans_ble_gatts_register(bitmans_gatts_app_id app_id, bitmans_gatts_
 void bitman_gatts_no_op(bitmans_gatts_callbacks_t *, esp_ble_gatts_cb_param_t *);
 void bitmans_ble_gatts_callbacks_init(bitmans_gatts_callbacks_t *, void * pContext);
 
+esp_err_t bitmans_gatts_stop_advertising();
+esp_err_t bitmans_gatts_start_service(bitmans_gatts_service_handle);
 esp_err_t bitmans_gatts_advertise128(const char *pszAdvertisedName, bitmans_ble_uuid128_t *pId);
 esp_err_t bitmans_gatts_create_service128(esp_gatt_if_t gatts_if, bitmans_ble_uuid128_t *pId);
 esp_err_t bitmans_gatts_create_char128(esp_gatt_if_t, bitmans_gatts_service_handle, 

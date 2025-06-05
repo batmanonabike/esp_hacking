@@ -23,10 +23,6 @@ static void bitman_gatts_on_reg(bitmans_gatts_callbacks_t *pCb, esp_ble_gatts_cb
 {
     bitmans_gatts_context *pAppContext = (bitmans_gatts_context *)pCb->pContext;
     esp_err_t err = bitmans_gatts_create_service128(pCb->gatts_if, &pAppContext->service_uuid);
-    if (err != ESP_OK)
-    {
-        ESP_LOGE(TAG, "Failed to create service: %s", esp_err_to_name(err));
-    }
 }
 
 static void bitman_gatts_on_create(bitmans_gatts_callbacks_t *pCb, esp_ble_gatts_cb_param_t *pParam)
@@ -37,31 +33,18 @@ static void bitman_gatts_on_create(bitmans_gatts_callbacks_t *pCb, esp_ble_gatts
         pCb->gatts_if, pCb->service_handle, &pAppContext->char_uuid,
         ESP_GATT_CHAR_PROP_BIT_READ | ESP_GATT_CHAR_PROP_BIT_WRITE,
         ESP_GATT_PERM_READ | ESP_GATT_PERM_WRITE);
-
-    if (err != ESP_OK)
-    {
-        ESP_LOGE(TAG, "Failed to create characteristic: %s", esp_err_to_name(err));
-    }
 }
 
 static void bitman_gatts_on_add_char(bitmans_gatts_callbacks_t *pCb, esp_ble_gatts_cb_param_t *pParam)
 {
     bitmans_gatts_context *pAppContext = (bitmans_gatts_context *)pCb->pContext;
-    esp_err_t err = esp_ble_gatts_start_service(pCb->service_handle);
-    if (err != ESP_OK)
-    {
-        ESP_LOGE(TAG, "Failed to start service: %s", esp_err_to_name(err));
-    }
+    esp_err_t err = bitmans_gatts_start_service(pCb->service_handle);
 }
 
 static void bitman_gatts_on_start(bitmans_gatts_callbacks_t *pCb, esp_ble_gatts_cb_param_t *pParam)
 {
     bitmans_gatts_context *pAppContext = (bitmans_gatts_context *)pCb->pContext;
     esp_err_t err = bitmans_gatts_advertise128(pAppContext->pszAdvName, &pAppContext->service_uuid);
-    if (err != ESP_OK)
-    {
-        ESP_LOGE(TAG, "Failed to start advertising: %s", esp_err_to_name(err));
-    }
 }
 
 static void bitman_gatts_on_unreg(bitmans_gatts_callbacks_t *pCb, esp_ble_gatts_cb_param_t *pParam)
@@ -135,7 +118,7 @@ void app_main(void)
     vTaskDelay(10000 / portTICK_PERIOD_MS);
 
     ESP_LOGI(TAG, "BLE stop advertising");
-    esp_ble_gap_stop_advertising();
+    bitmans_gatts_stop_advertising();
     vTaskDelay(10000 / portTICK_PERIOD_MS);
 
     ESP_LOGI(TAG, "Unregister BLE (1)");

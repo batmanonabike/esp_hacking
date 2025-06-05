@@ -11,19 +11,15 @@ static const char *TAG = "ble_battery_server_app";
 typedef struct bitmans_gatts_context
 {
     const char *pszAdvName;
-    bitmans_ble_uuid128_t char_uuid;
-    bitmans_ble_uuid128_t service_uuid;
+    bitmans_ble_uuid128_t battery_level_uuid;
+    bitmans_ble_uuid128_t battery_service_uuid;
 
 } bitmans_gatts_context;
 
 static void bitman_gatts_on_reg(bitmans_gatts_callbacks_t *pCb, esp_ble_gatts_cb_param_t *pParam)
 {
     bitmans_gatts_context *pAppContext = (bitmans_gatts_context *)pCb->pContext;
-    esp_err_t err = bitmans_gatts_create_service128(pCb->gatts_if, &pAppContext->service_uuid);
-    if (err != ESP_OK)
-    {
-        ESP_LOGE(TAG, "Failed to create service: %s", esp_err_to_name(err));
-    }
+    esp_err_t err = bitmans_gatts_create_service128(pCb->gatts_if, &pAppContext->battery_service_uuid);
 }
 
 static void bitman_gatts_on_create(bitmans_gatts_callbacks_t *pCb, esp_ble_gatts_cb_param_t *pParam)
@@ -31,38 +27,39 @@ static void bitman_gatts_on_create(bitmans_gatts_callbacks_t *pCb, esp_ble_gatts
     // Here we create the characteristic for the battery level.
     bitmans_gatts_context *pAppContext = (bitmans_gatts_context *)pCb->pContext;
     esp_err_t err = bitmans_gatts_create_char128(
-        pCb->gatts_if, pCb->service_handle, &pAppContext->char_uuid,
+        pCb->gatts_if, pCb->service_handle, &pAppContext->battery_level_uuid,
         ESP_GATT_CHAR_PROP_BIT_READ | ESP_GATT_CHAR_PROP_BIT_WRITE,
         ESP_GATT_PERM_READ | ESP_GATT_PERM_WRITE);
-
-    if (err != ESP_OK)
-    {
-        ESP_LOGE(TAG, "Failed to create characteristic: %s", esp_err_to_name(err));
-    }
 }
 
 static void bitman_gatts_on_add_char(bitmans_gatts_callbacks_t *pCb, esp_ble_gatts_cb_param_t *pParam)
 {
     bitmans_gatts_context *pAppContext = (bitmans_gatts_context *)pCb->pContext;
-    esp_err_t err = esp_ble_gatts_start_service(pCb->service_handle);
-    if (err != ESP_OK)
-    {
-        ESP_LOGE(TAG, "Failed to start service: %s", esp_err_to_name(err));
-    }
+    esp_err_t err = bitmans_gatts_start_service(pCb->service_handle);
 }
 
 static void bitman_gatts_on_start(bitmans_gatts_callbacks_t *pCb, esp_ble_gatts_cb_param_t *pParam)
 {
     bitmans_gatts_context *pAppContext = (bitmans_gatts_context *)pCb->pContext;
-    esp_err_t err = bitmans_gatts_advertise128(pAppContext->pszAdvName, &pAppContext->service_uuid);
-    if (err != ESP_OK)
-    {
-        ESP_LOGE(TAG, "Failed to start advertising: %s", esp_err_to_name(err));
-    }
+    esp_err_t err = bitmans_gatts_advertise128(pAppContext->pszAdvName, &pAppContext->battery_service_uuid);
+}
+
+static void bitman_gatts_on_connect(bitmans_gatts_callbacks_t *pCb, esp_ble_gatts_cb_param_t *pParam)
+{
+    bitmans_gatts_context *pAppContext = (bitmans_gatts_context *)pCb->pContext;        
+    bitmans_gatts_stop_advertising();
+
+    // You might want to cache the connection ID for later use for notifications,
+    // to send responses to the client, to manage the connection state,
+    // or to manage the connection state.
 }
 
 static void bitman_gatts_on_read(bitmans_gatts_callbacks_t *pCb, esp_ble_gatts_cb_param_t *pParam)
 {
+    // pParam->read.conn_id: The connection ID for this read request.
+    // pParam->read.trans_id: The transaction ID for this specific read operation.
+    // pParam->read.handle: The handle of the characteristic being read.
+
     // if (pParam->read.handle == battery_level_handle) {
     //     uint8_t battery_level = 42; // Simulated value
     //     esp_ble_gatts_send_response(
@@ -79,8 +76,8 @@ static void bitman_gatts_on_unreg(bitmans_gatts_callbacks_t *pCb, esp_ble_gatts_
 void bitmans_gatts_context_term(bitmans_gatts_context *pContext)
 {
     pContext->pszAdvName = NULL;
-    memset(&pContext->char_uuid, 0, sizeof(pContext->char_uuid));
-    memset(&pContext->service_uuid, 0, sizeof(pContext->service_uuid));
+    memset(&pContext->battery_level_uuid, 0, sizeof(pContext->battery_level_uuid));
+    memset(&pContext->battery_service_uuid, 0, sizeof(pContext->battery_service_uuid));
 }
 
 void bitmans_gatts_context_init(bitmans_gatts_context *pContext, const char *pszAdvName)
@@ -90,8 +87,8 @@ void bitmans_gatts_context_init(bitmans_gatts_context *pContext, const char *psz
     // https://www.bluetooth.com/specifications/gatt/characteristics/
     const char * pszBatteryLevel = "2A19";
     const char * pszBatteryService = "180F";
-    ESP_ERROR_CHECK(bitmans_ble_string4_to_uuid128(pszBatteryLevel, &pContext->char_uuid));
-    ESP_ERROR_CHECK(bitmans_ble_string4_to_uuid128(pszBatteryService, &pContext->service_uuid));
+    ESP_ERROR_CHECK(bitmans_ble_string4_to_uuid128(pszBatteryLevel, &pContext->battery_level_uuid));
+    ESP_ERROR_CHECK(bitmans_ble_string4_to_uuid128(pszBatteryService, &pContext->battery_service_uuid));
 }
 
 void app_main(void)
@@ -102,6 +99,7 @@ void app_main(void)
         .on_unreg = bitman_gatts_on_unreg,
         .on_start = bitman_gatts_on_start,
         .on_create = bitman_gatts_on_create,
+        .on_connect = bitman_gatts_on_connect,
         .on_add_char = bitman_gatts_on_add_char,
     };
 
@@ -110,8 +108,8 @@ void app_main(void)
 
     ESP_ERROR_CHECK(bitmans_lib_init());
     ESP_ERROR_CHECK(bitmans_ble_server_init());
-    bitmans_ble_gatts_callbacks_init(&appCallbacks, &appContext);
     bitmans_gatts_context_init(&appContext, pszAdvName);
+    bitmans_ble_gatts_callbacks_init(&appCallbacks, &appContext);
 
 #define BITMANS_APP_ID 0x56
     ESP_LOGI(TAG, "Register BLE server");
@@ -128,7 +126,7 @@ void app_main(void)
     vTaskDelay(10000 / portTICK_PERIOD_MS);
 
     ESP_LOGI(TAG, "BLE stop advertising");
-    esp_ble_gap_stop_advertising();
+    bitmans_gatts_stop_advertising();
     vTaskDelay(10000 / portTICK_PERIOD_MS);
 
     ESP_LOGI(TAG, "Unregister BLE");

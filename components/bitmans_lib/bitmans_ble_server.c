@@ -19,8 +19,6 @@
 // GATT Server implementation for Bitman's BLE server
 static const char *TAG = "bitmans_lib:ble_server";
 
-static uint16_t bitmans_conn_id = 0;
-
 // The GATTS interface is a unique identifier for each GATT server instance, we get that during registration.
 static bitmans_hash_table_t app_cb_table;   // Hash table to map app IDs to GATTS callbacks.
 static bitmans_hash_table_t gatts_cb_table; // Hash table to map GATTS interfaces to callbacks.
@@ -173,7 +171,6 @@ esp_err_t bitmans_gatts_create_service128(esp_gatt_if_t gatts_if, bitmans_ble_uu
     memcpy(service_id.uuid.uuid.uuid128, pId->uuid, sizeof(pId->uuid));
 
     return bitmans_gatts_create_service(gatts_if, &service_id);
-
 }
 
 // Permissions control what operations a client is allowed to perform on the characteristic value.
@@ -199,10 +196,9 @@ static esp_err_t bitmans_gatts_create_char(
     esp_err_t err = esp_ble_gatts_add_char(service_handle, pId, permissions, properties, NULL, NULL);
     if (err != ESP_OK)
     {
-        ESP_LOGE(TAG, "Failed to add characteristic: %s", esp_err_to_name(err));
+        ESP_LOGE(TAG, "Failed to create characteristic: %s", esp_err_to_name(err));
         return err;
     }
-
     return ESP_OK;
 }
 
@@ -212,8 +208,7 @@ esp_err_t bitmans_gatts_create_char128(
 {
     esp_bt_uuid_t char_uuid = {
         .len = ESP_UUID_LEN_128,
-        .uuid = {.uuid128 = {0}}
-    };
+        .uuid = {.uuid128 = {0}}};
     memcpy(char_uuid.uuid.uuid128, pId->uuid, sizeof(pId->uuid));
     return bitmans_gatts_create_char(gatts_if, service_handle, &char_uuid, properties, permissions);
 }
@@ -231,6 +226,20 @@ static bitmans_gatts_callbacks_t *bitmans_gatts_callbacks_lookup(esp_gatt_if_t g
 
     ESP_LOGW(TAG, "No callback registered for gatts_if: %d", gatts_if);
     return NULL;
+}
+
+esp_err_t bitmans_gatts_start_service(bitmans_gatts_service_handle service_handle)
+{
+    esp_err_t err = esp_ble_gatts_start_service(service_handle);
+    if (err != ESP_OK)
+    {
+        ESP_LOGE(TAG, "Failed to start service: %s", esp_err_to_name(err));
+    }
+    else
+    {
+        ESP_LOGI(TAG, "Service started successfully, service_handle=%d", service_handle);
+    }
+    return ESP_OK;
 }
 
 // GATTS (GATT Server) events notify about BLE server events.
@@ -291,12 +300,12 @@ static void bitmans_gatts_event_handler(esp_gatts_cb_event_t event, esp_gatt_if_
             pCallbacks->on_start(pCallbacks, pParam);
         break;
 
-    //////
     case ESP_GATTS_CONNECT_EVT:
         ESP_LOGI(TAG, "ESP_GATTS_CONNECT_EVT, Client connected, gatts_if=%d, conn_id=%d", gatts_if, pParam->connect.conn_id);
         pCallbacks = bitmans_gatts_callbacks_lookup(gatts_if);
 
-        bitmans_conn_id = pParam->connect.conn_id;
+        if (pCallbacks != NULL)
+            pCallbacks->on_connect(pCallbacks, pParam);
         break;
 
     case ESP_GATTS_DISCONNECT_EVT:
@@ -380,24 +389,33 @@ esp_err_t bitmans_ble_server_init()
     return bitmans_hash_table_init(&app_cb_table, 4, NULL, NULL);
 }
 
+esp_err_t bitmans_gatts_stop_advertising()
+{
+    esp_err_t ret = esp_ble_gap_stop_advertising();
+    if (ret == ESP_OK)
+    {
+        ESP_LOGV(TAG, "Stopped advertising: %s", esp_err_to_name(ret));
+    }
+    else
+    {
+        ESP_LOGE(TAG, "Failed to stop advertising: %s", esp_err_to_name(ret));
+    }
+    return ret;
+}
+
 esp_err_t bitmans_ble_server_term()
 {
     ESP_LOGI(TAG, "Terminating BLE GATT server");
 
-    esp_err_t ret = esp_ble_gap_stop_advertising();
-    if (ret != ESP_OK)
-    {
-        ESP_LOGE(TAG, "Failed to stop advertising: %s", esp_err_to_name(ret));
-        return ret;
-    }
-
+    bitmans_gatts_stop_advertising();
     esp_bluedroid_disable();
     esp_bluedroid_deinit();
     esp_bt_controller_disable();
     esp_bt_controller_deinit();
-
+    
     bitmans_hash_table_cleanup(&app_cb_table);
     bitmans_hash_table_cleanup(&gatts_cb_table);
+
     return ESP_OK;
 }
 
