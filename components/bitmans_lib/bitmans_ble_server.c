@@ -107,7 +107,7 @@ static bitmans_gatts_callbacks_t *bitmans_gatts_callbacks_create_mapping(
     return NULL;
 }
 
-esp_err_t bitmans_gatts_advertise(const char *pszAdvertisedName, bitmans_ble_uuid_t *pServiceUUID)
+static esp_err_t bitmans_gatts_advertise(const char *pszAdvertisedName, const uint8_t *pId, uint8_t idLen)
 {
     esp_err_t err = ESP_OK;
     if (pszAdvertisedName != NULL)
@@ -121,6 +121,8 @@ esp_err_t bitmans_gatts_advertise(const char *pszAdvertisedName, bitmans_ble_uui
     }
 
     esp_ble_adv_data_t adv_data = {
+        .p_service_uuid = pId,
+        .service_uuid_len = idLen,
         .set_scan_rsp = false,
         .include_name = true,
         .include_txpower = false,
@@ -131,31 +133,35 @@ esp_err_t bitmans_gatts_advertise(const char *pszAdvertisedName, bitmans_ble_uui
         .p_manufacturer_data = NULL,
         .service_data_len = 0,
         .p_service_data = NULL,
-        .service_uuid_len = sizeof(pServiceUUID->uuid),
-        .p_service_uuid = pServiceUUID->uuid,
         .flag = (ESP_BLE_ADV_FLAG_GEN_DISC | ESP_BLE_ADV_FLAG_BREDR_NOT_SPT),
     };
+
     err = esp_ble_gap_config_adv_data(&adv_data);
     if (err != ESP_OK)
     {
         ESP_LOGE(TAG, "Failed to configure advertising data: %s", esp_err_to_name(err));
         return err;
     }
-
     ESP_LOGV(TAG, "Advertising succeeded");
     return ESP_OK;
 }
 
-esp_err_t bitmans_gatts_create_service(esp_gatt_if_t gatts_if, bitmans_ble_uuid_t *pServiceUUID)
+esp_err_t bitmans_gatts_advertise128(const char *pszAdvertisedName, bitmans_ble_uuid128_t *pId)
 {
-    esp_gatt_id_t service_id = {
-        .inst_id = 0,
-        .uuid = {
-            .len = ESP_UUID_LEN_128,
-            .uuid = {.uuid128 = {0}}}};
+    return bitmans_gatts_advertise(pszAdvertisedName, pId->uuid, ESP_UUID_LEN_128);
+}
 
-    memcpy(service_id.uuid.uuid.uuid128, pServiceUUID->uuid, sizeof(pServiceUUID->uuid));
-    esp_err_t err = esp_ble_gatts_create_service(gatts_if, (void *)&service_id, 8);
+esp_err_t bitmans_gatts_advertise16(const char *pszAdvertisedName, bitmans_ble_uuid16_t id)
+{
+    return bitmans_gatts_advertise(pszAdvertisedName, (const uint8_t *)&id, ESP_UUID_LEN_16);
+}
+
+static esp_err_t bitmans_gatts_create_service(esp_gatt_if_t gatts_if, esp_gatt_id_t *pId)
+{
+    // memcpy(service_id.uuid.uuid.uuid128, pServiceUUID->uuid, sizeof(pServiceUUID->uuid));
+
+    // esp_err_t err = esp_ble_gatts_create_service(gatts_if, (void *)pServiceId, 8);
+    esp_err_t err = esp_ble_gatts_create_service(gatts_if, pId, 8);
     if (err != ESP_OK)
     {
         ESP_LOGE(TAG, "Failed to create GATTS service: %s", esp_err_to_name(err));
@@ -165,9 +171,48 @@ esp_err_t bitmans_gatts_create_service(esp_gatt_if_t gatts_if, bitmans_ble_uuid_
     return ESP_OK;
 }
 
+esp_err_t bitmans_gatts_create_service16(esp_gatt_if_t gatts_if, bitmans_ble_uuid16_t id)
+{
+    esp_gatt_id_t service_id = {
+        .inst_id = 0,
+        .uuid = {
+            .len = ESP_UUID_LEN_16,
+            .uuid = {.uuid16 = id}}};
+    return bitmans_gatts_create_service(gatts_if, &service_id);
+
+    // esp_err_t err = esp_ble_gatts_create_service(gatts_if, &service_id, 8);
+    // if (err != ESP_OK)
+    // {
+    //     ESP_LOGE(TAG, "Failed to create 16-bit GATTS service: %s", esp_err_to_name(err));
+    //     return err;
+    // }
+    // return ESP_OK;
+}
+
+esp_err_t bitmans_gatts_create_service128(esp_gatt_if_t gatts_if, bitmans_ble_uuid128_t *pId)
+{
+    esp_gatt_id_t service_id = {
+        .inst_id = 0,
+        .uuid = {
+            .len = ESP_UUID_LEN_128,
+            .uuid = {.uuid128 = {0}}}};
+    memcpy(service_id.uuid.uuid.uuid128, pId->uuid, sizeof(pId->uuid));
+
+    return bitmans_gatts_create_service(gatts_if, &service_id);
+
+    // esp_err_t err = esp_ble_gatts_create_service(gatts_if, (void *)&service_id, 8);
+    // if (err != ESP_OK)
+    // {
+    //     ESP_LOGE(TAG, "Failed to create GATTS service: %s", esp_err_to_name(err));
+    //     return err;
+    // }
+
+    // return ESP_OK;
+}
+
 esp_err_t bitmans_gatts_create_characteristic(
     esp_gatt_if_t gatts_if, uint16_t service_handle,
-    bitmans_ble_uuid_t *pCharUUID, esp_gatt_char_prop_t properties)
+    bitmans_ble_uuid128_t *pId, esp_gatt_char_prop_t properties)
 {
     esp_gatt_id_t char_id = {
         .inst_id = 0,
@@ -175,7 +220,7 @@ esp_err_t bitmans_gatts_create_characteristic(
             .len = ESP_UUID_LEN_128,
             .uuid = {.uuid128 = {0}}}};
 
-    memcpy(char_id.uuid.uuid.uuid128, pCharUUID->uuid, sizeof(pCharUUID->uuid));
+    memcpy(char_id.uuid.uuid.uuid128, pId->uuid, sizeof(pId->uuid));
 
     esp_err_t err = esp_ble_gatts_add_char(
         service_handle,
@@ -377,21 +422,30 @@ esp_err_t bitmans_ble_server_term()
     return ESP_OK;
 }
 
-void bitmans_ble_gatts_callbacks_init(bitmans_gatts_callbacks_t *pCallbacks, void * pContext)
+void bitmans_ble_gatts_callbacks_init(bitmans_gatts_callbacks_t *pCallbacks, void *pContext)
 {
     pCallbacks->service_handle = 0;
     pCallbacks->pContext = pContext;
     pCallbacks->gatts_if = ESP_GATT_IF_NONE;
 
-    if (pCallbacks->on_reg == NULL) pCallbacks->on_reg = bitman_gatts_no_op;
-    if (pCallbacks->on_read == NULL) pCallbacks->on_read = bitman_gatts_no_op;
-    if (pCallbacks->on_start == NULL) pCallbacks->on_start = bitman_gatts_no_op;
-    if (pCallbacks->on_unreg == NULL) pCallbacks->on_unreg = bitman_gatts_no_op;
-    if (pCallbacks->on_write == NULL) pCallbacks->on_write = bitman_gatts_no_op;
-    if (pCallbacks->on_create == NULL) pCallbacks->on_create = bitman_gatts_no_op;
-    if (pCallbacks->on_connect == NULL) pCallbacks->on_connect = bitman_gatts_no_op;
-    if (pCallbacks->on_add_char == NULL) pCallbacks->on_add_char = bitman_gatts_no_op;
-    if (pCallbacks->on_disconnect == NULL) pCallbacks->on_disconnect = bitman_gatts_no_op;
+    if (pCallbacks->on_reg == NULL)
+        pCallbacks->on_reg = bitman_gatts_no_op;
+    if (pCallbacks->on_read == NULL)
+        pCallbacks->on_read = bitman_gatts_no_op;
+    if (pCallbacks->on_start == NULL)
+        pCallbacks->on_start = bitman_gatts_no_op;
+    if (pCallbacks->on_unreg == NULL)
+        pCallbacks->on_unreg = bitman_gatts_no_op;
+    if (pCallbacks->on_write == NULL)
+        pCallbacks->on_write = bitman_gatts_no_op;
+    if (pCallbacks->on_create == NULL)
+        pCallbacks->on_create = bitman_gatts_no_op;
+    if (pCallbacks->on_connect == NULL)
+        pCallbacks->on_connect = bitman_gatts_no_op;
+    if (pCallbacks->on_add_char == NULL)
+        pCallbacks->on_add_char = bitman_gatts_no_op;
+    if (pCallbacks->on_disconnect == NULL)
+        pCallbacks->on_disconnect = bitman_gatts_no_op;
 }
 
 esp_err_t bitmans_ble_gatts_register(bitmans_gatts_app_id app_id, bitmans_gatts_callbacks_t *pCallbacks, void *pContext)

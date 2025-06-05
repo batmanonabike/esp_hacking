@@ -8,6 +8,7 @@ extern "C" {
 #endif
 
 typedef uint16_t bitmans_gatts_app_id;
+typedef uint16_t bitmans_ble_uuid16_t;
 
 typedef struct bitmans_gatts_callbacks_t
 {
@@ -27,19 +28,21 @@ typedef struct bitmans_gatts_callbacks_t
 
 } bitmans_gatts_callbacks_t;
 
-void bitman_gatts_no_op(bitmans_gatts_callbacks_t *, esp_ble_gatts_cb_param_t *);
-void bitmans_ble_gatts_callbacks_init(bitmans_gatts_callbacks_t *, void * pContext);
-
 esp_err_t bitmans_ble_server_init();
 esp_err_t bitmans_ble_server_term();
 esp_err_t bitmans_ble_gatts_unregister(bitmans_gatts_app_id app_id);
-esp_err_t bitmans_gatts_create_service(esp_gatt_if_t gatts_if, bitmans_ble_uuid_t *pServiceUUID);
-esp_err_t bitmans_gatts_advertise(const char *pszAdvertisedName, bitmans_ble_uuid_t *pServiceUUID);
 esp_err_t bitmans_ble_gatts_register(bitmans_gatts_app_id app_id, bitmans_gatts_callbacks_t *, void * pContext);
 
+void bitman_gatts_no_op(bitmans_gatts_callbacks_t *, esp_ble_gatts_cb_param_t *);
+void bitmans_ble_gatts_callbacks_init(bitmans_gatts_callbacks_t *, void * pContext);
+
+esp_err_t bitmans_gatts_advertise16(const char *pszAdvertisedName, bitmans_ble_uuid16_t id);
+esp_err_t bitmans_gatts_advertise128(const char *pszAdvertisedName, bitmans_ble_uuid128_t *pId);
+esp_err_t bitmans_gatts_create_service16(esp_gatt_if_t gatts_if, bitmans_ble_uuid16_t id);
+esp_err_t bitmans_gatts_create_service128(esp_gatt_if_t gatts_if, bitmans_ble_uuid128_t *pId);
 esp_err_t bitmans_gatts_create_characteristic(
     esp_gatt_if_t gatts_if, uint16_t service_handle, 
-    bitmans_ble_uuid_t *pCharUUID, esp_gatt_char_prop_t properties);
+    bitmans_ble_uuid128_t *pCharUUID, esp_gatt_char_prop_t properties);
 
 #ifdef __cplusplus
 }

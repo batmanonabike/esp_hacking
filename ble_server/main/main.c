@@ -14,15 +14,15 @@ typedef struct bitmans_gatts_context
     const char *pszAdvName;   // Advertised name for the BLE device
 
     EventGroupHandle_t ble_events;
-    bitmans_ble_uuid_t char_uuid;
-    bitmans_ble_uuid_t service_uuid;
+    bitmans_ble_uuid128_t char_uuid;
+    bitmans_ble_uuid128_t service_uuid;
 
 } bitmans_gatts_context;
 
 static void bitman_gatts_on_reg(bitmans_gatts_callbacks_t *pCb, esp_ble_gatts_cb_param_t *pParam)
 {
     bitmans_gatts_context *pAppContext = (bitmans_gatts_context *)pCb->pContext;
-    esp_err_t err = bitmans_gatts_create_service(pCb->gatts_if, &pAppContext->service_uuid);
+    esp_err_t err = bitmans_gatts_create_service128(pCb->gatts_if, &pAppContext->service_uuid);
     if (err != ESP_OK)
     {
         ESP_LOGE(TAG, "Failed to create service: %s", esp_err_to_name(err));
@@ -56,7 +56,7 @@ static void bitman_gatts_on_add_char(bitmans_gatts_callbacks_t *pCb, esp_ble_gat
 static void bitman_gatts_on_start(bitmans_gatts_callbacks_t *pCb, esp_ble_gatts_cb_param_t *pParam)
 {
     bitmans_gatts_context *pAppContext = (bitmans_gatts_context *)pCb->pContext;
-    esp_err_t err = bitmans_gatts_advertise(pAppContext->pszAdvName, &pAppContext->service_uuid);
+    esp_err_t err = bitmans_gatts_advertise128(pAppContext->pszAdvName, &pAppContext->service_uuid);
     if (err != ESP_OK)
     {
         ESP_LOGE(TAG, "Failed to start advertising: %s", esp_err_to_name(err));
@@ -75,8 +75,8 @@ void bitmans_gatts_context_init(bitmans_gatts_context *pContext,
     pContext->UNREGISTER_BIT = BIT0;
     pContext->pszAdvName = pszAdvName;
     pContext->ble_events = xEventGroupCreate();
-    bitmans_ble_string_to_uuid(pszCharUUID, &pContext->char_uuid);
-    bitmans_ble_string_to_uuid(pszServerUUID, &pContext->service_uuid);
+    bitmans_ble_string_to_uuid128(pszCharUUID, &pContext->char_uuid);
+    bitmans_ble_string_to_uuid128(pszServerUUID, &pContext->service_uuid);
 }
 
 void bitmans_gatts_context_term(bitmans_gatts_context *pContext)
