@@ -17,10 +17,12 @@
         },
         {
             "path": "./ble_server"
-        }
-        ,
+        },
         {
             "path": "./ble_battery_server"
+        },
+        {
+            "path": "./ble_bob"
         }
     ],
         
