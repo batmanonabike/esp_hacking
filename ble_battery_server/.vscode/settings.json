@@ -1,0 +1,6 @@
+{
+    "idf.portWin": "COM13",
+    "idf.flashType": "JTAG",
+    "idf.launchMonitorOnDebugSession": true,
+    "idf.monitorPort": "COM13"
+}

@@ -18,6 +18,10 @@
         {
             "path": "./ble_server"
         }
+        ,
+        {
+            "path": "./ble_battery_server"
+        }
     ],
         
     "settings": {
