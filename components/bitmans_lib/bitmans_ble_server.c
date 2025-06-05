@@ -213,6 +213,34 @@ esp_err_t bitmans_gatts_create_char128(
     return bitmans_gatts_create_char(gatts_if, service_handle, &char_uuid, properties, permissions);
 }
 
+// The Client Characteristic Configuration Descriptor (CCCD, UUID 0x2902) is required for any
+// BLE characteristic that supports notifications or indications.
+// It allows each client to enable or disable notifications/indications for itself by writing to this descriptor.
+// Without the CCCD, clients cannot subscribe to battery level notifications, even if the characteristic supports them.
+// https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/bluetooth/esp_gatts.html
+esp_err_t bitmans_gatts_add_cccd(uint16_t service_handle, uint16_t char_handle)
+{
+    // 0x2902 is the standard UUID for CCCD
+    esp_bt_uuid_t cccd_uuid = {
+        .len = ESP_UUID_LEN_16,
+        .uuid = {.uuid16 = ESP_GATT_UUID_CHAR_CLIENT_CONFIG}};
+
+    // Permissions: allow client to read and write the descriptor
+    esp_err_t err = esp_ble_gatts_add_char_descr(service_handle, &cccd_uuid,
+                                                 ESP_GATT_PERM_READ | ESP_GATT_PERM_WRITE, NULL, NULL);
+
+    if (err != ESP_OK)
+    {
+        ESP_LOGE(TAG, "Failed to add CCCD descriptor: %s", esp_err_to_name(err));
+    }
+    else
+    {
+        ESP_LOGI(TAG, "CCCD descriptor added for service_handle=%d, char_handle=%d", service_handle, char_handle);
+    }
+
+    return err;
+}
+
 static bitmans_gatts_callbacks_t *bitmans_gatts_callbacks_lookup(esp_gatt_if_t gatts_if)
 {
     bitmans_gatts_callbacks_t *pCallbacks = NULL;
@@ -273,18 +301,20 @@ esp_err_t bitmans_gatts_send_uint8(
 // These include:
 // - ESP_GATTS_REG_EVT: GATT server profile registered, usually where you create your service.
 // - ESP_GATTS_CREATE_EVT: Service created, add characteristics here.
-// - ESP_GATTS_ADD_CHAR_EVT: Characteristic added, start the service.
+// - ESP_GATTS_ADD_CHAR_EVT: Characteristic added, add descriptors (like CCCD) here.
+// - ESP_GATTS_ADD_CHAR_DESCR_EVT: Descriptor (such as CCCD) added, store descriptor handle if needed.
 // - ESP_GATTS_START_EVT: Service started, begin advertising.
 // - ESP_GATTS_CONNECT_EVT: A client has connected.
 // - ESP_GATTS_DISCONNECT_EVT: A client has disconnected, often restart advertising.
-// - ESP_GATTS_READ_EVT: A client is reading a characteristic value.
-// - ESP_GATTS_WRITE_EVT: A client is writing to a characteristic value.
+// - ESP_GATTS_READ_EVT: A client is reading a characteristic or descriptor value.
+// - ESP_GATTS_WRITE_EVT: A client is writing to a characteristic or descriptor value.
 // https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/bluetooth/esp_gatts.html#_CPPv426esp_gatts_cb_event_t
 
 // Order of Operations: The correct order of operations is:
 // ESP_GATTS_REG_EVT: Register the GATT application and create the service.
 // ESP_GATTS_CREATE_EVT: The service is created. Now add the characteristic.
-// ESP_GATTS_ADD_CHAR_EVT: The characteristic is added. Now start the service.
+// ESP_GATTS_ADD_CHAR_EVT: The characteristic is added. Now add descriptors (like CCCD).
+// ESP_GATTS_ADD_CHAR_DESCR_EVT: The descriptor is added. Now start the service.
 // ESP_GATTS_START_EVT: The service is started. Now start advertising.
 static void bitmans_gatts_event_handler(esp_gatts_cb_event_t event, esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *pParam)
 {
@@ -293,17 +323,14 @@ static void bitmans_gatts_event_handler(esp_gatts_cb_event_t event, esp_gatt_if_
     switch (event)
     {
     case ESP_GATTS_REG_EVT:
-    {
-        ESP_LOGI(TAG, "ESP_GATTS_REG_EVT, Service registered, gatts_if=%d, app_id=%d", gatts_if, pParam->reg.app_id);
+        ESP_LOGI(TAG, "ESP_GATTS_REG_EVT, Service registered");
         pCallbacks = bitmans_gatts_callbacks_create_mapping(gatts_if, pParam->reg.app_id);
         if (pCallbacks != NULL)
             pCallbacks->on_reg(pCallbacks, pParam);
-    }
-    break;
+        break;
 
     case ESP_GATTS_CREATE_EVT:
-    {
-        ESP_LOGI(TAG, "ESP_GATTS_CREATE_EVT, Service created, service_handle=%d", pParam->create.service_handle);
+        ESP_LOGI(TAG, "ESP_GATTS_CREATE_EVT, Service created");
         pCallbacks = bitmans_gatts_callbacks_lookup(gatts_if);
         if (pCallbacks != NULL)
         {
@@ -311,34 +338,38 @@ static void bitmans_gatts_event_handler(esp_gatts_cb_event_t event, esp_gatt_if_
             pCallbacks->on_create(pCallbacks, pParam);
         }
         break;
-    }
 
     case ESP_GATTS_ADD_CHAR_EVT:
-        ESP_LOGI(TAG, "ESP_GATTS_ADD_CHAR_EVT, Characteristic added, char_handle=%d", pParam->add_char.attr_handle);
+        ESP_LOGI(TAG, "ESP_GATTS_ADD_CHAR_EVT, Characteristic added");
         pCallbacks = bitmans_gatts_callbacks_lookup(gatts_if);
         if (pCallbacks != NULL)
             pCallbacks->on_add_char(pCallbacks, pParam);
         break;
 
+    case ESP_GATTS_ADD_CHAR_DESCR_EVT:
+        ESP_LOGI(TAG, "ESP_GATTS_ADD_CHAR_DESCR_EVT, Descriptor added");
+        pCallbacks = bitmans_gatts_callbacks_lookup(gatts_if);
+        if (pCallbacks != NULL)
+            pCallbacks->on_add_char_descr(pCallbacks, pParam);
+        break;
+
     case ESP_GATTS_START_EVT:
-        ESP_LOGI(TAG, "ESP_GATTS_START_EVT, Service started, gatts_if=%d", gatts_if);
+        ESP_LOGI(TAG, "ESP_GATTS_START_EVT, Service started");
         pCallbacks = bitmans_gatts_callbacks_lookup(gatts_if);
         if (pCallbacks != NULL)
             pCallbacks->on_start(pCallbacks, pParam);
         break;
 
     case ESP_GATTS_CONNECT_EVT:
-        ESP_LOGI(TAG, "ESP_GATTS_CONNECT_EVT, Client connected, gatts_if=%d, conn_id=%d", gatts_if, pParam->connect.conn_id);
+        ESP_LOGI(TAG, "ESP_GATTS_CONNECT_EVT, Client connected");
         pCallbacks = bitmans_gatts_callbacks_lookup(gatts_if);
-
         if (pCallbacks != NULL)
             pCallbacks->on_connect(pCallbacks, pParam);
         break;
 
     case ESP_GATTS_DISCONNECT_EVT:
-        ESP_LOGI(TAG, "ESP_GATTS_DISCONNECT_EVT, Client disconnected, restarting advertising");
+        ESP_LOGI(TAG, "ESP_GATTS_DISCONNECT_EVT, Client disconnected");
         pCallbacks = bitmans_gatts_callbacks_lookup(gatts_if);
-
         if (pCallbacks != NULL)
             pCallbacks->on_disconnect(pCallbacks, pParam);
         break;
@@ -346,20 +377,23 @@ static void bitmans_gatts_event_handler(esp_gatts_cb_event_t event, esp_gatt_if_
     case ESP_GATTS_READ_EVT:
         ESP_LOGI(TAG, "ESP_GATTS_READ_EVT, Read event");
         pCallbacks = bitmans_gatts_callbacks_lookup(gatts_if);
+        if (pCallbacks != NULL)
+            pCallbacks->on_read(pCallbacks, pParam);
+        break;
 
         // Respond with dummy data
-        {
-            uint8_t value[4] = {0x42, 0x43, 0x44, 0x45};
-            esp_gatt_rsp_t rsp = {0};
-            rsp.attr_value.handle = pParam->read.handle;
-            rsp.attr_value.len = 4;
-            memcpy(rsp.attr_value.value, value, 4);
-            esp_ble_gatts_send_response(gatts_if, pParam->read.conn_id, pParam->read.trans_id, ESP_GATT_OK, &rsp);
-        }
+        // {
+        //     uint8_t value[4] = {0x42, 0x43, 0x44, 0x45};
+        //     esp_gatt_rsp_t rsp = {0};
+        //     rsp.attr_value.handle = pParam->read.handle;
+        //     rsp.attr_value.len = 4;
+        //     memcpy(rsp.attr_value.value, value, 4);
+        //     esp_ble_gatts_send_response(gatts_if, pParam->read.conn_id, pParam->read.trans_id, ESP_GATT_OK, &rsp);
+        // }
         break;
 
     case ESP_GATTS_WRITE_EVT:
-        ESP_LOGI(TAG, "ESP_GATTS_WRITE_EVT, Write event, len=%d", pParam->write.len);
+        ESP_LOGI(TAG, "ESP_GATTS_WRITE_EVT, Write event");
         pCallbacks = bitmans_gatts_callbacks_lookup(gatts_if);
 
         // Optionally process param->write.value
@@ -371,7 +405,6 @@ static void bitmans_gatts_event_handler(esp_gatts_cb_event_t event, esp_gatt_if_
         pCallbacks = bitmans_gatts_callbacks_lookup(gatts_if);
         if (pCallbacks != NULL)
             pCallbacks->on_unreg(pCallbacks, pParam);
-
         bitmans_hash_table_remove(&gatts_cb_table, gatts_if);
         break;
 
@@ -471,6 +504,8 @@ void bitmans_ble_gatts_callbacks_init(bitmans_gatts_callbacks_t *pCallbacks, voi
         pCallbacks->on_add_char = bitman_gatts_no_op;
     if (pCallbacks->on_disconnect == NULL)
         pCallbacks->on_disconnect = bitman_gatts_no_op;
+    if (pCallbacks->on_add_char_descr == NULL)
+        pCallbacks->on_add_char_descr = bitman_gatts_no_op;
 }
 
 esp_err_t bitmans_ble_gatts_register(bitmans_gatts_app_id app_id, bitmans_gatts_callbacks_t *pCallbacks, void *pContext)

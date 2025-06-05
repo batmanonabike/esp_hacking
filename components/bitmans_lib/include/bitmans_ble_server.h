@@ -20,6 +20,7 @@ typedef struct bitmans_gatts_callbacks_t
     void (*on_reg)(struct bitmans_gatts_callbacks_t *, esp_ble_gatts_cb_param_t *);
     void (*on_create)(struct bitmans_gatts_callbacks_t *, esp_ble_gatts_cb_param_t *);
     void (*on_add_char)(struct bitmans_gatts_callbacks_t *, esp_ble_gatts_cb_param_t *);
+    void (*on_add_char_descr)(struct bitmans_gatts_callbacks_t *, esp_ble_gatts_cb_param_t *);
     void (*on_start)(struct bitmans_gatts_callbacks_t *, esp_ble_gatts_cb_param_t *);
     void (*on_connect)(struct bitmans_gatts_callbacks_t *, esp_ble_gatts_cb_param_t *);
     void (*on_disconnect)(struct bitmans_gatts_callbacks_t *, esp_ble_gatts_cb_param_t *);
@@ -43,6 +44,7 @@ esp_err_t bitmans_gatts_begin_advertise128(const char *, bitmans_ble_uuid128_t *
 esp_err_t bitmans_gatts_create_service128(esp_gatt_if_t gatts_if, bitmans_ble_uuid128_t *pId);
 esp_err_t bitmans_gatts_create_char128(esp_gatt_if_t, bitmans_gatts_service_handle, 
     bitmans_ble_uuid128_t *, esp_gatt_char_prop_t, esp_gatt_perm_t);
+esp_err_t bitmans_gatts_add_cccd(uint16_t service_handle, uint16_t char_handle);
 
 esp_err_t bitmans_gatts_send_response(
     esp_gatt_if_t gatts_if, uint16_t conn_id, uint32_t trans_id,
