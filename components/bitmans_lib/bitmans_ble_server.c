@@ -151,173 +151,8 @@ esp_err_t bitmans_gatts_advertise128(const char *pszAdvertisedName, bitmans_ble_
     return bitmans_gatts_advertise(pszAdvertisedName, pId->uuid, ESP_UUID_LEN_128);
 }
 
-esp_err_t bitmans_gatts_advertise16_broken(const char *pszAdvertisedName, bitmans_ble_uuid16_t id)
-{
-    // The pointer must point to a buffer of the correct size (2 bytes for 16-bit UUID, in little-endian order).
-    uint8_t uuid_le[2];
-    uuid_le[0] = id & 0xFF;
-    uuid_le[1] = (id >> 8) & 0xFF;
-    return bitmans_gatts_advertise(pszAdvertisedName, uuid_le, ESP_UUID_LEN_16);
-}
-
-#define EXAMPLE_SERVICE_UUID 0xABCD  
-
-//static uint16_t battery_service_uuid = 0x180F;
-
-// void configure_ble_advertising_with_16bit_uuid(void)
-// {
-//     esp_err_t ret;
-    
-//     // Define the 16-bit service UUID
-//     uint16_t service_uuid = EXAMPLE_SERVICE_UUID;
-    
-//     // Configure the advertising data
-//     static esp_ble_adv_data_t adv_data = {
-//         .set_scan_rsp = false,
-//         .include_name = true,
-//         .include_txpower = false,
-//         .min_interval = 0x0006, // Minimum advertising interval
-//         .max_interval = 0x0010, // Maximum advertising interval
-//         .appearance = 0x00,
-//         .manufacturer_len = 0,
-//         .p_manufacturer_data = NULL,
-//         .service_data_len = 0,
-//         .p_service_data = NULL,
-//         .service_uuid_len = sizeof(service_uuid),
-//         .p_service_uuid = (uint8_t*)&service_uuid,
-//         .flag = (ESP_BLE_ADV_FLAG_GEN_DISC | ESP_BLE_ADV_FLAG_BREDR_NOT_SPT),
-//     };
-    
-//     // Set the advertising data
-//     ret = esp_ble_gap_config_adv_data(&adv_data);
-//     if (ret) {
-//         ESP_LOGE(TAG, "Configure advertising data failed, error code = %x", ret);
-//         return;
-//     }
-    
-//     ESP_LOGI(TAG, "Configure advertising data with 16-bit service UUID: 0x%04X", service_uuid);
-// }
-
-static uint8_t service_uuid[ESP_UUID_LEN_16] = {0x0F, 0x18};
-
-void configure_ble_advertising(void)
-{
-    esp_err_t ret;
-    
-    // Configure advertising data
-    static esp_ble_adv_data_t adv_data = {
-        .set_scan_rsp = false,
-        .include_name = true,
-        .include_txpower = true,
-        .min_interval = 0x20,
-        .max_interval = 0x40,
-        .appearance = 0x00,
-        .manufacturer_len = 0,
-        .p_manufacturer_data = NULL,
-        .service_data_len = 0,
-        .p_service_data = NULL,
-        .service_uuid_len = ESP_UUID_LEN_16,
-        .p_service_uuid = service_uuid,
-        .flag = (ESP_BLE_ADV_FLAG_GEN_DISC | ESP_BLE_ADV_FLAG_BREDR_NOT_SPT),
-    };
-
-    // Set advertising data
-    ret = esp_ble_gap_config_adv_data(&adv_data);
-    if (ret) {
-        ESP_LOGE(TAG, "Failed to configure advertising data, error code = %x", ret);
-        return;
-    }
-    
-    ESP_LOGI(TAG, "Advertising configuration complete with Battery Service UUID (0x180F)");
-}
-
-void configure_ble_adv_with_16bit_uuid(uint16_t service_uuid)
-{
-    // https://docs.espressif.com/projects/esp-idf/en/stable/esp32/api-reference/bluetooth/esp_gap_ble.html#_CPPv418esp_ble_adv_data_t
-    static esp_ble_adv_data_t adv_data = {0};
-    static uint8_t service_uuid_16[2];
-
-    // Convert 16-bit UUID to little-endian byte array
-    service_uuid_16[0] = service_uuid & 0xFF;
-    service_uuid_16[1] = (service_uuid >> 8) & 0xFF;
-
-    adv_data.set_scan_rsp = false;
-    adv_data.include_name = true;
-    adv_data.include_txpower = false;
-    adv_data.min_interval = 0x0006; // Optional
-    adv_data.max_interval = 0x0010; // Optional
-    adv_data.appearance = 0x00;
-    adv_data.manufacturer_len = 0;
-    adv_data.p_manufacturer_data = NULL;
-    adv_data.service_data_len = 0;
-    adv_data.p_service_data = NULL;
-    adv_data.service_uuid_len = sizeof(service_uuid_16);
-    adv_data.p_service_uuid = service_uuid_16;
-    adv_data.flag = (ESP_BLE_ADV_FLAG_GEN_DISC | ESP_BLE_ADV_FLAG_BREDR_NOT_SPT);
-
-    esp_err_t err = esp_ble_gap_config_adv_data(&adv_data);
-    if (err != ESP_OK) 
-    {
-        ESP_LOGE(TAG, "Still buggered: %s", esp_err_to_name(err));
-    }
-}
-
-esp_err_t bitmans_gatts_advertise16(const char *pszAdvertisedName, bitmans_ble_uuid16_t id)
-{
-    configure_ble_advertising();
-    //configure_ble_adv_with_16bit_uuid(id);
-    //configure_ble_advertising_with_16bit_uuid();
-    return ESP_OK;
-
-    esp_err_t err = ESP_OK;
-    if (pszAdvertisedName != NULL)
-    {
-        err = esp_ble_gap_set_device_name(pszAdvertisedName);
-        if (err != ESP_OK)
-        {
-            ESP_LOGE(TAG, "Failed to set device name for: %s, %s", pszAdvertisedName, esp_err_to_name(err));
-            return err;
-        }
-    }
-
-    // Prepare 2-byte little-endian UUID
-    uint8_t uuid_le[2];
-    uuid_le[0] = id & 0xFF;
-    uuid_le[1] = (id >> 8) & 0xFF;
-
-    esp_ble_adv_data_t adv_data = {
-        .p_service_uuid = uuid_le,
-        .service_uuid_len = ESP_UUID_LEN_16,
-        .set_scan_rsp = false,
-        .include_name = true,
-        .include_txpower = false,
-        .min_interval = 0x0006,
-        .max_interval = 0x0010,
-        .appearance = 0x00,
-        .manufacturer_len = 0,
-        .p_manufacturer_data = NULL,
-        .service_data_len = 0,
-        .p_service_data = NULL,
-        .flag = (ESP_BLE_ADV_FLAG_GEN_DISC | ESP_BLE_ADV_FLAG_BREDR_NOT_SPT),
-    };
-
-    ESP_LOGI(TAG, "Advertising 16-bit UUID (v2): %02x %02x", uuid_le[0], uuid_le[1]);
-
-    err = esp_ble_gap_config_adv_data(&adv_data);
-    if (err != ESP_OK)
-    {
-        ESP_LOGE(TAG, "Failed to configure advertising2 data: %s", esp_err_to_name(err));
-        return err;
-    }
-    ESP_LOGV(TAG, "Advertising (v2) succeeded");
-    return ESP_OK;
-}
-
 static esp_err_t bitmans_gatts_create_service(esp_gatt_if_t gatts_if, esp_gatt_id_t *pId)
 {
-    // memcpy(service_id.uuid.uuid.uuid128, pServiceUUID->uuid, sizeof(pServiceUUID->uuid));
-
-    // esp_err_t err = esp_ble_gatts_create_service(gatts_if, (void *)pServiceId, 8);
     esp_err_t err = esp_ble_gatts_create_service(gatts_if, pId, 8);
     if (err != ESP_OK)
     {
@@ -326,24 +161,6 @@ static esp_err_t bitmans_gatts_create_service(esp_gatt_if_t gatts_if, esp_gatt_i
     }
 
     return ESP_OK;
-}
-
-esp_err_t bitmans_gatts_create_service16(esp_gatt_if_t gatts_if, bitmans_ble_uuid16_t id)
-{
-    esp_gatt_id_t service_id = {
-        .inst_id = 0,
-        .uuid = {
-            .len = ESP_UUID_LEN_16,
-            .uuid = {.uuid16 = id}}};
-    return bitmans_gatts_create_service(gatts_if, &service_id);
-
-    // esp_err_t err = esp_ble_gatts_create_service(gatts_if, &service_id, 8);
-    // if (err != ESP_OK)
-    // {
-    //     ESP_LOGE(TAG, "Failed to create 16-bit GATTS service: %s", esp_err_to_name(err));
-    //     return err;
-    // }
-    // return ESP_OK;
 }
 
 esp_err_t bitmans_gatts_create_service128(esp_gatt_if_t gatts_if, bitmans_ble_uuid128_t *pId)
@@ -357,14 +174,6 @@ esp_err_t bitmans_gatts_create_service128(esp_gatt_if_t gatts_if, bitmans_ble_uu
 
     return bitmans_gatts_create_service(gatts_if, &service_id);
 
-    // esp_err_t err = esp_ble_gatts_create_service(gatts_if, (void *)&service_id, 8);
-    // if (err != ESP_OK)
-    // {
-    //     ESP_LOGE(TAG, "Failed to create GATTS service: %s", esp_err_to_name(err));
-    //     return err;
-    // }
-
-    // return ESP_OK;
 }
 
 // Permissions control what operations a client is allowed to perform on the characteristic value.
@@ -407,50 +216,6 @@ esp_err_t bitmans_gatts_create_char128(
     };
     memcpy(char_uuid.uuid.uuid128, pId->uuid, sizeof(pId->uuid));
     return bitmans_gatts_create_char(gatts_if, service_handle, &char_uuid, properties, permissions);
-
-    // esp_err_t err = esp_ble_gatts_add_char(
-    //     service_handle,
-    //     &char_uuid,
-    //     permissions,
-    //     properties,
-    //     NULL,
-    //     NULL);
-
-    // if (err != ESP_OK)
-    // {
-    //     ESP_LOGE(TAG, "Failed to add characteristic: %s", esp_err_to_name(err));
-    //     return err;
-    // }
-
-    // return ESP_OK;
-}
-
-esp_err_t bitmans_gatts_create_char16(
-    esp_gatt_if_t gatts_if, bitmans_gatts_service_handle service_handle,
-    bitmans_ble_uuid16_t id, esp_gatt_char_prop_t properties, esp_gatt_perm_t permissions)
-{
-    esp_bt_uuid_t char_uuid = {
-        .len = ESP_UUID_LEN_16,
-        .uuid = {.uuid16 = id}
-    };
-    return bitmans_gatts_create_char(gatts_if, service_handle, &char_uuid, properties, permissions);
-
-
-    // esp_err_t err = esp_ble_gatts_add_char(
-    //     service_handle,
-    //     &char_uuid,
-    //     permissions,
-    //     properties,
-    //     NULL,
-    //     NULL);
-
-    // if (err != ESP_OK)
-    // {
-    //     ESP_LOGE(TAG, "Failed to add 16-bit characteristic: %s", esp_err_to_name(err));
-    //     return err;
-    // }
-
-    // return ESP_OK;
 }
 
 static bitmans_gatts_callbacks_t *bitmans_gatts_callbacks_lookup(esp_gatt_if_t gatts_if)

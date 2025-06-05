@@ -30,7 +30,7 @@ static esp_err_t bitmans_ble_parse_uuid(const char *psz, uint8_t *pValue)
     return ESP_OK;
 }
 
-esp_err_t bitmans_ble_string_to_uuid128(const char *psz, bitmans_ble_uuid128_t *pId)
+esp_err_t bitmans_ble_string36_to_uuid128(const char *psz, bitmans_ble_uuid128_t *pId)
 {
     if (psz == NULL || pId == NULL)
     {
@@ -74,4 +74,64 @@ esp_err_t bitmans_ble_string_to_uuid128(const char *psz, bitmans_ble_uuid128_t *
         pId->uuid[i] = big_endian[ESP_UUID_LEN_128 - 1 - i];
 
     return ESP_OK;
+}
+
+// Converts a standard 16-bit UUID value to a 128-bit UUID
+// Uses the Bluetooth Base UUID: 0000xxxx-0000-1000-8000-00805F9B34FB
+esp_err_t bitmans_ble_uuid16_to_uuid128(uint16_t uuid16, bitmans_ble_uuid128_t *pId)
+{
+    if (pId == NULL)
+    {
+        ESP_LOGE(TAG, "Null pointer provided.");
+        return ESP_ERR_INVALID_ARG;
+    }
+
+    // Standard Bluetooth Base UUID: 0000xxxx-0000-1000-8000-00805F9B34FB
+    // In little-endian format for ESP32
+    static const uint8_t base_uuid[16] = {
+        0xFB, 0x34, 0x9B, 0x5F, 0x80, 0x00, // Last parts of the UUID
+        0x00, 0x80,                         // 8000
+        0x00, 0x10,                         // 1000
+        0x00, 0x00,                         // 0000
+        0x00, 0x00, 0x00, 0x00              // First part (to be replaced with uuid16)
+    };
+
+    // Copy the base UUID
+    memcpy(pId->uuid, base_uuid, sizeof(base_uuid));
+
+    // Replace the placeholder with the actual 16-bit UUID (in little-endian)
+    pId->uuid[12] = (uint8_t)(uuid16 & 0xFF);        // Low byte
+    pId->uuid[13] = (uint8_t)((uuid16 >> 8) & 0xFF); // High byte
+
+    return ESP_OK;
+}
+
+// Converts a 16-bit UUID string (e.g., "180F") to a 128-bit UUID
+// by parsing the string and using the existing bitmans_ble_uuid16_to_uuid128 function
+esp_err_t bitmans_ble_string4_to_uuid128(const char *psz, bitmans_ble_uuid128_t *pId)
+{
+    if (psz == NULL || pId == NULL)
+    {
+        ESP_LOGE(TAG, "Null pointer provided.");
+        return ESP_ERR_INVALID_ARG;
+    }
+
+    if (strlen(psz) != 4)
+    {
+        ESP_LOGE(TAG, "Invalid UUID16 string length: %s", psz);
+        return ESP_ERR_INVALID_ARG;
+    }
+
+    // Parse the 4-character hex string into a 16-bit value
+    uint8_t high_byte, low_byte;
+    esp_err_t err = bitmans_ble_parse_uuid(&psz[0], &high_byte);
+    if (err != ESP_OK)
+        return err;
+
+    err = bitmans_ble_parse_uuid(&psz[2], &low_byte);
+    if (err != ESP_OK)
+        return err;
+
+    uint16_t uuid16 = (high_byte << 8) | low_byte;
+    return bitmans_ble_uuid16_to_uuid128(uuid16, pId);
 }

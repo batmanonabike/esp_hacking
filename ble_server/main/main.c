@@ -89,8 +89,8 @@ void bitmans_gatts_context_init(bitmans_gatts_context *pContext,
     pContext->UNREGISTER_BIT = BIT0;
     pContext->pszAdvName = pszAdvName;
     pContext->ble_events = xEventGroupCreate();
-    bitmans_ble_string_to_uuid128(pszCharUUID, &pContext->char_uuid);
-    bitmans_ble_string_to_uuid128(pszServerUUID, &pContext->service_uuid);
+    ESP_ERROR_CHECK(bitmans_ble_string36_to_uuid128(pszCharUUID, &pContext->char_uuid));
+    ESP_ERROR_CHECK(bitmans_ble_string36_to_uuid128(pszServerUUID, &pContext->service_uuid));
 }
 
 void app_main(void)
