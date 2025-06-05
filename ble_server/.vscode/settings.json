@@ -1,0 +1,4 @@
+{
+    "idf.portWin": "COM15",
+    "idf.flashType": "JTAG"
+}

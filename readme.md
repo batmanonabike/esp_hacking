@@ -4,8 +4,8 @@
 
 Take from [espressif doc](https://docs.espressif.com/projects/esp-idf/en/stable/esp32/get-started/windows-setup.html)
 
-1. Ensure you have the drivers installed (e.g. CH340).  You should see something like: `USB-SERIAL CH340` in device manager when your ESP is connect. 
-You can the find the COM port from device manager.  Mine was COM11. 
+1. Ensure you have the drivers installed (e.g. CH340).  You should see something like: `USB-SERIAL CH340` in device manager when your ESP is connect.
+You can the find the COM port from device manager.  Mine was COM11.
 2. Install the framework from [here](https://dl.espressif.com/dl/esp-idf/?idf=4.4).  I used `v5.3.1 - Offline Installer`.
 3. Use the `ESP-IDF CMD' from the start menu.
 4. Copy an example, such as hello_world (`C:\Espressif\frameworks\esp-idf-v5.3.1\examples\get-started\hello_world`) to a working directory.
@@ -38,7 +38,7 @@ This captures output from the device for logging.
 
 ## Starting new projects
 
-vscode tip: 
+vscode tip:
 1. Use the `ESP-IDF CMD' from the start menu.
 2. code .
 This ensure that all the environment variables are used.
@@ -61,7 +61,10 @@ idf.py size-components
 ```
 
 ## Other notes:
-If you find that compilations are missing header files and you have added the dependencies...
+
+### Opening a workspace, such as `bitman_windows.code-workspace` is useful for allowing sub projects for the ESP-IDF vscode extension.
+ 
+### If you find that compilations are missing header files and you have added the dependencies...
 
 Ensure that menuconfig is enabling the required feature in the TOP level project (e.g. BLE).  Header files can be hidden otherwise.
 ```
@@ -74,8 +77,8 @@ Note that menuconfig alters `sdkconfig` which should probably be committed to so
 E.g. Enabling bluetooth in menuconfig made these changes:
 ```
 CONFIG_BT_ENABLED=y
-CONFIG_BT_BLUEDROID_ENABLED=y 
-CONFIG_BT_CONTROLLER_ENABLED=y 
+CONFIG_BT_BLUEDROID_ENABLED=y
+CONFIG_BT_CONTROLLER_ENABLED=y
 CONFIG_BT_BLE_ENABLED=y
 ```
 
@@ -128,9 +131,9 @@ Consider setting log levels directly in your C code (e.g., in `app_main`):
 
 void app_main(void) {
     // Set all other tags to ERROR level
-    esp_log_level_set("*", ESP_LOG_ERROR); 
+    esp_log_level_set("*", ESP_LOG_ERROR);
     // Set your specific tag to VERBOSE
-    esp_log_level_set("bitmans_lib:wifi_logging", ESP_LOG_VERBOSE); 
+    esp_log_level_set("bitmans_lib:wifi_logging", ESP_LOG_VERBOSE);
 
     // ... rest of your app_main code
 }
@@ -138,3 +141,29 @@ void app_main(void) {
 This requires a recompile and flash.
 
 You can also configure log levels via `idf.py menuconfig` under `Component config` -> `Log output`.
+
+## JTAG Debugging
+
+Make sure to have first *selected a project in the ESP-IDF extension*! (OpenOCD Server will fail otherwise).
+Ensure that `OpenOCD Server` can run.
+Once that is running you can `Debug` from the `ESP-IDF: Explorer` *or* from standard vscode menus.
+You may need to use the 'ESP-IDF: Add vscode Configuration Folder' for each project before you can debug.
+
+Getting this to work was a bit fiddly, but I suspect it was all down to drivers.
+
+The working driver was installed with `zadig-2.9.exe` as `WinUSB`.
+See also:
+File:`my_esp_prog.cfg` <-- I'm not sure if this was needed.
+File: `settings.json` and `idf.openOcdConfigs` <-- I'm not sure if this was needed either.
+
+```
+"idf.openOcdConfigs": [
+        "C:/source/repos/esp_hacking_33/my_esp_prog.cfg",
+        "${env:IDF_TOOLS_PATH}/tools/openocd-esp32/v0.12.0-esp32-20240318/openocd-esp32/share/openocd/scripts/board/esp32-wrover-kit-1.8v.cfg"
+    ],
+```
+
+https://medium.com/@manuel.bl/low-cost-esp32-in-circuit-debugging-dbbee39e508b
+https://docs.espressif.com/projects/esp-iot-solution/en/latest/hw-reference/ESP-Prog_guide.html
+
+
