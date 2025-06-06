@@ -168,3 +168,29 @@ https://docs.espressif.com/projects/esp-iot-solution/en/latest/hw-reference/ESP-
 
 Also note that *monitoring* works over the UART (COM port) not JTAG (which doesn't use a COM port).
 To permit both debugging and monitoring, you need two usb cables connected. One to the ESP Prog and one to the ESP32 UART.
+
+## ESP Tool and board identification
+
+https://espressif.github.io/esptool-js/
+
+## Bitmans ESP32s...
+
+A, B: esp32-devkitC-32, WROOM-32, CH340C
+C, D, E: WROOM-32, CP2102
+F: Need ESP Prog + JTAG (no USB)
+G: WROOM-S3-1, ESP32-S3 (QFN56) (revision v0.2), Embedded PSRAM 8MB (AP_3v3) [Build issues to address]
+H: TODO 
+I: ESP32S3 Sense, ESP32-S3 (QFN56) (revision v0.2), Wi-Fi,BLE,Embedded PSRAM 8MB (AP_3v3)
+
+## Troubleshooting
+This is needed for BLE on S3 (for bitmans_lib)...
+
+MenuConfig:
+```
+	"Enable BLE 4.2 features"
+```
+Or (directly in `sdkconfig`):
+```
+	CONFIG_BT_BLE_42_FEATURES_SUPPORTED=y
+```
+Then full clean.
