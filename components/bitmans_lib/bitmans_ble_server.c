@@ -105,7 +105,7 @@ static bitmans_gatts_callbacks_t *bitmans_gatts_callbacks_create_mapping(
     return NULL;
 }
 
-static esp_err_t bitmans_gatts_begin_advertise(const char *pszAdvertisedName, const uint8_t *pId, uint8_t idLen)
+esp_err_t bitmans_gatts_begin_advertise(const char *pszAdvertisedName, const uint8_t *pId, uint8_t idLen)
 {
     esp_err_t err = ESP_OK;
     if (pszAdvertisedName != NULL)

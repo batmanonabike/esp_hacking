@@ -1,5 +1,8 @@
 #include <string.h>
+#include <stdlib.h>
 #include "esp_log.h"
+#include "esp_system.h"
+#include "esp_random.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/event_groups.h"
 
@@ -10,173 +13,123 @@ static const char *TAG = "ble_bob_app";
 typedef struct app_gatts_context
 {
     const char *pszAdvName;
-    uint16_t battery_level_handle;
-    bitmans_ble_uuid128_t battery_level_uuid;
-    bitmans_ble_uuid128_t battery_service_uuid;
-
 } app_gatts_context;
+
+static esp_err_t app_create_service(esp_gatt_if_t gatts_if)
+{
+    static esp_gatt_id_t service_id = {
+        .inst_id = 0,
+        .uuid = {
+            .len = ESP_UUID_LEN_16,
+            .uuid = {.uuid16 = 0x1800} // Generic Access, or any 16-bit value
+        }};
+    esp_err_t err = esp_ble_gatts_create_service(gatts_if, &service_id, 4);
+
+    if (err != ESP_OK)
+    {
+        ESP_LOGE(TAG, "Failed to create GATTS service: %s", esp_err_to_name(err));
+        return err;
+    }
+
+    return ESP_OK;
+}
 
 static void app_on_reg(bitmans_gatts_callbacks_t *pCb, esp_ble_gatts_cb_param_t *pParam)
 {
-    app_gatts_context *pAppContext = (app_gatts_context *)pCb->pContext;
-    esp_err_t err = bitmans_gatts_create_service128(pCb->gatts_if, &pAppContext->battery_service_uuid);
+    esp_err_t err = app_create_service(pCb->gatts_if);
 }
 
 static void app_on_create(bitmans_gatts_callbacks_t *pCb, esp_ble_gatts_cb_param_t *pParam)
 {
-    // Here we create the characteristic for the battery level.
-    app_gatts_context *pAppContext = (app_gatts_context *)pCb->pContext;
-    esp_err_t err = bitmans_gatts_create_char128(
-        pCb->gatts_if, pCb->service_handle, &pAppContext->battery_level_uuid,
-        ESP_GATT_CHAR_PROP_BIT_READ | ESP_GATT_CHAR_PROP_BIT_NOTIFY, //TODO: handle notifications
-        ESP_GATT_PERM_READ);
-}
-
-static void app_on_add_char(bitmans_gatts_callbacks_t *pCb, esp_ble_gatts_cb_param_t *pParam)
-{
-    app_gatts_context *pAppContext = (app_gatts_context *)pCb->pContext;
-    if (bitmans_ble_uuid_try_match(&pParam->add_char.char_uuid, &pAppContext->battery_level_uuid))
-    {
-        pAppContext->battery_level_handle = pParam->add_char.attr_handle;
-        ESP_LOGI(TAG, "Battery level characteristic added with handle: %d", pAppContext->battery_level_handle);
-
-        // Add CCCD so clients can enable notifications
-        esp_err_t err = bitmans_gatts_add_cccd(pCb->service_handle, pAppContext->battery_level_handle);
-    }
-
-    // TODO: delete/restart service if we fail to add the characteristic???
-}
-
-static void app_on_add_char_desc(bitmans_gatts_callbacks_t *pCb, esp_ble_gatts_cb_param_t *pParam)
-{
-    app_gatts_context *pAppContext = (app_gatts_context *)pCb->pContext;
     esp_err_t err = bitmans_gatts_start_service(pCb->service_handle);
 }
 
 static void app_on_start(bitmans_gatts_callbacks_t *pCb, esp_ble_gatts_cb_param_t *pParam)
 {
     app_gatts_context *pAppContext = (app_gatts_context *)pCb->pContext;
-    esp_err_t err = bitmans_gatts_begin_advertise128(pAppContext->pszAdvName, &pAppContext->battery_service_uuid);
+    esp_err_t err = bitmans_gatts_begin_advertise(pAppContext->pszAdvName, NULL, 0);
 }
 
-static void app_on_connect(bitmans_gatts_callbacks_t *pCb, esp_ble_gatts_cb_param_t *pParam)
+static const char *bob_insults[] = {
+    // 1234567890123456789012345]
+    "Tiny Bob strikes again!",
+    "Bob: fun-sized legend",
+    "Bob needs a booster seat",
+    "Bob: pocket edition",
+    "Bob can't reach the shelf",
+    "Bob: half-pint wonder",
+    "Bob: vertically efficient",
+    "Bob: knee-high ninja",
+    "Bob: short on height",
+    "Bob: pint-sized pal",
+    "Bob: small but loud",
+    "Bob: fun-sized fury",
+    "Bob: small fry",
+    "Bob: low altitude",
+    "Bob: ankle-biter",
+    "Bob: vertically challenged",
+    "Bob: human hobbit",
+    "Bob: fun-size failure",
+    "Bob: pocket-sized pain",
+    "Bob: mini menace",
+    "Bob: shortcut to nowhere",
+    "Bob: shrimp with attitude",
+    "Bob: microscopic moron",
+    "Bob: dwarf-sized drama",
+    "Bob: pint-sized pest",
+    "Bob: compact catastrophe",
+    "Bob: bite-sized brat",
+    "Bob: small package, big ego",
+    "Bob: little loudmouth",
+    "Bob: short stack of sass",
+    "Bob: fun-sized fool",
+    "Bob has a small penis",
+    "Bob: tiny tool, big mouth",
+    "Bob's dick is microscopic",
+    "Bob: small man, small dick",
+    "Bob: short & hung poorly",
+    "Bob: mini member moron",
+    "Bob's package is pathetic",
+    "Bob: little prick",
+    "Bob: size matters, you lose",
+    "Bob: micro penis energy",
+    "Bob compensates badly",
+    "Bob's tool needs tweezers",
+    "Bob: small stick, big ego",
+    "Bob: needle dick energy",
+    "Bob's lacking downstairs"};
+
+#define NUM_BOB_INSULTS (sizeof(bob_insults) / sizeof(bob_insults[0]))
+
+const char *pick_random_bob_insult()
 {
-    app_gatts_context *pAppContext = (app_gatts_context *)pCb->pContext;
-    bitmans_gatts_stop_advertising();
-
-    // You might want to cache the connection ID for later use for notifications,
-    // to send responses to the client, to manage the connection state,
-    // or to manage the connection state.
+    uint32_t random_val = esp_random();
+    int idx = random_val % NUM_BOB_INSULTS;
+    return bob_insults[idx];
 }
 
-static void app_on_read(bitmans_gatts_callbacks_t *pCb, esp_ble_gatts_cb_param_t *pParam)
-{
-    app_gatts_context *pAppContext = (app_gatts_context *)pCb->pContext;
-
-    // This is a read request for the battery level characteristic
-    if (pParam->read.handle == pAppContext->battery_level_handle)
-    {
-        uint8_t battery_level = 42; // Simulated value        
-        ESP_LOGI(TAG, "Sending battery level response: %d", battery_level);
-
-        bitmans_gatts_send_uint8(pCb->gatts_if, 
-            pParam->read.handle, pParam->read.conn_id, pParam->read.trans_id,
-            ESP_GATT_OK, battery_level);
-    }
-}
-
-static void app_on_disconnect(bitmans_gatts_callbacks_t *pCb, esp_ble_gatts_cb_param_t *pParam)
-{
-    app_gatts_context *pAppContext = (app_gatts_context *)pCb->pContext;
-    esp_err_t err = bitmans_gatts_begin_advertise128(pAppContext->pszAdvName, &pAppContext->battery_service_uuid);
-}
-
-static void app_on_unreg(bitmans_gatts_callbacks_t *pCb, esp_ble_gatts_cb_param_t *pParam)
-{
-    app_gatts_context *pAppContext = (app_gatts_context *)pCb->pContext;
-}
-
-static void app_context_term(app_gatts_context *pContext)
-{
-    pContext->pszAdvName = NULL;
-    pContext->battery_level_handle = 0;
-    memset(&pContext->battery_level_uuid, 0, sizeof(pContext->battery_level_uuid));
-    memset(&pContext->battery_service_uuid, 0, sizeof(pContext->battery_service_uuid));
-}
-
-// Our battery service uses:
-// 0x180F - Battery Service UUID (specific to battery)
-// 0x2A19 - Battery Level Characteristic UUID (specific to battery)
-// 0x2902 - CCCD (generic - same UUID used by heart rate monitors, thermometers, etc.)
-//
-// The 0x2902 descriptor is simply a mechanism that allows clients to subscribe to notifications. 
-// It's a general BLE feature that the battery service uses, but it's not specifically a battery thing.
-static void app_context_init(app_gatts_context *pContext)
-{
-    // https://www.bluetooth.com/specifications/gatt/characteristics/
-    pContext->battery_level_handle = 0;
-    pContext->pszAdvName = "Bitmans Battery";
-    ESP_ERROR_CHECK(bitmans_ble_string4_to_uuid128("2A19", &pContext->battery_level_uuid));
-    ESP_ERROR_CHECK(bitmans_ble_string4_to_uuid128("180F", &pContext->battery_service_uuid));
-}
-
-////////////////////////////////////////////////////////////////////////////////////////////
-// As it stands: this  is a correct, minimal, read-only fake battery service.
-// Testable with Bluetooth LE Explorer (Windows) or similar app.
-// TODO: To be “fully functioning pretend battery”:
-// Add a simulated battery level that changes over time.
-// Implement notification logic and CCCD write handling.
-// Add a timer to update the battery level and send notifications if a client is subscribed.
-// Handle client connection/pairing.
-////////////////////////////////////////////////////////////////////////////////////////////
+#define BITMANS_APP_ID 0x57
 void app_main(void)
 {
-#define BITMANS_APP_ID 0x56
-
-    app_gatts_context appContext;
-    bitmans_gatts_callbacks_t callbacks = {
-        .on_reg = app_on_reg,
-        .on_read = app_on_read,
-        .on_unreg = app_on_unreg,
-        .on_start = app_on_start,
-        .on_create = app_on_create,
-        .on_connect = app_on_connect,
-        .on_add_char = app_on_add_char,
-        .on_disconnect = app_on_disconnect,
-        .on_add_char_descr = app_on_add_char_desc,
-    };
-
     ESP_LOGI(TAG, "App starting");
-
     ESP_ERROR_CHECK(bitmans_lib_init());
     ESP_ERROR_CHECK(bitmans_ble_server_init());
-    app_context_init(&appContext);
+
+    app_gatts_context appContext = { 
+        .pszAdvName = pick_random_bob_insult()
+    };
+
+    bitmans_gatts_callbacks_t callbacks = {
+        .on_reg = app_on_reg,
+        .on_start = app_on_start,
+        .on_create = app_on_create,
+    };
     bitmans_ble_gatts_callbacks_init(&callbacks, &appContext);
 
     ESP_LOGI(TAG, "Register Gatts");
     ESP_ERROR_CHECK(bitmans_ble_gatts_register(BITMANS_APP_ID, &callbacks, &appContext));
 
     ESP_LOGI(TAG, "App running");
-    for (int counter = 180; counter > 0; counter--)
-    {
-        ESP_LOGI(TAG, "App counter: %d", counter);
+    while (1)
         vTaskDelay(1000 / portTICK_PERIOD_MS);
-    }
-
-    ESP_LOGI(TAG, "App running");
-    vTaskDelay(10000 / portTICK_PERIOD_MS);
-
-    ESP_LOGI(TAG, "Stop advertising");
-    bitmans_gatts_stop_advertising();
-    vTaskDelay(10000 / portTICK_PERIOD_MS);
-
-    ESP_LOGI(TAG, "Unregister Gatts");
-    bitmans_ble_gatts_unregister(BITMANS_APP_ID);
-    vTaskDelay(30000 / portTICK_PERIOD_MS);
-
-    ESP_LOGI(TAG, "Term BLE");
-    bitmans_ble_server_term();
-
-    app_context_term(&appContext);
-    ESP_LOGI(TAG, "App terminated");
 }
