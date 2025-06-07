@@ -35,7 +35,7 @@ static const uint8_t custom_service_uuid[ESP_UUID_LEN_128] = {
     0xC5, 0xA9, 0x55, 0x3A, 0x3F, 0xE9, 0x7A, 0xB4,
     0x88, 0x4C, 0xF0, 0xF2, 0x1A, 0x2B, 0x78, 0xDA};
 
-static void log_ble_scan(const ble_scan_result_t *pScanResult, bool ignoreNoAdvertisedName) // Changed type to esp_ble_scan_result_evt_param_t
+static void log_ble_scan(ble_scan_result_t *pScanResult, bool ignoreNoAdvertisedName) // Changed type to esp_ble_scan_result_evt_param_t
 {
     assert(pScanResult != NULL);
 
@@ -148,7 +148,7 @@ static void log_ble_scan(const ble_scan_result_t *pScanResult, bool ignoreNoAdve
     }
 }
 
-static bool find_custom_service_uuid(const ble_scan_result_t *scan_rst)
+static bool find_custom_service_uuid(ble_scan_result_t *scan_rst)
 {
     uint8_t *adv_data = NULL;
     uint8_t adv_data_len = 0;
@@ -643,7 +643,7 @@ esp_err_t bitmans_ble_client_stop_scan()
     return ret;
 }
 
-esp_err_t bitmans_ble_client_get_advertised_name(const ble_scan_result_t *pScanResult, advertised_name_t *pAdvertisedName) 
+esp_err_t bitmans_ble_client_get_advertised_name(ble_scan_result_t *pScanResult, advertised_name_t *pAdvertisedName) 
 {
     assert(pScanResult != NULL);
     assert(pAdvertisedName != NULL);

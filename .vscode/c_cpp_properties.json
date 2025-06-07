@@ -1,15 +1,17 @@
 {
     "configurations": [
         {
-            "name": "ESP-IDF",
-            "compilerPath": "${env:IDF_TOOLS_PATH}/tools/xtensa-esp32-elf/esp-2021r2-patch3-8.4.0/xtensa-esp32-elf/bin/xtensa-esp32-elf-gcc.exe",
+            "name": "BitmansESP-IDF",
+            "compilerPath": "${env:IDF_TOOLS_PATH}/tools/xtensa-esp-elf/esp-13.2.0_20240530/xtensa-esp-elf/bin/xtensa-esp32-elf-gcc.exe",            
             "cStandard": "c11",
             "cppStandard": "c++17",
             "includePath": [
                 "${workspaceFolder}/**",
                 "${env:IDF_PATH}/components/**",
+                "${env:IDF_PATH}/components/*/*/include",
                 "${env:IDF_TOOLS_PATH}/tools/**",
-                "${workspaceFolder}/components/**/include"
+                "${workspaceFolder}/components/**/include",
+                "${workspaceFolder}/components/bitmans_lib/include"
             ],
             "browse": {
                 "path": [

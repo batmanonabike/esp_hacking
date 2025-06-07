@@ -22,14 +22,14 @@ typedef struct app_gatts_context
 static void app_on_reg(bitmans_gatts_callbacks_t *pCb, esp_ble_gatts_cb_param_t *pParam)
 {
     app_gatts_context *pAppContext = (app_gatts_context *)pCb->pContext;
-    esp_err_t err = bitmans_gatts_create_service128(pCb->gatts_if, &pAppContext->service_uuid);
+    bitmans_gatts_create_service128(pCb->gatts_if, &pAppContext->service_uuid);
 }
 
 static void app_on_create(bitmans_gatts_callbacks_t *pCb, esp_ble_gatts_cb_param_t *pParam)
 {
     // One or more characteristics can be created here.
     app_gatts_context *pAppContext = (app_gatts_context *)pCb->pContext;
-    esp_err_t err = bitmans_gatts_create_char128(
+    bitmans_gatts_create_char128(
         pCb->gatts_if, pCb->service_handle, &pAppContext->char_uuid,
         ESP_GATT_CHAR_PROP_BIT_READ | ESP_GATT_CHAR_PROP_BIT_WRITE,
         ESP_GATT_PERM_READ | ESP_GATT_PERM_WRITE);
@@ -37,14 +37,13 @@ static void app_on_create(bitmans_gatts_callbacks_t *pCb, esp_ble_gatts_cb_param
 
 static void app_on_add_char(bitmans_gatts_callbacks_t *pCb, esp_ble_gatts_cb_param_t *pParam)
 {
-    app_gatts_context *pAppContext = (app_gatts_context *)pCb->pContext;
-    esp_err_t err = bitmans_gatts_start_service(pCb->service_handle);
+    bitmans_gatts_start_service(pCb->service_handle);
 }
 
 static void app_on_start(bitmans_gatts_callbacks_t *pCb, esp_ble_gatts_cb_param_t *pParam)
 {
     app_gatts_context *pAppContext = (app_gatts_context *)pCb->pContext;
-    esp_err_t err = bitmans_gatts_begin_advertise128(pAppContext->pszAdvName, &pAppContext->service_uuid);
+    bitmans_gatts_begin_advertise128(pAppContext->pszAdvName, &pAppContext->service_uuid);
 }
 
 static void app_on_unreg(bitmans_gatts_callbacks_t *pCb, esp_ble_gatts_cb_param_t *pParam)

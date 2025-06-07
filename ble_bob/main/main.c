@@ -17,12 +17,14 @@ typedef struct app_gatts_context
 
 static esp_err_t app_create_service(esp_gatt_if_t gatts_if)
 {
-    static esp_gatt_id_t service_id = {
+    esp_gatt_id_t id = {
         .inst_id = 0,
         .uuid = {
             .len = ESP_UUID_LEN_16,
             .uuid = {.uuid16 = 0x1800} // Generic Access, or any 16-bit value
         }};
+    esp_gatt_srvc_id_t service_id = { .id = id, .is_primary = true};
+
     esp_err_t err = esp_ble_gatts_create_service(gatts_if, &service_id, 4);
 
     if (err != ESP_OK)
@@ -36,18 +38,18 @@ static esp_err_t app_create_service(esp_gatt_if_t gatts_if)
 
 static void app_on_reg(bitmans_gatts_callbacks_t *pCb, esp_ble_gatts_cb_param_t *pParam)
 {
-    esp_err_t err = app_create_service(pCb->gatts_if);
+    app_create_service(pCb->gatts_if);
 }
 
 static void app_on_create(bitmans_gatts_callbacks_t *pCb, esp_ble_gatts_cb_param_t *pParam)
 {
-    esp_err_t err = bitmans_gatts_start_service(pCb->service_handle);
+    bitmans_gatts_start_service(pCb->service_handle);
 }
 
 static void app_on_start(bitmans_gatts_callbacks_t *pCb, esp_ble_gatts_cb_param_t *pParam)
 {
     app_gatts_context *pAppContext = (app_gatts_context *)pCb->pContext;
-    esp_err_t err = bitmans_gatts_begin_advertise(pAppContext->pszAdvName, NULL, 0);
+    bitmans_gatts_begin_advertise(pAppContext->pszAdvName, NULL, 0);
 }
 
 static const char *bob_insults[] = {

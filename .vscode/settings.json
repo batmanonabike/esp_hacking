@@ -18,7 +18,7 @@
         "${env:IDF_PATH}/components",
         "${env:IDF_TOOLS_PATH}/tools"
     ],
-    "C_Cpp.default.compilerPath": "${env:IDF_TOOLS_PATH}/tools/xtensa-esp32-elf/esp-2021r2-patch3-8.4.0/xtensa-esp32-elf/bin/xtensa-esp32-elf-gcc.exe",
+    "C_Cpp.default.compilerPath": "${env:IDF_TOOLS_PATH}/tools/xtensa-esp-elf/esp-13.2.0_20240530/xtensa-esp-elf/bin/xtensa-esp32-elf-gcc.exe",
     "C_Cpp.default.defines": [],
     "C_Cpp.default.cStandard": "c11",
     "C_Cpp.default.cppStandard": "c++17",

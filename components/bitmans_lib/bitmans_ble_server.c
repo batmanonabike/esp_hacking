@@ -105,7 +105,7 @@ static bitmans_gatts_callbacks_t *bitmans_gatts_callbacks_create_mapping(
     return NULL;
 }
 
-esp_err_t bitmans_gatts_begin_advertise(const char *pszAdvertisedName, const uint8_t *pId, uint8_t idLen)
+esp_err_t bitmans_gatts_begin_advertise(const char *pszAdvertisedName, uint8_t *pId, uint8_t idLen)
 {
     esp_err_t err = ESP_OK;
     if (pszAdvertisedName != NULL)
@@ -149,7 +149,7 @@ esp_err_t bitmans_gatts_begin_advertise128(const char *pszAdvertisedName, bitman
     return bitmans_gatts_begin_advertise(pszAdvertisedName, pId->uuid, ESP_UUID_LEN_128);
 }
 
-static esp_err_t bitmans_gatts_create_service(esp_gatt_if_t gatts_if, esp_gatt_id_t *pId)
+static esp_err_t bitmans_gatts_create_service(esp_gatt_if_t gatts_if, esp_gatt_srvc_id_t *pId)
 {
     esp_err_t err = esp_ble_gatts_create_service(gatts_if, pId, 8);
     if (err != ESP_OK)
@@ -163,12 +163,14 @@ static esp_err_t bitmans_gatts_create_service(esp_gatt_if_t gatts_if, esp_gatt_i
 
 esp_err_t bitmans_gatts_create_service128(esp_gatt_if_t gatts_if, bitmans_ble_uuid128_t *pId)
 {
-    esp_gatt_id_t service_id = {
+    esp_gatt_id_t id = {
         .inst_id = 0,
         .uuid = {
             .len = ESP_UUID_LEN_128,
             .uuid = {.uuid128 = {0}}}};
-    memcpy(service_id.uuid.uuid.uuid128, pId->uuid, sizeof(pId->uuid));
+    memcpy(id.uuid.uuid.uuid128, pId->uuid, sizeof(pId->uuid));
+
+    esp_gatt_srvc_id_t service_id = { .id = id, .is_primary = true};
 
     return bitmans_gatts_create_service(gatts_if, &service_id);
 }

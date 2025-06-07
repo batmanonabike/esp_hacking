@@ -173,17 +173,22 @@ To permit both debugging and monitoring, you need two usb cables connected. One 
 
 https://espressif.github.io/esptool-js/
 
-## Bitmans ESP32s...
+## Bitmans ESP32 devices
 
-A, B: esp32-devkitC-32, WROOM-32, CH340C  
-C, D, E: WROOM-32, CP2102  
-F: Need ESP Prog + JTAG (no USB)  
-G: WROOM-S3-1, ESP32-S3 (QFN56) (revision v0.2), Embedded PSRAM 8MB (AP_3v3) [Build issues to address]  
-H: TODO   
-I: ESP32S3 Sense, ESP32-S3 (QFN56) (revision v0.2), Wi-Fi,BLE,Embedded PSRAM 8MB (AP_3v3)
+Regarding the chipsets:
+
+- Labels: **A, B** hardware is esp32-devkitC-32, `WROOM-32`, `CH340C`  
+- Labels: **C, D, E**: `WROOM-32`, `CP2102`  
+I think I blew up `D` by drunken incorrect battery insertion.
+- Label: **F**: `TODO`, no UART, Need ESP Prog + JTAG (no USB)  
+- Label: **G**: `WROOM-S3-1`, ESP32-S3 (QFN56) (revision v0.2)  
+Embedded PSRAM 8MB (AP_3v3) [Build issues to address]  
+- Label: **H**: `TODO`   
+- Label: **I**: ESP32-S3 Sense, `ESP32-S3` (QFN56) (revision v0.2)  
+Wi-Fi,BLE,Embedded PSRAM 8MB (AP_3v3)
 
 ## Troubleshooting
-This is needed for BLE on S3 (for bitmans_lib)...
+This is needed for BLE on ESP32-*S3* (for bitmans_lib)...
 
 MenuConfig:
 ```
@@ -194,3 +199,51 @@ Or (directly in `sdkconfig`):
 	CONFIG_BT_BLE_42_FEATURES_SUPPORTED=y
 ```
 Then full clean.
+
+## VSCode Intellisense.
+
+You need to provide vscode information *seperate* from the build chain for intellisense to work.
+
+In `.vscode/c_cpp_properties.json`:
+```
+{
+    "configurations": [
+        {
+            "name": "BitmansESP-IDF",
+            "compilerPath": "${env:IDF_TOOLS_PATH}/tools/xtensa-esp-elf/esp-13.2.0_20240530/xtensa-esp-elf/bin/xtensa-esp32-elf-gcc.exe",  
+```
+Also note that there is a *default* compiler path (`C_Cpp.default.compilerPath`) in `.vscode/settings.json`. 
+
+### Example
+On my windows PC:
+```
+${env:IDF_TOOLS_PATH}/tools/xtensa-esp-elf/esp-13.2.0_20240530/xtensa-esp-elf/bin/xtensa-esp32-elf-gcc.exe
+```
+maps to:
+```
+C:\Espressif\tools\xtensa-esp-elf\esp-13.2.0_20240530\xtensa-esp-elf\bin\xtensa-esp32-elf-gcc.exe
+```
+And:
+```
+IDF_TOOLS_PATH=C:\Espressif
+IDF_PATH=C:\Espressif\frameworks\esp-idf-v5.3.1
+```
+
+You can use the command pallette to select the correct configiuration...
+```
+C/C++: Select IntelliSense Configuration
+```
+Then the `name` in `.vscode/c_cpp_properties.json` (e.g. `BitmansESP-IDF`) should appear in the status bar (bottom-right corner of VS Code).  
+Alternatively you click on that part of the status bar to select the configuration.
+
+### Debug Compiler Path for Intellisense
+Also note that there are *debug* versions of the gcc executable...
+
+```
+C:\Espressif\tools\xtensa-esp-elf-gdb\14.2_20240403\xtensa-esp-elf-gdb\bin
+    xtensa-esp32-elf-gdb.exe
+    xtensa-esp32s2-elf-gdb.exe
+    xtensa-esp32s3-elf-gdb.exe
+```
+
+Though when using an ESP Prog for debugging, I've yet found a purpose for this, debugging seems to work.

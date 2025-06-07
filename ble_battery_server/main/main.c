@@ -19,14 +19,14 @@ typedef struct app_gatts_context
 static void app_on_reg(bitmans_gatts_callbacks_t *pCb, esp_ble_gatts_cb_param_t *pParam)
 {
     app_gatts_context *pAppContext = (app_gatts_context *)pCb->pContext;
-    esp_err_t err = bitmans_gatts_create_service128(pCb->gatts_if, &pAppContext->battery_service_uuid);
+    bitmans_gatts_create_service128(pCb->gatts_if, &pAppContext->battery_service_uuid);
 }
 
 static void app_on_create(bitmans_gatts_callbacks_t *pCb, esp_ble_gatts_cb_param_t *pParam)
 {
     // Here we create the characteristic for the battery level.
     app_gatts_context *pAppContext = (app_gatts_context *)pCb->pContext;
-    esp_err_t err = bitmans_gatts_create_char128(
+    bitmans_gatts_create_char128(
         pCb->gatts_if, pCb->service_handle, &pAppContext->battery_level_uuid,
         ESP_GATT_CHAR_PROP_BIT_READ | ESP_GATT_CHAR_PROP_BIT_NOTIFY, //TODO: handle notifications
         ESP_GATT_PERM_READ);
@@ -41,7 +41,7 @@ static void app_on_add_char(bitmans_gatts_callbacks_t *pCb, esp_ble_gatts_cb_par
         ESP_LOGI(TAG, "Battery level characteristic added with handle: %d", pAppContext->battery_level_handle);
 
         // Add CCCD so clients can enable notifications
-        esp_err_t err = bitmans_gatts_add_cccd(pCb->service_handle, pAppContext->battery_level_handle);
+        bitmans_gatts_add_cccd(pCb->service_handle, pAppContext->battery_level_handle);
     }
 
     // TODO: delete/restart service if we fail to add the characteristic???
@@ -49,19 +49,17 @@ static void app_on_add_char(bitmans_gatts_callbacks_t *pCb, esp_ble_gatts_cb_par
 
 static void app_on_add_char_desc(bitmans_gatts_callbacks_t *pCb, esp_ble_gatts_cb_param_t *pParam)
 {
-    app_gatts_context *pAppContext = (app_gatts_context *)pCb->pContext;
-    esp_err_t err = bitmans_gatts_start_service(pCb->service_handle);
+    bitmans_gatts_start_service(pCb->service_handle);
 }
 
 static void app_on_start(bitmans_gatts_callbacks_t *pCb, esp_ble_gatts_cb_param_t *pParam)
 {
     app_gatts_context *pAppContext = (app_gatts_context *)pCb->pContext;
-    esp_err_t err = bitmans_gatts_begin_advertise128(pAppContext->pszAdvName, &pAppContext->battery_service_uuid);
+    bitmans_gatts_begin_advertise128(pAppContext->pszAdvName, &pAppContext->battery_service_uuid);
 }
 
 static void app_on_connect(bitmans_gatts_callbacks_t *pCb, esp_ble_gatts_cb_param_t *pParam)
 {
-    app_gatts_context *pAppContext = (app_gatts_context *)pCb->pContext;
     bitmans_gatts_stop_advertising();
 
     // You might want to cache the connection ID for later use for notifications,
@@ -88,12 +86,11 @@ static void app_on_read(bitmans_gatts_callbacks_t *pCb, esp_ble_gatts_cb_param_t
 static void app_on_disconnect(bitmans_gatts_callbacks_t *pCb, esp_ble_gatts_cb_param_t *pParam)
 {
     app_gatts_context *pAppContext = (app_gatts_context *)pCb->pContext;
-    esp_err_t err = bitmans_gatts_begin_advertise128(pAppContext->pszAdvName, &pAppContext->battery_service_uuid);
+    bitmans_gatts_begin_advertise128(pAppContext->pszAdvName, &pAppContext->battery_service_uuid);
 }
 
 static void app_on_unreg(bitmans_gatts_callbacks_t *pCb, esp_ble_gatts_cb_param_t *pParam)
 {
-    app_gatts_context *pAppContext = (app_gatts_context *)pCb->pContext;
 }
 
 static void app_context_term(app_gatts_context *pContext)
