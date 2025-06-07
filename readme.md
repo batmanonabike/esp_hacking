@@ -142,6 +142,14 @@ This requires a recompile and flash.
 
 You can also configure log levels via `idf.py menuconfig` under `Component config` -> `Log output`.
 
+Also note that you can reduce binary size wrt logging but *ONLY* via menuconfig/sdkconfig.
+
+`sdkconfig`
+```
+CONFIG_LOG_DEFAULT_LEVEL_ERROR=y
+CONFIG_LOG_DEFAULT_LEVEL=1
+``` 
+
 ## JTAG Debugging
 
 Make sure to have first *selected a project in the ESP-IDF extension*! (OpenOCD Server will fail otherwise).
