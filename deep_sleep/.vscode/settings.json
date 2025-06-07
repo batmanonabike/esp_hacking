@@ -1,0 +1,6 @@
+{
+    "idf.portWin": "COM10",
+    "idf.flashType": "UART",
+    "idf.launchMonitorOnDebugSession": true,
+    "idf.monitorPort": "COM10"
+}

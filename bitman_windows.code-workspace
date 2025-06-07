@@ -23,6 +23,9 @@
         },
         {
             "path": "./ble_bob"
+        },
+        {
+            "path": "./deep_sleep"
         }
     ],
         
