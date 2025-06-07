@@ -19,82 +19,6 @@
 //   3. If fresh boot or other wakeup, go to deep sleep for 5 seconds.
 //   4. Loop forever: sleep, wake, log, sleep...
 
-#include <stdio.h>
-#include "freertos/FreeRTOS.h"
-#include "freertos/task.h"
-#include "esp_sleep.h"
-#include "esp_log.h"
-#include "esp_timer.h"
-#include "freertos/portmacro.h" // Add this for portTICK_PERIOD_MS
-
-static const char *TAG = "deep_sleep";
-
-// RTC memory variables: persist across deep sleep cycles
-RTC_DATA_ATTR static int wake_count = 0;          // Counts wakeups
-RTC_DATA_ATTR static int64_t last_sleep_time = 0; // Stores last sleep timestamp (in microseconds)
-
-void app_main(void)
-{
-    // Get wakeup reason
-    esp_sleep_wakeup_cause_t wakeup_reason = esp_sleep_get_wakeup_cause();
-    int64_t now = esp_timer_get_time(); // microseconds since initialization of the ESP Timer.
-
-    // Log startup time (since power-on or last reset)
-    ESP_LOGI(TAG, "Startup time: %lld ms since boot", now / 1000);
-
-    if (wakeup_reason == ESP_SLEEP_WAKEUP_TIMER)
-    {
-        wake_count++;
-        int64_t slept_us = 0;
-        if (last_sleep_time != 0 && now > last_sleep_time)
-        {
-            slept_us = now - last_sleep_time;
-            ESP_LOGI(TAG, "Device was asleep for: %lld ms", slept_us / 1000);
-        }
-        else
-        {
-            ESP_LOGI(TAG, "First boot or unknown sleep duration");
-        }
-
-        ESP_LOGI(TAG, "Woke from timer! Wake count: %d", wake_count);
-        ESP_LOGI(TAG, "Last sleep started at: %lld us", last_sleep_time);
-
-        // Log for 3 seconds
-        int log_time = 0;
-        while (log_time < 3000)
-        {
-            ESP_LOGI(TAG, "Awake! Logging... (%d/3)", (log_time / 1000) + 1);
-            vTaskDelay(1000 / portTICK_PERIOD_MS);
-            log_time += 1000;
-        }
-
-        ESP_LOGI(TAG, "Going to deep sleep for 5 seconds...");
-        vTaskDelay(1000 / portTICK_PERIOD_MS);  // Short delay for log flush
-
-        last_sleep_time = esp_timer_get_time(); // Save timestamp before sleep
-        esp_sleep_enable_timer_wakeup(5000000); // 5 seconds in microseconds
-        esp_deep_sleep_start();
-    }
-    else
-    {
-        // Called on first boot or other wakeup reasons
-        ESP_LOGI(TAG, "Boot or other wakeup (reason: %d). Going to deep sleep for 5 seconds...", wakeup_reason);
-
-        wake_count = 0;
-        last_sleep_time = esp_timer_get_time(); // Save timestamp before sleep
-        vTaskDelay(1000 / portTICK_PERIOD_MS);  // Short delay for log flush
-        esp_sleep_enable_timer_wakeup(5000000); // 5 seconds in microseconds
-        
-        // esp_deep_sleep_disable_rom_logging(); // Disable ROM logging lowers power consumption
-        esp_deep_sleep_start();
-    }
-    // Code never reaches here due to deep sleep reset
-}
-
-// --- RTC Memory Usage ---
-// Use RTC_DATA_ATTR to persist variables (e.g., counters, flags) across deep sleep cycles.
-// See: https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/system/deep_sleep.html#rtc-memory
-//
 // --- Wakeup Methods ---
 // Use esp_sleep_enable_timer_wakeup(), esp_sleep_enable_ext0_wakeup(), etc., to configure wakeup sources.
 // See: https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/system/sleep_modes.html
@@ -107,3 +31,73 @@ void app_main(void)
 //     * Manually set the time after each boot or wakeup
 // - After deep sleep, only elapsed time is available unless you restore the real time from NTP or an external RTC.
 // - For most battery-powered applications, tracking elapsed time is sufficient, but for logging real timestamps, NTP or an external RTC is required.
+
+#include <stdio.h>
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
+#include "esp_sleep.h"
+#include "esp_log.h"
+#include "esp_timer.h"
+#include "freertos/portmacro.h" 
+
+#include "bitmans_lib.h"
+
+static const char *TAG = "deep_sleep";
+
+// --- RTC Memory Usage ---
+// Use RTC_DATA_ATTR to persist variables (e.g., counters, flags) across deep sleep cycles.
+// See: https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/system/deep_sleep.html#rtc-memory
+RTC_DATA_ATTR static int rtc_wake_count = 0;             // Counts wakeups
+
+void app_first_boot(esp_sleep_wakeup_cause_t wakeup_reason)
+{
+    bitmans_set_blink_mode(BLINK_MODE_BASIC);
+    ESP_LOGI(TAG, "Boot or other wakeup (reason: %d). Going to deep sleep for 5 seconds...", wakeup_reason);
+
+    rtc_wake_count = 0;
+    vTaskDelay(5000 / portTICK_PERIOD_MS);
+}
+
+void app_wake_from_timer()
+{
+    bitmans_set_blink_mode(BLINK_MODE_BREATHING);
+
+    rtc_wake_count++;
+    ESP_LOGI(TAG, "Woke from timer! Wake count: %d", rtc_wake_count);
+
+    const int max = 5;
+    for (int n = 0; n < max; ++n)
+    {
+        ESP_LOGI(TAG, "Awake! Logging... (%d/%d)", n + 1, max);
+        vTaskDelay(1000 / portTICK_PERIOD_MS);
+    }
+}
+
+void app_main(void)
+{
+    int64_t now = esp_timer_get_time(); // microseconds since initialization of the ESP Timer.
+    esp_sleep_wakeup_cause_t wakeup_reason = esp_sleep_get_wakeup_cause();
+
+    ESP_ERROR_CHECK(bitmans_lib_init());
+    ESP_ERROR_CHECK(bitmans_blink_init(-1));
+
+    // Log startup time (since power-on or last reset)
+    ESP_LOGI(TAG, "Startup time: %lld ms since boot", now / 1000);
+
+    if (wakeup_reason != ESP_SLEEP_WAKEUP_TIMER)
+        app_first_boot(wakeup_reason);
+    else
+        app_wake_from_timer();
+
+    ESP_LOGI(TAG, "Going to deep sleep for 5 seconds...");
+    bitmans_set_blink_mode(BLINK_MODE_VERY_FAST);
+    vTaskDelay(3000 / portTICK_PERIOD_MS);
+
+    vTaskDelay(1000 / portTICK_PERIOD_MS);  // Ensure logs are flushed before deep sleep
+    esp_sleep_enable_timer_wakeup(5000000); // 5 seconds in microseconds
+    esp_deep_sleep_disable_rom_logging();   // Disable ROM logging lowers power consumption
+    esp_deep_sleep_start();
+
+    // Code never reaches here due to deep sleep reset
+    /* bitmans_blink_term(); */
+}
