@@ -5,7 +5,6 @@
 
 #include "bitmans_lib.h"
 #include "bitmans_config.h"
-#include "bitmans_ble_server.h"
 
 static const char *TAG = "ble_server_app";
 
@@ -27,19 +26,6 @@ typedef struct app_context
     bitmans_ble_uuid128_t service_uuid;
 
 } app_context;
-
-void app_context_term(app_context *pContext)
-{
-    pContext->pszAdvName = NULL;
-    if (pContext->ble_events != NULL)
-    {
-        vEventGroupDelete(pContext->ble_events);
-        pContext->ble_events = NULL;
-    }
-
-    memset(&pContext->char_uuid, 0, sizeof(pContext->char_uuid));
-    memset(&pContext->service_uuid, 0, sizeof(pContext->service_uuid));
-}
 
 void app_context_init(app_context *pContext)
 {

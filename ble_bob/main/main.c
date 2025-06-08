@@ -23,10 +23,9 @@ static esp_err_t app_create_service(esp_gatt_if_t gatts_if)
             .len = ESP_UUID_LEN_16,
             .uuid = {.uuid16 = 0x1800} // Generic Access, or any 16-bit value
         }};
-    esp_gatt_srvc_id_t service_id = { .id = id, .is_primary = true};
+    esp_gatt_srvc_id_t service_id = {.id = id, .is_primary = true};
 
     esp_err_t err = esp_ble_gatts_create_service(gatts_if, &service_id, 4);
-
     if (err != ESP_OK)
     {
         ESP_LOGE(TAG, "Failed to create GATTS service: %s", esp_err_to_name(err));
@@ -36,20 +35,30 @@ static esp_err_t app_create_service(esp_gatt_if_t gatts_if)
     return ESP_OK;
 }
 
-static void app_on_reg(bitmans_gatts_callbacks_t *pCb, esp_ble_gatts_cb_param_t *pParam)
+////////////////////////////////////////////////////////////////////////////////////////////////////
+// Gatts callbacks
+static void app_on_gatts_reg(bitmans_gatts_callbacks_t *pCb, esp_ble_gatts_cb_param_t *pParam)
 {
     app_create_service(pCb->gatts_if);
 }
 
-static void app_on_create(bitmans_gatts_callbacks_t *pCb, esp_ble_gatts_cb_param_t *pParam)
+static void app_on_gatts_create(bitmans_gatts_callbacks_t *pCb, esp_ble_gatts_cb_param_t *pParam)
 {
     bitmans_gatts_start_service(pCb->service_handle);
 }
 
-static void app_on_start(bitmans_gatts_callbacks_t *pCb, esp_ble_gatts_cb_param_t *pParam)
+static void app_on_gatts_start(bitmans_gatts_callbacks_t *pCb, esp_ble_gatts_cb_param_t *pParam)
 {
     app_context *pAppContext = (app_context *)pCb->pContext;
     bitmans_gatts_begin_advert_data_set(pAppContext->pszAdvName, NULL, 0);
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+// Gap callbacks
+static void on_gaps_advert_data_set(bitmans_gaps_callbacks_t *pCb, esp_ble_gap_cb_param_t *pParam)
+{
+    ESP_LOGI(TAG, "Advertising data set, starting advertising");
+    bitmans_gatts_start_advertising();
 }
 
 static const char *bob_insults[] = {
@@ -76,27 +85,31 @@ const char *pick_random_bob_insult()
     return bob_insults[idx];
 }
 
-#define BITMANS_APP_ID 0x57
 void app_main(void)
 {
     ESP_LOGI(TAG, "App starting");
+
     ESP_ERROR_CHECK(bitmans_lib_init());
+    ESP_ERROR_CHECK(bitmans_blink_init(-1));
     ESP_ERROR_CHECK(bitmans_ble_server_init());
 
-    app_context appContext = { 
-        .pszAdvName = pick_random_bob_insult()
+    bitmans_gatts_callbacks_t gatts_callbacks = {
+        .on_reg = app_on_gatts_reg,
+        .on_start = app_on_gatts_start,
+        .on_create = app_on_gatts_create,
     };
+    
+    app_context appContext = { .pszAdvName = pick_random_bob_insult() };
+    bitmans_gaps_callbacks_t gaps_callbacks = { .on_advert_data_set = on_gaps_advert_data_set};
 
-    bitmans_gatts_callbacks_t callbacks = {
-        .on_reg = app_on_reg,
-        .on_start = app_on_start,
-        .on_create = app_on_create,
-    };
-    bitmans_ble_gatts_callbacks_init(&callbacks, &appContext);
+    bitmans_ble_gaps_callbacks_init(&gaps_callbacks, &appContext);
+    bitmans_ble_gatts_callbacks_init(&gatts_callbacks, &appContext);
 
+#define BITMANS_APP_ID 0x57
     ESP_LOGI(TAG, "Register Gatts");
-    ESP_ERROR_CHECK(bitmans_gatts_register(BITMANS_APP_ID, &callbacks, &appContext));
+    ESP_ERROR_CHECK(bitmans_gatts_register(BITMANS_APP_ID, &gatts_callbacks, &appContext));
 
+    bitmans_set_blink_mode(BLINK_MODE_BREATHING);
     ESP_LOGI(TAG, "App running");
     while (1)
         vTaskDelay(1000 / portTICK_PERIOD_MS);

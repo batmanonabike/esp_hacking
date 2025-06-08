@@ -8,6 +8,8 @@ extern "C"
 const char *bitmans_get_advertname();
 const char *bitmans_get_char_id();    
 const char *bitmans_get_server_id();    
+const char *bitmans_get_battery_level_id();    
+const char *bitmans_get_battery_server_id();    
 
 #ifdef __cplusplus
 }
