@@ -42,3 +42,46 @@ const char *bitmans_lib_get_version(void)
 {
     return VERSION;
 }
+
+esp_err_t bitmans_waitbits(
+    EventGroupHandle_t ble_events, int bit,
+    TickType_t xTicksToWait, EventBits_t *pResult)
+{
+    TickType_t start = xTaskGetTickCount();
+
+    BaseType_t xClearOnExit = pdTRUE;
+    BaseType_t xWaitForAllBits = pdFALSE;
+    EventBits_t bits = xEventGroupWaitBits(ble_events, bit, xClearOnExit, xWaitForAllBits, xTicksToWait);
+
+    TickType_t end = xTaskGetTickCount();
+    TickType_t waited = end - start;
+
+    if (bits == 0)
+        return ESP_ERR_TIMEOUT; // No bits were set within the timeout
+
+    ESP_LOGI(TAG, "waitbits: waited %lu ticks (%.2f seconds, %lu ms)",
+             (unsigned long)waited,
+             waited / (float)configTICK_RATE_HZ,
+             (unsigned long)(waited * 1000 / configTICK_RATE_HZ));
+
+    if (pResult != NULL)
+        *pResult = bits; // Store the result if provided
+    return ESP_OK;
+}
+
+esp_err_t bitmans_waitbits_forever(EventGroupHandle_t ble_events, int bit, EventBits_t *pResult)
+{
+    return bitmans_waitbits(ble_events, bit, portMAX_DELAY, pResult);
+}
+
+void _bitmans_error_check_restart(esp_err_t rc, const char *file, int line, const char *function, const char *expression)
+{
+    printf("ESP_ERROR_CHECK_RESTART failed: esp_err_t 0x%x", rc);
+    printf(" (%s)", esp_err_to_name(rc));
+    printf(" at %p\n", __builtin_return_address(0));
+    printf("file: \"%s\" line %d\nfunc: %s\nexpression: %s\n", file, line, function, expression);
+
+    printf("This message will self destruct in 5 seconds...\n");
+    vTaskDelay(5000 / portTICK_PERIOD_MS);
+    esp_restart();
+}
