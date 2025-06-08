@@ -67,7 +67,6 @@ void app_context_term(app_gatts_context *pContext)
 
 void app_context_init(app_gatts_context *pContext)
 {
-    
     pContext->UNREGISTER_BIT = BIT0;
     pContext->pszAdvName = "BitmansGATTS";
     pContext->ble_events = xEventGroupCreate();

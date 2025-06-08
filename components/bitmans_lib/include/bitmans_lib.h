@@ -7,6 +7,7 @@
 #include "bitmans_ble_server.h"
 #include "bitmans_wifi_logging.h"
 #include "bitmans_wifi_connect.h"
+#include "bitmans_ble_client_logging.h"
 
 #ifdef __cplusplus
 extern "C" {
