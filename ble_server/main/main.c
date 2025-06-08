@@ -11,8 +11,9 @@ static const char *TAG = "ble_server_app";
 
 typedef enum app_bits
 {
-    GATTS_REGISTER_BIT = BIT0,   // Register event
-    GATTS_UNREGISTER_BIT = BIT1, // Unregister event
+    GATTS_START_BIT = BIT0,   
+    GATTS_REGISTER_BIT = BIT1,   
+    GATTS_UNREGISTER_BIT = BIT2, 
 } app_bits;
 
 typedef struct app_gatts_context
@@ -50,6 +51,7 @@ static void app_on_start(bitmans_gatts_callbacks_t *pCb, esp_ble_gatts_cb_param_
 {
     app_gatts_context *pAppContext = (app_gatts_context *)pCb->pContext;
     bitmans_gatts_begin_advertise128(pAppContext->pszAdvName, &pAppContext->service_uuid);
+    xEventGroupSetBits(pAppContext->ble_events, GATTS_START_BIT);
 }
 
 static void app_on_unreg(bitmans_gatts_callbacks_t *pCb, esp_ble_gatts_cb_param_t *pParam)
@@ -80,10 +82,6 @@ void app_context_init(app_gatts_context *pContext)
     ESP_ERROR_CHECK(bitmans_ble_string36_to_uuid128(bitmans_get_server_id(), &pContext->service_uuid));
 }
 
-////////////////////////////////////////////////////////////////////////////////////////
-// TODO: Come back to this example.  The issue is that the BLE server does not restart
-// advertising after the first time it is unregistered.
-////////////////////////////////////////////////////////////////////////////////////////
 void app_main(void)
 {
 #define BITMANS_APP_ID 0x55
@@ -109,9 +107,12 @@ void app_main(void)
         esp_err_t ret = bitmans_ble_gatts_register(BITMANS_APP_ID, &callbacks, &appContext);
         ESP_LOGI(TAG, "bitmans_ble_gatts_register: %s", esp_err_to_name(ret));
 
-        ESP_LOGI(TAG, "Wait for register event");
-        ESP_ERROR_CHECK(bitmans_waitbits_forever(appContext.ble_events, GATTS_REGISTER_BIT, NULL));
+        // ESP_LOGI(TAG, "Wait for register event");
+        // ESP_ERROR_CHECK(bitmans_waitbits_forever(appContext.ble_events, GATTS_REGISTER_BIT, NULL));
         //ESP_ERROR_CHECK_RESTART(bitmans_waitbits_forever(appContext.ble_events, GATTS_REGISTER_BIT, NULL));
+
+        ESP_LOGI(TAG, "Wait for start event");
+        ESP_ERROR_CHECK(bitmans_waitbits_forever(appContext.ble_events, GATTS_START_BIT, NULL));
 
         // ESP_LOGI(TAG, "WAITING");
         // vTaskDelay(10000 / portTICK_PERIOD_MS);
@@ -126,39 +127,16 @@ void app_main(void)
         ESP_ERROR_CHECK(bitmans_waitbits_forever(appContext.ble_events, GATTS_UNREGISTER_BIT, NULL));
         //ESP_ERROR_CHECK_RESTART(bitmans_waitbits_forever(appContext.ble_events, GATTS_UNREGISTER_BIT, NULL));
 
+        // We shouldn't need this delay, but there might be some race condition.  From the log...
+        // E (1965) BT_BTC: bta_to_btc_uuid UUID len is invalid 56080
         vTaskDelay(10000 / portTICK_PERIOD_MS);
     }
 
     vTaskDelay(60000 / portTICK_PERIOD_MS);
-    // // esp_restart();
 
     // ESP_LOGI(TAG, "Stop advertising");
-    // bitmans_gatts_stop_advertising();
+    //bitmans_gatts_stop_advertising();
     // vTaskDelay(10000 / portTICK_PERIOD_MS);
-
-    // ESP_LOGI(TAG, "Unregister Gatts (1)");
-    // bitmans_ble_gatts_unregister(BITMANS_APP_ID);
-    // vTaskDelay(30000 / portTICK_PERIOD_MS);
-
-    // ESP_LOGI(TAG, "Wait for unregister event (1)");
-    // xEventGroupWaitBits(appContext.ble_events, appContext.UNREGISTER_BIT,
-    //     pdTRUE,         /* Clear the bits before returning */
-    //     pdFALSE,        /* Don't wait for both bits, either bit will do */
-    //     portMAX_DELAY); /* Wait forever */
-
-    // ESP_LOGI(TAG, "Register Gatts (2)");
-    // bitmans_ble_gatts_register(BITMANS_APP_ID, &callbacks, &appContext);
-    // vTaskDelay(10000 / portTICK_PERIOD_MS);
-
-    // ESP_LOGI(TAG, "Unregister Gatts (2)");
-    // bitmans_ble_gatts_unregister(BITMANS_APP_ID);
-    // // vTaskDelay(10000 / portTICK_PERIOD_MS);
-
-    // ESP_LOGI(TAG, "Wait for unregister event (2)");
-    // xEventGroupWaitBits(appContext.ble_events, appContext.UNREGISTER_BIT,
-    //     pdTRUE,         /* Clear the bits before returning */
-    //     pdFALSE,        /* Don't wait for both bits, either bit will do */
-    //     portMAX_DELAY); /* Wait forever */
 
     ESP_LOGI(TAG, "Term BLE");
     bitmans_ble_gatts_unregister(BITMANS_APP_ID);
@@ -166,4 +144,6 @@ void app_main(void)
 
     app_context_term(&appContext);
     ESP_LOGI(TAG, "App terminated");
+
+    esp_restart();
 }
