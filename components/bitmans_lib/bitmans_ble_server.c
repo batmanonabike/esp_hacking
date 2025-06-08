@@ -90,7 +90,6 @@ static bitmans_gatts_callbacks_t *bitmans_gatts_callbacks_create_mapping(
 
     if (err == ESP_OK && pCallbacks != NULL)
     {
-        bitmans_hash_table_remove(&app_cb_table, app_id);
         err = bitmans_hash_table_set(&gatts_cb_table, gatts_if, pCallbacks);
         if (err == ESP_OK)
         {
@@ -170,7 +169,7 @@ esp_err_t bitmans_gatts_create_service128(esp_gatt_if_t gatts_if, bitmans_ble_uu
             .uuid = {.uuid128 = {0}}}};
     memcpy(id.uuid.uuid.uuid128, pId->uuid, sizeof(pId->uuid));
 
-    esp_gatt_srvc_id_t service_id = { .id = id, .is_primary = true};
+    esp_gatt_srvc_id_t service_id = {.id = id, .is_primary = true};
 
     return bitmans_gatts_create_service(gatts_if, &service_id);
 }
@@ -536,7 +535,16 @@ esp_err_t bitmans_ble_gatts_unregister(bitmans_gatts_app_id app_id)
 {
     ESP_LOGI(TAG, "Unregistering GATT server: %d", app_id);
 
-    esp_err_t ret = esp_ble_gatts_app_unregister(app_id);
+    bitmans_gatts_callbacks_t *pCallbacks = pCallbacks =
+        (bitmans_gatts_callbacks_t *)bitmans_hash_table_try_get(&app_cb_table, app_id);
+
+    if (pCallbacks == NULL)
+    {
+        ESP_LOGW(TAG, "No callbacks registered for appId: %d", app_id);
+        return ESP_ERR_NOT_FOUND;
+    }
+
+    esp_err_t ret = esp_ble_gatts_app_unregister(pCallbacks->gatts_if);
     if (ret != ESP_OK)
     {
         ESP_LOGE(TAG, "Failed to unregister GATT application: %s", esp_err_to_name(ret));
