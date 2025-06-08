@@ -2,14 +2,23 @@
 
 #include "esp_err.h"
 #include "esp_gatts_api.h"
+#include "bitmans_ble.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 typedef uint16_t bitmans_gatts_app_id;
-typedef uint16_t bitmans_ble_uuid16_t;
 typedef uint16_t bitmans_gatts_service_handle;
+
+// typedef struct bitmans_gaps_callbacks_t
+// {
+//     void * pContext;
+//     void (*on_advert_data_set)(struct bitmans_gaps_callbacks_t *, esp_ble_gap_cb_param_t *);
+//     void (*on_advert_start)(struct bitmans_gaps_callbacks_t *, esp_ble_gap_cb_param_t *);
+//     void (*on_advert_stop)(struct bitmans_gaps_callbacks_t *, esp_ble_gap_cb_param_t *);
+    
+// } bitmans_gaps_callbacks_t;
 
 typedef struct bitmans_gatts_callbacks_t
 {

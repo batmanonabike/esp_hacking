@@ -1,7 +1,6 @@
 #pragma once
 
 #include "esp_err.h"
-#include "freertos/event_groups.h"
 
 #include "bitmans_ble.h"
 #include "bitmans_blink.h"
@@ -28,7 +27,7 @@ void _bitmans_error_check_restart(esp_err_t, const char *, int, const char *, co
 }
 #endif
 
-// The was coppied from esp_err.h, but modified to restart the system instead of aborting.
+// The was copied from esp_err.h, but modified to restart the system instead of aborting.
 #define ESP_ERROR_CHECK_RESTART(x) do {                                 \
         esp_err_t err_rc_ = (x);                                        \
         if (unlikely(err_rc_ != ESP_OK)) {                              \

@@ -41,30 +41,28 @@ extern "C"
 
     esp_err_t bitmans_ble_client_init();
     esp_err_t bitmans_ble_client_term();
-    
-    esp_err_t bitmans_ble_client_register_gattc(bitmans_gattc_app_id_t app_id);
-    esp_err_t bitmans_ble_client_unregister_gattc(bitmans_gattc_app_id_t app_id);
+    esp_err_t bitmans_ble_client_stop_scanning();
+    esp_err_t bitmans_ble_client_set_scan_params(); // Effectively initiates scanning.
     esp_err_t bitmans_ble_client_get_advertised_name(bitmans_scan_result_t *, bitmans_advertised_name_t *);
+    bool bitmans_ble_client_find_service_uuid(bitmans_scan_result_t *pScanResult, bitmans_ble_uuid128_t * pId);
     
-    esp_err_t bitmans_ble_stop_scanning();
-    esp_err_t bitmans_ble_set_scan_params(); // Effectively initiates scanning.
-
-    bool bitmans_ble_find_service_uuid(bitmans_scan_result_t *pScanResult, bitmans_ble_uuid128_t * pId);
-
+    esp_err_t bitmans_ble_register_gattc(bitmans_gattc_app_id_t);
+    esp_err_t bitmans_ble_unregister_gattc(bitmans_gattc_app_id_t);
+    
     // Callbacks from scanning and connection management. 
-    typedef struct bitmans_gap_callbacks_t
+    typedef struct bitmans_gapc_callbacks_t
     {
         void *pContext;
-        void (*on_scan_param_set_complete)(struct bitmans_gap_callbacks_t *, esp_ble_gap_cb_param_t *);
-        void (*on_scan_start_complete)(struct bitmans_gap_callbacks_t *, esp_ble_gap_cb_param_t *);
-        void (*on_scan_stop_complete)(struct bitmans_gap_callbacks_t *, esp_ble_gap_cb_param_t *);
+        void (*on_scan_param_set_complete)(struct bitmans_gapc_callbacks_t *, esp_ble_gap_cb_param_t *);
+        void (*on_scan_start_complete)(struct bitmans_gapc_callbacks_t *, esp_ble_gap_cb_param_t *);
+        void (*on_scan_stop_complete)(struct bitmans_gapc_callbacks_t *, esp_ble_gap_cb_param_t *);
 
         // BDA-specific callbacks can be added here if needed
-        void (*on_scan_result)(struct bitmans_gap_callbacks_t *, esp_ble_gap_cb_param_t *);
-        void (*on_update_conn_params)(struct bitmans_gap_callbacks_t *, esp_ble_gap_cb_param_t *);
-        void (*on_sec_req)(struct bitmans_gap_callbacks_t *, esp_ble_gap_cb_param_t *);
-    } bitmans_gap_callbacks_t;
-    void bitmans_ble_gap_callbacks_init(bitmans_gap_callbacks_t *pCb, void *pContext);
+        void (*on_scan_result)(struct bitmans_gapc_callbacks_t *, esp_ble_gap_cb_param_t *);
+        void (*on_update_conn_params)(struct bitmans_gapc_callbacks_t *, esp_ble_gap_cb_param_t *);
+        void (*on_sec_req)(struct bitmans_gapc_callbacks_t *, esp_ble_gap_cb_param_t *);
+    } bitmans_gapc_callbacks_t;
+    void bitmans_ble_gapc_callbacks_init(bitmans_gapc_callbacks_t *, void *pContext);
 
     // GAP BDA-specific callbacks, we might want to associate context with each BDA.
     void bitmans_bda_context_reset(const esp_bd_addr_t *pbda);

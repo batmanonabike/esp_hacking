@@ -11,12 +11,12 @@ typedef struct app_gap_context
     
 } app_gap_context;
 
-void app_on_scan_param_set_complete(struct bitmans_gap_callbacks_t *pCb, esp_ble_gap_cb_param_t *pParam)
+void app_on_scan_param_set_complete(struct bitmans_gapc_callbacks_t *pCb, esp_ble_gap_cb_param_t *pParam)
 {
-    bitmans_ble_set_scan_params();
+    bitmans_ble_client_set_scan_params();
 }
 
-void app_on_scan_start_complete(struct bitmans_gap_callbacks_t *pCb, esp_ble_gap_cb_param_t *pParam)
+void app_on_scan_start_complete(struct bitmans_gapc_callbacks_t *pCb, esp_ble_gap_cb_param_t *pParam)
 {
     if (pParam->scan_start_cmpl.status != ESP_BT_STATUS_SUCCESS)
     {
@@ -28,7 +28,7 @@ void app_on_scan_start_complete(struct bitmans_gap_callbacks_t *pCb, esp_ble_gap
     }
 }
 
-void app_on_update_conn_params(struct bitmans_gap_callbacks_t *pCb, esp_ble_gap_cb_param_t *pParam)
+void app_on_update_conn_params(struct bitmans_gapc_callbacks_t *pCb, esp_ble_gap_cb_param_t *pParam)
 {
     ESP_LOGI(TAG, "Connection parameters updated: min_int=%d, max_int=%d, latency=%d, timeout=%d",
              pParam->update_conn_params.min_int,
@@ -39,13 +39,13 @@ void app_on_update_conn_params(struct bitmans_gap_callbacks_t *pCb, esp_ble_gap_
     bitmans_bda_context_lookup(&pParam->update_conn_params.bda);
 }
 
-void app_on_sec_req(struct bitmans_gap_callbacks_t *pCb, esp_ble_gap_cb_param_t *pParam)
+void app_on_sec_req(struct bitmans_gapc_callbacks_t *pCb, esp_ble_gap_cb_param_t *pParam)
 {
     bitmans_bda_context_lookup(&pParam->ble_security.ble_req.bd_addr);
 }
 
 // In your scan result handler:
-// if (bitmans_ble_find_service_uuid(&scan_result->scan_rst, &pAppContext->service_uuid)) {
+// if (bitmans_ble_client_find_service_uuid(&scan_result->scan_rst, &pAppContext->service_uuid)) {
 //     // Found the device you want
 //     memcpy(g_target_bda, scan_result->scan_rst.bda, ESP_BD_ADDR_LEN);
 //     g_target_addr_type = scan_result->scan_rst.ble_addr_type;
@@ -56,7 +56,7 @@ void app_on_sec_req(struct bitmans_gap_callbacks_t *pCb, esp_ble_gap_cb_param_t 
 // esp_ble_gattc_open(g_gattc_handles[GATTC_APP0], g_target_bda, g_target_addr_type, true);
 // // This results in calls to the GATT Client callbacks, where you can handle the connection establishment.
 
-void app_on_scan_result(struct bitmans_gap_callbacks_t *pCb, esp_ble_gap_cb_param_t *pParam)
+void app_on_scan_result(struct bitmans_gapc_callbacks_t *pCb, esp_ble_gap_cb_param_t *pParam)
 {
     app_gap_context *pAppContext = (app_gap_context *)pCb->pContext;
     esp_ble_gap_cb_param_t *scan_result = (esp_ble_gap_cb_param_t *)pParam;
@@ -70,7 +70,7 @@ void app_on_scan_result(struct bitmans_gap_callbacks_t *pCb, esp_ble_gap_cb_para
         // Here you would check if this is the server you want to connect to
         // For example, by checking the advertised name or service UUID
         // If it is, you would call esp_ble_gap_stop_scanning() and then esp_ble_gattc_open()
-        if (bitmans_ble_find_service_uuid(&scan_result->scan_rst, &pAppContext->service_uuid))
+        if (bitmans_ble_client_find_service_uuid(&scan_result->scan_rst, &pAppContext->service_uuid))
         {
             ESP_LOGI(TAG, "Device with custom service UUID found. BDA: %02x:%02x:%02x:%02x:%02x:%02x",
                      scan_result->scan_rst.bda[0], scan_result->scan_rst.bda[1],
@@ -94,7 +94,7 @@ void app_on_scan_result(struct bitmans_gap_callbacks_t *pCb, esp_ble_gap_cb_para
     }
 }
 
-void on_scan_stop_complete(struct bitmans_gap_callbacks_t *pCb, esp_ble_gap_cb_param_t *pParam)
+void on_scan_stop_complete(struct bitmans_gapc_callbacks_t *pCb, esp_ble_gap_cb_param_t *pParam)
 {
     // If you stopped scanning to connect, initiate connection here
 }
@@ -111,10 +111,10 @@ void app_main(void)
 
     ESP_ERROR_CHECK(bitmans_lib_init());
     ESP_ERROR_CHECK(bitmans_ble_client_init());
-    ESP_ERROR_CHECK(bitmans_ble_client_register_gattc(GATTC_APP0));
+    ESP_ERROR_CHECK(bitmans_ble_register_gattc(GATTC_APP0));
 
     app_gap_context app_context;
-    bitmans_gap_callbacks_t gap_callbacks = {
+    bitmans_gapc_callbacks_t gap_callbacks = {
         .pContext = NULL,
         .on_sec_req = app_on_sec_req,
         .on_scan_result = app_on_scan_result,
@@ -123,7 +123,7 @@ void app_main(void)
         .on_scan_param_set_complete = app_on_scan_param_set_complete,
     };
     app_context_init(&app_context);
-    bitmans_ble_gap_callbacks_init(&gap_callbacks, &app_context);
+    bitmans_ble_gapc_callbacks_init(&gap_callbacks, &app_context);
 
     ESP_ERROR_CHECK(bitmans_blink_init(-1));
     bitmans_set_blink_mode(BLINK_MODE_SLOW);
@@ -132,13 +132,13 @@ void app_main(void)
     vTaskDelay(2000 / portTICK_PERIOD_MS);
 
     bitmans_set_blink_mode(BLINK_MODE_BREATHING);
-    ESP_ERROR_CHECK(bitmans_ble_set_scan_params());
+    ESP_ERROR_CHECK(bitmans_ble_client_set_scan_params());
     for (int counter = 20; counter > 0; counter--)
     {
         ESP_LOGI(TAG, "Running application: %d", counter);
         vTaskDelay(1000 / portTICK_PERIOD_MS);
     }
-    ESP_ERROR_CHECK(bitmans_ble_stop_scanning());
+    ESP_ERROR_CHECK(bitmans_ble_client_stop_scanning());
 
     bitmans_set_blink_mode(BLINK_MODE_FAST);
     ESP_LOGI(TAG, "Uninitialising application");
@@ -149,6 +149,6 @@ void app_main(void)
     vTaskDelay(5000 / portTICK_PERIOD_MS);
 
     bitmans_blink_term();
-    bitmans_ble_client_unregister_gattc(GATTC_APP0);
+    bitmans_ble_unregister_gattc(GATTC_APP0);
     bitmans_ble_client_term();
 }

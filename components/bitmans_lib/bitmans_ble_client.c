@@ -38,7 +38,7 @@ typedef struct
 static gap_bda_callback_entry_t gap_cb_table[GAP_CB_TABLE_SIZE] = {0}; // Array for per-BDA callbacks
 static esp_gatt_if_t g_gattc_handles[GATTC_APPLAST + 1]; // AppIds to GATT Client handles mapping
 
-static bitmans_gap_callbacks_t *g_pGapCallbacks = NULL; 
+static bitmans_gapc_callbacks_t *g_pGapCallbacks = NULL; 
 
 // GAP (Generic Access Profile) events notify about BLE advertising, scanning, connection management, and security events.
 // Common events include:
@@ -53,7 +53,7 @@ static bitmans_gap_callbacks_t *g_pGapCallbacks = NULL;
 // https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/bluetooth/esp_gap_ble.html#_CPPv426esp_gap_ble_cb_event_t
 static void bitmans_gap_event_handler(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *pParam)
 {
-    assert(g_pGapCallbacks != NULL); // call bitmans_ble_gap_callbacks_init!
+    assert(g_pGapCallbacks != NULL); // call bitmans_ble_gapc_callbacks_init!
 
     switch (event)
     {
@@ -323,7 +323,7 @@ static bool bitmans_ble_find_service_uuid_by_type(bitmans_scan_result_t *pScanRe
     return false;
 }
 
-bool bitmans_ble_find_service_uuid(bitmans_scan_result_t *pScanResult, bitmans_ble_uuid128_t *pId)
+bool bitmans_ble_client_find_service_uuid(bitmans_scan_result_t *pScanResult, bitmans_ble_uuid128_t *pId)
 {
     if (bitmans_ble_find_service_uuid_by_type(pScanResult, pId, ESP_BLE_AD_TYPE_128SRV_CMPL))
     {
@@ -340,7 +340,7 @@ bool bitmans_ble_find_service_uuid(bitmans_scan_result_t *pScanResult, bitmans_b
     return false;
 }
 
-esp_err_t bitmans_ble_client_register_gattc(bitmans_gattc_app_id_t app_id)
+esp_err_t bitmans_ble_register_gattc(bitmans_gattc_app_id_t app_id)
 {
     esp_err_t ret = esp_ble_gattc_app_register(app_id);
     if (ret == ESP_OK)
@@ -350,7 +350,7 @@ esp_err_t bitmans_ble_client_register_gattc(bitmans_gattc_app_id_t app_id)
     return ret;
 }
 
-esp_err_t bitmans_ble_client_unregister_gattc(bitmans_gattc_app_id_t app_id)
+esp_err_t bitmans_ble_unregister_gattc(bitmans_gattc_app_id_t app_id)
 {
     if (g_gattc_handles[app_id] == ESP_GATT_IF_NONE)
         return ESP_OK;
@@ -387,7 +387,7 @@ esp_err_t bitmans_ble_client_term()
 
     // Unregister GATTC applications
     for (int n = GATTC_APPFIRST; n <= GATTC_APPLAST; n++)
-        bitmans_ble_client_unregister_gattc(n);
+        bitmans_ble_unregister_gattc(n);
 
     // It's generally good practice to unregister callbacks, but deinitialization
     // of bluedroid should handle this. If issues arise, explicit unregistration
@@ -438,7 +438,7 @@ esp_err_t bitmans_ble_client_term()
 
 // You'll need a function to start the scanning process.
 // This could be called after bitmans_ble_init() is successful.
-esp_err_t bitmans_ble_set_scan_params()
+esp_err_t bitmans_ble_client_set_scan_params()
 {
     ESP_LOGI(TAG, "Starting BLE scan soon...");
 
@@ -465,7 +465,7 @@ esp_err_t bitmans_ble_set_scan_params()
     return ret;
 }
 
-esp_err_t bitmans_ble_stop_scanning()
+esp_err_t bitmans_ble_client_stop_scanning()
 {
     ESP_LOGI(TAG, "Stopping BLE scan...");
     esp_err_t ret = esp_ble_gap_stop_scanning();
@@ -573,11 +573,11 @@ void bitmans_bda_context_reset(const esp_bd_addr_t *pbda)
     }
 }
 
-void bitmans_gap_no_op(struct bitmans_gap_callbacks_t *pCb, esp_ble_gap_cb_param_t *pParam)
+void bitmans_gap_no_op(struct bitmans_gapc_callbacks_t *pCb, esp_ble_gap_cb_param_t *pParam)
 {
 }
 
-void bitmans_ble_gap_callbacks_init(bitmans_gap_callbacks_t *pCb, void *pContext)
+void bitmans_ble_gapc_callbacks_init(bitmans_gapc_callbacks_t *pCb, void *pContext)
 {
     assert(pCb != NULL);
 

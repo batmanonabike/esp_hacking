@@ -78,7 +78,7 @@ esp_err_t bitmans_ble_string36_to_uuid128(const char *psz, bitmans_ble_uuid128_t
 
 // Converts a standard 16-bit UUID value to a 128-bit UUID
 // Uses the Bluetooth Base UUID: 0000xxxx-0000-1000-8000-00805F9B34FB
-esp_err_t bitmans_ble_uuid16_to_uuid128(uint16_t uuid16, bitmans_ble_uuid128_t *pId)
+esp_err_t bitmans_ble_uuid16_to_uuid128(bitmans_ble_uuid16_t uuid16, bitmans_ble_uuid128_t *pId)
 {
     if (pId == NULL)
     {
