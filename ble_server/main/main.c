@@ -147,7 +147,7 @@ bool handle_flags_error(esp_err_t err, EventBits_t flags, int stage)
     return true;
 }
 
-esp_err_t run_gatts_service(bitmans_gatts_callbacks_t *pGattsCallbacks, const char * pszAdvName, uint16_t runtimeSecs)
+esp_err_t run_gatts_service(bitmans_gatts_callbacks_t *pGattsCallbacks, const char * pszAdvName, uint32_t runtimeMs)
 {
     EventBits_t flags = 0;
     app_context *pAppContext = (app_context *)pGattsCallbacks->pContext;
@@ -166,7 +166,7 @@ esp_err_t run_gatts_service(bitmans_gatts_callbacks_t *pGattsCallbacks, const ch
 
     bitmans_set_blink_mode(BLINK_MODE_BREATHING);
     ESP_LOGI(TAG, "Running");
-    vTaskDelay(runtimeSecs / portTICK_PERIOD_MS);
+    vTaskDelay(runtimeMs / portTICK_PERIOD_MS);
 
     bitmans_set_blink_mode(BLINK_MODE_SLOW);
     err = bitmans_gatts_stop_advertising();
@@ -231,7 +231,7 @@ void app_main(void)
         for (int n = 0;; ++n)
         {
             snprintf(szAdvName, sizeof(szAdvName), "%s_%d", appContext.pszAdvNameBase, n);
-            err = run_gatts_service(&gatts_callbacks, szAdvName, 10000);
+            err = run_gatts_service(&gatts_callbacks, szAdvName, 1000 * 60 * 60);
             if (err != ESP_OK)
                 break;
         }
