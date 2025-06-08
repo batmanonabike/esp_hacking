@@ -151,7 +151,7 @@ void app_main(void)
     bitmans_ble_gatts_callbacks_init(&callbacks, &appContext);
 
     ESP_LOGI(TAG, "Register Gatts");
-    ESP_ERROR_CHECK(bitmans_ble_gatts_register(BITMANS_APP_ID, &callbacks, &appContext));
+    ESP_ERROR_CHECK(bitmans_gatts_register(BITMANS_APP_ID, &callbacks, &appContext));
 
     ESP_LOGI(TAG, "App running");
     for (int counter = 180; counter > 0; counter--)
@@ -168,7 +168,7 @@ void app_main(void)
     vTaskDelay(10000 / portTICK_PERIOD_MS);
 
     ESP_LOGI(TAG, "Unregister Gatts");
-    bitmans_ble_gatts_unregister(BITMANS_APP_ID);
+    bitmans_gatts_unregister(BITMANS_APP_ID);
     vTaskDelay(30000 / portTICK_PERIOD_MS);
 
     ESP_LOGI(TAG, "Term BLE");

@@ -273,6 +273,20 @@ esp_err_t bitmans_gatts_start_service(bitmans_gatts_service_handle service_handl
     return ESP_OK;
 }
 
+esp_err_t bitmans_gatts_stop_service(bitmans_gatts_service_handle service_handle)
+{
+    esp_err_t err = esp_ble_gatts_stop_service(service_handle);
+    if (err != ESP_OK)
+    {
+        ESP_LOGE(TAG, "Failed to stop service: %s", esp_err_to_name(err));
+    }
+    else
+    {
+        ESP_LOGI(TAG, "Service started successfully, service_handle=%d", service_handle);
+    }
+    return ESP_OK;
+}
+
 esp_err_t bitmans_gatts_send_response(
     esp_gatt_if_t gatts_if, uint16_t conn_id, uint32_t trans_id,
     esp_gatt_status_t status, esp_gatt_rsp_t *pResponse)
@@ -323,18 +337,21 @@ static void bitmans_gatts_event_handler(esp_gatts_cb_event_t event, esp_gatt_if_
 {
     bitmans_gatts_callbacks_t *pCallbacks = NULL;
 
-    switch (event)
+    if (event == ESP_GATTS_REG_EVT)
     {
-    case ESP_GATTS_REG_EVT:
         ESP_LOGI(TAG, "ESP_GATTS_REG_EVT, Service registered");
         pCallbacks = bitmans_gatts_callbacks_create_mapping(gatts_if, pParam->reg.app_id);
         if (pCallbacks != NULL)
             pCallbacks->on_reg(pCallbacks, pParam);
-        break;
+        return;
+    }
 
+    pCallbacks = bitmans_gatts_callbacks_lookup(gatts_if);
+
+    switch (event)
+    {
     case ESP_GATTS_CREATE_EVT:
         ESP_LOGI(TAG, "ESP_GATTS_CREATE_EVT, Service created");
-        pCallbacks = bitmans_gatts_callbacks_lookup(gatts_if);
         if (pCallbacks != NULL)
         {
             pCallbacks->service_handle = pParam->create.service_handle;
@@ -344,42 +361,36 @@ static void bitmans_gatts_event_handler(esp_gatts_cb_event_t event, esp_gatt_if_
 
     case ESP_GATTS_ADD_CHAR_EVT:
         ESP_LOGI(TAG, "ESP_GATTS_ADD_CHAR_EVT, Characteristic added");
-        pCallbacks = bitmans_gatts_callbacks_lookup(gatts_if);
         if (pCallbacks != NULL)
             pCallbacks->on_add_char(pCallbacks, pParam);
         break;
 
     case ESP_GATTS_ADD_CHAR_DESCR_EVT:
         ESP_LOGI(TAG, "ESP_GATTS_ADD_CHAR_DESCR_EVT, Descriptor added");
-        pCallbacks = bitmans_gatts_callbacks_lookup(gatts_if);
         if (pCallbacks != NULL)
             pCallbacks->on_add_char_descr(pCallbacks, pParam);
         break;
 
     case ESP_GATTS_START_EVT:
         ESP_LOGI(TAG, "ESP_GATTS_START_EVT, Service started");
-        pCallbacks = bitmans_gatts_callbacks_lookup(gatts_if);
         if (pCallbacks != NULL)
             pCallbacks->on_start(pCallbacks, pParam);
         break;
 
     case ESP_GATTS_CONNECT_EVT:
         ESP_LOGI(TAG, "ESP_GATTS_CONNECT_EVT, Client connected");
-        pCallbacks = bitmans_gatts_callbacks_lookup(gatts_if);
         if (pCallbacks != NULL)
             pCallbacks->on_connect(pCallbacks, pParam);
         break;
 
     case ESP_GATTS_DISCONNECT_EVT:
         ESP_LOGI(TAG, "ESP_GATTS_DISCONNECT_EVT, Client disconnected");
-        pCallbacks = bitmans_gatts_callbacks_lookup(gatts_if);
         if (pCallbacks != NULL)
             pCallbacks->on_disconnect(pCallbacks, pParam);
         break;
 
     case ESP_GATTS_READ_EVT:
         ESP_LOGI(TAG, "ESP_GATTS_READ_EVT, Read event");
-        pCallbacks = bitmans_gatts_callbacks_lookup(gatts_if);
         if (pCallbacks != NULL)
             pCallbacks->on_read(pCallbacks, pParam);
         break;
@@ -397,15 +408,19 @@ static void bitmans_gatts_event_handler(esp_gatts_cb_event_t event, esp_gatt_if_
 
     case ESP_GATTS_WRITE_EVT:
         ESP_LOGI(TAG, "ESP_GATTS_WRITE_EVT, Write event");
-        pCallbacks = bitmans_gatts_callbacks_lookup(gatts_if);
 
         // Optionally process param->write.value
-        esp_ble_gatts_send_response(gatts_if, pParam->write.conn_id, pParam->write.trans_id, ESP_GATT_OK, NULL);
+        // esp_ble_gatts_send_response(gatts_if, pParam->write.conn_id, pParam->write.trans_id, ESP_GATT_OK, NULL);
+        break;
+
+    case ESP_GATTS_STOP_EVT:
+        ESP_LOGI(TAG, "ESP_GATTS_STOP_EVT, Service stopped");
+        if (pCallbacks != NULL)
+            pCallbacks->on_stop(pCallbacks, pParam);
         break;
 
     case ESP_GATTS_UNREG_EVT:
         ESP_LOGI(TAG, "ESP_GATTS_UNREG_EVT, unregistering app");
-        pCallbacks = bitmans_gatts_callbacks_lookup(gatts_if);
         if (pCallbacks != NULL)
             pCallbacks->on_unreg(pCallbacks, pParam);
         bitmans_hash_table_remove(&gatts_cb_table, gatts_if);
@@ -497,6 +512,8 @@ void bitmans_ble_gatts_callbacks_init(bitmans_gatts_callbacks_t *pCallbacks, voi
         pCallbacks->on_reg = bitman_gatts_no_op;
     if (pCallbacks->on_read == NULL)
         pCallbacks->on_read = bitman_gatts_no_op;
+    if (pCallbacks->on_stop == NULL)
+        pCallbacks->on_stop = bitman_gatts_no_op;
     if (pCallbacks->on_start == NULL)
         pCallbacks->on_start = bitman_gatts_no_op;
     if (pCallbacks->on_unreg == NULL)
@@ -515,7 +532,7 @@ void bitmans_ble_gatts_callbacks_init(bitmans_gatts_callbacks_t *pCallbacks, voi
         pCallbacks->on_add_char_descr = bitman_gatts_no_op;
 }
 
-esp_err_t bitmans_ble_gatts_register(bitmans_gatts_app_id app_id, bitmans_gatts_callbacks_t *pCallbacks, void *pContext)
+esp_err_t bitmans_gatts_register(bitmans_gatts_app_id app_id, bitmans_gatts_callbacks_t *pCallbacks, void *pContext)
 {
     ESP_LOGI(TAG, "Registering GATT server: %d", app_id);
 
@@ -537,7 +554,7 @@ esp_err_t bitmans_ble_gatts_register(bitmans_gatts_app_id app_id, bitmans_gatts_
     return ESP_OK;
 }
 
-esp_err_t bitmans_ble_gatts_unregister(bitmans_gatts_app_id app_id)
+esp_err_t bitmans_gatts_unregister(bitmans_gatts_app_id app_id)
 {
     ESP_LOGI(TAG, "Unregistering GATT server: %d", app_id);
 

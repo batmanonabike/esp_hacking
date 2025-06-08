@@ -12,21 +12,44 @@ static const char *TAG = "ble_server_app";
 typedef enum app_bits
 {
     ERROR_BIT = BIT0,
-    GATTS_REGISTER_BIT = BIT1,
-    GATTS_START_BIT = BIT2,
-    GATTS_UNREGISTER_BIT = BIT3,
-    GAPS_STOPADVERTISING_BIT = BIT4,
-    GAPS_STARTADVERTISING_BIT = BIT5,
+    GATTS_STOP_BIT = BIT1,
+    GATTS_READY_TO_START_BIT = BIT2,
+    GAPS_STOP_ADVERTISING_BIT = BIT3,
+    GAPS_START_ADVERTISING_BIT = BIT4,
 } app_bits;
 
 typedef struct app_context
 {
     const char *pszAdvName;
+    const char *pszAdvNameBase;
     EventGroupHandle_t ble_events;
     bitmans_ble_uuid128_t char_uuid;
     bitmans_ble_uuid128_t service_uuid;
 
 } app_context;
+
+void app_context_term(app_context *pContext)
+{
+    pContext->pszAdvName = NULL;
+    if (pContext->ble_events != NULL)
+    {
+        vEventGroupDelete(pContext->ble_events);
+        pContext->ble_events = NULL;
+    }
+
+    memset(&pContext->char_uuid, 0, sizeof(pContext->char_uuid));
+    memset(&pContext->service_uuid, 0, sizeof(pContext->service_uuid));
+}
+
+void app_context_init(app_context *pContext)
+{
+    pContext->pszAdvName = NULL;
+    pContext->ble_events = xEventGroupCreate();
+    pContext->pszAdvNameBase = bitmans_get_advertname();
+
+    ESP_ERROR_CHECK(bitmans_ble_string36_to_uuid128(bitmans_get_char_id(), &pContext->char_uuid));
+    ESP_ERROR_CHECK(bitmans_ble_string36_to_uuid128(bitmans_get_server_id(), &pContext->service_uuid));
+}
 
 bool try_handle_error(app_context *pAppContext, esp_err_t err, const char *pszMethod)
 {
@@ -44,10 +67,7 @@ static void app_on_gatts_reg(bitmans_gatts_callbacks_t *pCb, esp_ble_gatts_cb_pa
 {
     app_context *pAppContext = (app_context *)pCb->pContext;
     esp_err_t err = bitmans_gatts_create_service128(pCb->gatts_if, &pAppContext->service_uuid);
-    if (try_handle_error(pAppContext, err, "app_on_gatts_reg"))
-        return;
-
-    xEventGroupSetBits(pAppContext->ble_events, GATTS_REGISTER_BIT);
+    try_handle_error(pAppContext, err, "app_on_gatts_reg");
 }
 
 static void app_on_gatts_create(bitmans_gatts_callbacks_t *pCb, esp_ble_gatts_cb_param_t *pParam)
@@ -64,24 +84,25 @@ static void app_on_gatts_create(bitmans_gatts_callbacks_t *pCb, esp_ble_gatts_cb
 static void app_on_gatts_add_char(bitmans_gatts_callbacks_t *pCb, esp_ble_gatts_cb_param_t *pParam)
 {
     app_context *pAppContext = (app_context *)pCb->pContext;
-    esp_err_t err = bitmans_gatts_start_service(pCb->service_handle);
-    try_handle_error(pAppContext, err, "app_on_gatts_add_char");
+    // esp_err_t err = bitmans_gatts_start_service(pCb->service_handle);
+    // try_handle_error(pAppContext, err, "app_on_gatts_add_char");
+    xEventGroupSetBits(pAppContext->ble_events, GATTS_READY_TO_START_BIT);
 }
 
 static void app_on_gatts_start(bitmans_gatts_callbacks_t *pCb, esp_ble_gatts_cb_param_t *pParam)
 {
     app_context *pAppContext = (app_context *)pCb->pContext;
-    esp_err_t err = bitmans_gatts_begin_advert_data_set128(pAppContext->pszAdvName, &pAppContext->service_uuid);
-    if (try_handle_error(pAppContext, err, "app_on_gatts_start"))
-        return;
+    assert(pAppContext->pszAdvName != NULL);
 
-    xEventGroupSetBits(pAppContext->ble_events, GATTS_START_BIT);
+    esp_err_t err = bitmans_gatts_begin_advert_data_set128(pAppContext->pszAdvName, &pAppContext->service_uuid);
+    try_handle_error(pAppContext, err, "app_on_gatts_start");
+    return;
 }
 
-static void app_on_gatts_unreg(bitmans_gatts_callbacks_t *pCb, esp_ble_gatts_cb_param_t *pParam)
+static void app_on_gatts_stop(bitmans_gatts_callbacks_t *pCb, esp_ble_gatts_cb_param_t *pParam)
 {
     app_context *pAppContext = (app_context *)pCb->pContext;
-    xEventGroupSetBits(pAppContext->ble_events, GATTS_UNREGISTER_BIT);
+    xEventGroupSetBits(pAppContext->ble_events, GATTS_STOP_BIT);
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -101,7 +122,7 @@ static void on_gaps_advert_start(bitmans_gaps_callbacks_t *pCb, esp_ble_gap_cb_p
     if (pParam->adv_start_cmpl.status == ESP_BT_STATUS_SUCCESS)
     {
         ESP_LOGI(TAG, "Advertising started successfully");
-        xEventGroupSetBits(pAppContext->ble_events, GAPS_STARTADVERTISING_BIT);
+        xEventGroupSetBits(pAppContext->ble_events, GAPS_START_ADVERTISING_BIT);
     }
     else
     {
@@ -116,7 +137,7 @@ static void on_gaps_advert_stop(bitmans_gaps_callbacks_t *pCb, esp_ble_gap_cb_pa
     if (pParam->adv_stop_cmpl.status == ESP_BT_STATUS_SUCCESS)
     {
         ESP_LOGI(TAG, "Advertising stopped successfully");
-        xEventGroupSetBits(pAppContext->ble_events, GAPS_STOPADVERTISING_BIT);
+        xEventGroupSetBits(pAppContext->ble_events, GAPS_STOP_ADVERTISING_BIT);
     }
     else
     {
@@ -126,27 +147,6 @@ static void on_gaps_advert_stop(bitmans_gaps_callbacks_t *pCb, esp_ble_gap_cb_pa
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
-void app_context_term(app_context *pContext)
-{
-    pContext->pszAdvName = NULL;
-    if (pContext->ble_events != NULL)
-    {
-        vEventGroupDelete(pContext->ble_events);
-        pContext->ble_events = NULL;
-    }
-
-    memset(&pContext->char_uuid, 0, sizeof(pContext->char_uuid));
-    memset(&pContext->service_uuid, 0, sizeof(pContext->service_uuid));
-}
-
-void app_context_init(app_context *pContext)
-{
-    pContext->ble_events = xEventGroupCreate();
-    pContext->pszAdvName = bitmans_get_advertname();
-
-    ESP_ERROR_CHECK(bitmans_ble_string36_to_uuid128(bitmans_get_char_id(), &pContext->char_uuid));
-    ESP_ERROR_CHECK(bitmans_ble_string36_to_uuid128(bitmans_get_server_id(), &pContext->service_uuid));
-}
 
 bool handle_flags_error(esp_err_t err, EventBits_t flags, int stage)
 {
@@ -155,10 +155,57 @@ bool handle_flags_error(esp_err_t err, EventBits_t flags, int stage)
 
     if (err != ESP_OK)
         ESP_LOGE(TAG, "Error: %s, stage: %d", esp_err_to_name(err), stage);
-    else 
+    else
         ESP_LOGE(TAG, "Error: Flags=0x%08lx, stage: %d", (unsigned long)flags, stage);
 
     return true;
+}
+
+esp_err_t run_gatts_service(bitmans_gatts_callbacks_t *pGattsCallbacks, const char * pszAdvName, uint16_t runtimeSecs)
+{
+    EventBits_t flags = 0;
+    app_context *pAppContext = (app_context *)pGattsCallbacks->pContext;
+    pAppContext->pszAdvName = pszAdvName;
+    xEventGroupClearBits(pAppContext->ble_events, 0x00FFFFFF); // Top byte is reserved.
+
+    bitmans_set_blink_mode(BLINK_MODE_BASIC);
+    esp_err_t err = bitmans_gatts_start_service(pGattsCallbacks->service_handle);
+    if (handle_flags_error(err, ~ERROR_BIT, 100))
+        return ESP_FAIL;
+
+    ESP_LOGI(TAG, "Wait for start advertising event");
+    err = bitmans_waitbits_forever(pAppContext->ble_events, GAPS_START_ADVERTISING_BIT | ERROR_BIT, &flags);
+    if (handle_flags_error(err, flags, 200))
+        return ESP_FAIL;
+
+    bitmans_set_blink_mode(BLINK_MODE_BREATHING);
+    ESP_LOGI(TAG, "Running");
+    vTaskDelay(runtimeSecs / portTICK_PERIOD_MS);
+
+    bitmans_set_blink_mode(BLINK_MODE_SLOW);
+    err = bitmans_gatts_stop_advertising();
+    if (handle_flags_error(err, ~ERROR_BIT, 300))
+        return ESP_FAIL;
+
+    ESP_LOGI(TAG, "Wait for stop advertising event");
+    err = bitmans_waitbits_forever(pAppContext->ble_events, GAPS_STOP_ADVERTISING_BIT | ERROR_BIT, &flags);
+    if (handle_flags_error(err, flags, 400))
+        return ESP_FAIL;
+
+    err = bitmans_gatts_stop_service(pGattsCallbacks->service_handle);
+    if (handle_flags_error(err, ~ERROR_BIT, 500))
+        return ESP_FAIL;
+
+    ESP_LOGI(TAG, "Wait for stop service event");
+    err = bitmans_waitbits_forever(pAppContext->ble_events, GATTS_STOP_BIT | ERROR_BIT, &flags);
+    if (handle_flags_error(err, flags, 600))
+        return ESP_FAIL;
+
+    // We shouldn't need this delay, but there might be some race condition.  From the log...
+    // E (1965) BT_BTC: bta_to_btc_uuid UUID len is invalid 56080
+    // vTaskDelay(2000 / portTICK_PERIOD_MS);
+
+    return ESP_OK;
 }
 
 void app_main(void)
@@ -167,7 +214,7 @@ void app_main(void)
 
     bitmans_gatts_callbacks_t gatts_callbacks = {
         .on_reg = app_on_gatts_reg,
-        .on_unreg = app_on_gatts_unreg,
+        .on_stop = app_on_gatts_stop,
         .on_start = app_on_gatts_start,
         .on_create = app_on_gatts_create,
         .on_add_char = app_on_gatts_add_char,
@@ -188,60 +235,26 @@ void app_main(void)
     bitmans_ble_gaps_callbacks_init(&gaps_callbacks, &appContext);
     bitmans_ble_gatts_callbacks_init(&gatts_callbacks, &appContext);
 
-    EventBits_t flags = 0;
-    esp_err_t err = ESP_OK;
-
-    while (true)
-    {
 #define BITMANS_APP_ID 0x55
-        bitmans_set_blink_mode(BLINK_MODE_BASIC);
-        err = bitmans_ble_gatts_register(BITMANS_APP_ID, &gatts_callbacks, &appContext);
-        if (handle_flags_error(err, ~ERROR_BIT, 100))
-            break;
-
-        ESP_LOGI(TAG, "Wait for start advertising event");
-        err = bitmans_waitbits_forever(appContext.ble_events, GAPS_STARTADVERTISING_BIT | ERROR_BIT, &flags);
-        if (handle_flags_error(err, flags, 200))
-            break;
-
-        bitmans_set_blink_mode(BLINK_MODE_BREATHING);
-        ESP_LOGI(TAG, "Running");
-        vTaskDelay(10000 / portTICK_PERIOD_MS);
-
-        bitmans_set_blink_mode(BLINK_MODE_SLOW);
-        err = bitmans_gatts_stop_advertising();
-        if (handle_flags_error(err, ~ERROR_BIT, 300))
-            break;
-
-        ESP_LOGI(TAG, "Wait for stop advertising event");
-        err = bitmans_waitbits_forever(appContext.ble_events, GAPS_STOPADVERTISING_BIT | ERROR_BIT, &flags);
-        if (handle_flags_error(err, flags, 400))
-            break;
-
-        err = bitmans_ble_gatts_unregister(BITMANS_APP_ID);
-        if (handle_flags_error(err, ~ERROR_BIT, 500))
-            break;
-
-        ESP_LOGI(TAG, "Wait for unregister event");
-        err = bitmans_waitbits_forever(appContext.ble_events, GATTS_UNREGISTER_BIT | ERROR_BIT, &flags);
-        if (handle_flags_error(err, flags, 600))
-            break;
-
-        // We shouldn't need this delay, but there might be some race condition.  From the log...
-        // E (1965) BT_BTC: bta_to_btc_uuid UUID len is invalid 56080
-        // vTaskDelay(1000 / portTICK_PERIOD_MS);
+    EventBits_t flags = 0;
+    ESP_ERROR_CHECK(bitmans_gatts_register(BITMANS_APP_ID, &gatts_callbacks, &appContext));
+    esp_err_t err = bitmans_waitbits_forever(appContext.ble_events, GATTS_READY_TO_START_BIT | ERROR_BIT, &flags);
+    if (!handle_flags_error(err, flags, 50))
+    {
+        char szAdvName[64];
+        for (int n = 0;; ++n)
+        {
+            snprintf(szAdvName, sizeof(szAdvName), "%s_%d", appContext.pszAdvNameBase, n);
+            err = run_gatts_service(&gatts_callbacks, szAdvName, 10000);
+            if (err != ESP_OK)
+                break;
+        }
     }
 
+    ESP_LOGI(TAG, "Exiting soon");
     bitmans_set_blink_mode(BLINK_MODE_VERY_FAST);
     vTaskDelay(5000 / portTICK_PERIOD_MS);
 
-    ESP_LOGI(TAG, "Term BLE");
-    bitmans_ble_gatts_unregister(BITMANS_APP_ID);
-    bitmans_ble_server_term();
-    bitmans_blink_term();
-
-    app_context_term(&appContext);
-    ESP_LOGI(TAG, "App terminated");
-
+    ESP_LOGI(TAG, "App restarting");
     esp_restart();
 }
