@@ -134,6 +134,8 @@ static void bitmans_gattc_event_handler(esp_gattc_cb_event_t event, esp_gatt_if_
                  param->connect.remote_bda[0], param->connect.remote_bda[1], param->connect.remote_bda[2],
                  param->connect.remote_bda[3], param->connect.remote_bda[4], param->connect.remote_bda[5]);
         // The actual GATT connection status and service discovery initiation should be handled in ESP_GATTC_OPEN_EVT
+
+        bitmans_bda_context_lookup(&param->connect.remote_bda); // TODO
         break;
     }
 
@@ -155,11 +157,15 @@ static void bitmans_gattc_event_handler(esp_gattc_cb_event_t event, esp_gatt_if_
                 ESP_LOGE(TAG, "esp_ble_gattc_search_service error, status %d", err);
             }
         }
+
+        bitmans_bda_context_lookup(&param->open.remote_bda);
         break;
 
     case ESP_GATTC_DISCONNECT_EVT:
         ESP_LOGI(TAG, "ESP_GATTC_DISCONNECT_EVT, conn_id %d, reason %d", param->disconnect.conn_id, param->disconnect.reason);
         // You might want to re-scan or attempt to reconnect here
+
+        bitmans_bda_context_lookup(&param->disconnect.remote_bda);
         break;
 
     case ESP_GATTC_SEARCH_RES_EVT:

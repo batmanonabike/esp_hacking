@@ -4,6 +4,7 @@
 #include "freertos/event_groups.h"
 
 #include "bitmans_lib.h"
+#include "bitmans_config.h"
 #include "bitmans_ble_server.h"
 
 static const char *TAG = "ble_server_app";
@@ -68,13 +69,11 @@ void app_context_term(app_gatts_context *pContext)
 void app_context_init(app_gatts_context *pContext)
 {
     pContext->UNREGISTER_BIT = BIT0;
-    pContext->pszAdvName = "BitmansGATTS";
     pContext->ble_events = xEventGroupCreate();
+    pContext->pszAdvName = bitmans_get_advertname();
 
-    const char *pszCharUUID = "f0debc9a-3412-7856-1234-56785601efcd";
-    const char *pszServerUUID = "f0debc9a-7856-3412-1234-567856125612";
-    ESP_ERROR_CHECK(bitmans_ble_string36_to_uuid128(pszCharUUID, &pContext->char_uuid));
-    ESP_ERROR_CHECK(bitmans_ble_string36_to_uuid128(pszServerUUID, &pContext->service_uuid));
+    ESP_ERROR_CHECK(bitmans_ble_string36_to_uuid128(bitmans_get_char_id(), &pContext->char_uuid));
+    ESP_ERROR_CHECK(bitmans_ble_string36_to_uuid128(bitmans_get_server_id(), &pContext->service_uuid));
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////

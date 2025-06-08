@@ -11,7 +11,8 @@
                 "${env:IDF_PATH}/components/*/*/include",
                 "${env:IDF_TOOLS_PATH}/tools/**",
                 "${workspaceFolder}/components/**/include",
-                "${workspaceFolder}/components/bitmans_lib/include"
+                "${workspaceFolder}/components/bitmans_lib/include",
+                "${workspaceFolder}/components/bitmans_config/include"
             ],
             "browse": {
                 "path": [

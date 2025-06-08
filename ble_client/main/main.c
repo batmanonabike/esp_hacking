@@ -1,5 +1,6 @@
 #include "esp_log.h"
 #include "bitmans_lib.h"
+#include "bitmans_config.h"
 
 static const char *TAG = "ble_client_app";
 
@@ -43,6 +44,18 @@ void app_on_sec_req(struct bitmans_gap_callbacks_t *pCb, esp_ble_gap_cb_param_t 
     bitmans_bda_context_lookup(&pParam->ble_security.ble_req.bd_addr);
 }
 
+// In your scan result handler:
+// if (bitmans_ble_find_service_uuid(&scan_result->scan_rst, &pAppContext->service_uuid)) {
+//     // Found the device you want
+//     memcpy(g_target_bda, scan_result->scan_rst.bda, ESP_BD_ADDR_LEN);
+//     g_target_addr_type = scan_result->scan_rst.ble_addr_type;
+//     esp_ble_gap_stop_scanning(); // Stop scanning before connecting
+// }
+
+// // In your scan stop complete handler:
+// esp_ble_gattc_open(g_gattc_handles[GATTC_APP0], g_target_bda, g_target_addr_type, true);
+// // This results in calls to the GATT Client callbacks, where you can handle the connection establishment.
+
 void app_on_scan_result(struct bitmans_gap_callbacks_t *pCb, esp_ble_gap_cb_param_t *pParam)
 {
     app_gap_context *pAppContext = (app_gap_context *)pCb->pContext;
@@ -50,7 +63,8 @@ void app_on_scan_result(struct bitmans_gap_callbacks_t *pCb, esp_ble_gap_cb_para
 
     switch (scan_result->scan_rst.search_evt)
     {
-    case ESP_GAP_SEARCH_INQ_RES_EVT: // Inquiry result for a peer device
+    // Triggered for each device found during scanning.
+    case ESP_GAP_SEARCH_INQ_RES_EVT: 
         bitmans_log_ble_scan(&scan_result->scan_rst, true);
 
         // Here you would check if this is the server you want to connect to
@@ -88,8 +102,7 @@ void on_scan_stop_complete(struct bitmans_gap_callbacks_t *pCb, esp_ble_gap_cb_p
 void app_context_init(app_gap_context *pContext)
 {
     pContext->scan_duration_secs = 30; // Default scan duration
-    const char *pszServerUUID = "f0debc9a-7856-3412-1234-567856125612";
-    ESP_ERROR_CHECK(bitmans_ble_string36_to_uuid128(pszServerUUID, &pContext->service_uuid));
+    ESP_ERROR_CHECK(bitmans_ble_string36_to_uuid128(bitmans_get_server_id(), &pContext->service_uuid));
 }
 
 void app_main(void)
