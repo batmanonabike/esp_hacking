@@ -524,7 +524,7 @@ esp_err_t bitmans_ble_gatts_register(bitmans_gatts_app_id app_id, bitmans_gatts_
 
     pCallbacks->pContext = pContext;
     esp_err_t ret = bitmans_hash_table_set(&app_cb_table, app_id, pCallbacks);
-    if (ret)
+    if (ret != ESP_OK)
         return ret;
 
     ret = esp_ble_gatts_app_register(app_id);
