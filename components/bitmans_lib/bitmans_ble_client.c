@@ -58,7 +58,7 @@ static void bitmans_gap_event_handler(esp_gap_ble_cb_event_t event, esp_ble_gap_
     switch (event)
     {
     case ESP_GAP_BLE_SCAN_PARAM_SET_COMPLETE_EVT:
-        ESP_LOGI(TAG, "Scan parameters set, starting scan...");
+        ESP_LOGI(TAG, "ESP_GAP_BLE_SCAN_PARAM_SET_COMPLETE_EVT");
         g_pGapCallbacks->on_scan_param_set_complete(g_pGapCallbacks, pParam);
         break;
 
@@ -573,7 +573,7 @@ void bitmans_bda_context_reset(const esp_bd_addr_t *pbda)
     }
 }
 
-void bitmans_gap_no_op(struct bitmans_gapc_callbacks_t *pCb, esp_ble_gap_cb_param_t *pParam)
+void bitmans_gapc_no_op(struct bitmans_gapc_callbacks_t *pCb, esp_ble_gap_cb_param_t *pParam)
 {
 }
 
@@ -584,15 +584,15 @@ void bitmans_ble_gapc_callbacks_init(bitmans_gapc_callbacks_t *pCb, void *pConte
     g_pGapCallbacks = pCb;
     g_pGapCallbacks->pContext = pContext;
     if (g_pGapCallbacks->on_sec_req == NULL)
-        g_pGapCallbacks->on_sec_req = bitmans_gap_no_op;
+        g_pGapCallbacks->on_sec_req = bitmans_gapc_no_op;
     if (g_pGapCallbacks->on_scan_result == NULL)
-        g_pGapCallbacks->on_scan_result = bitmans_gap_no_op;
+        g_pGapCallbacks->on_scan_result = bitmans_gapc_no_op;
     if (g_pGapCallbacks->on_scan_stop_complete == NULL)
-        g_pGapCallbacks->on_scan_stop_complete = bitmans_gap_no_op;
+        g_pGapCallbacks->on_scan_stop_complete = bitmans_gapc_no_op;
     if (g_pGapCallbacks->on_update_conn_params == NULL)
-        g_pGapCallbacks->on_update_conn_params = bitmans_gap_no_op;
+        g_pGapCallbacks->on_update_conn_params = bitmans_gapc_no_op;
     if (g_pGapCallbacks->on_scan_start_complete == NULL)
-        g_pGapCallbacks->on_scan_start_complete = bitmans_gap_no_op;
+        g_pGapCallbacks->on_scan_start_complete = bitmans_gapc_no_op;
     if (g_pGapCallbacks->on_scan_param_set_complete == NULL)
-        g_pGapCallbacks->on_scan_param_set_complete = bitmans_gap_no_op;
+        g_pGapCallbacks->on_scan_param_set_complete = bitmans_gapc_no_op;
 }

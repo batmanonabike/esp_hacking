@@ -7,25 +7,25 @@
 
 static const char *TAG = "ble_battery_server_app";
 
-typedef struct app_gatts_context
+typedef struct app_context
 {
     const char *pszAdvName;
     uint16_t battery_level_handle;
     bitmans_ble_uuid128_t battery_level_uuid;
     bitmans_ble_uuid128_t battery_service_uuid;
 
-} app_gatts_context;
+} app_context;
 
 static void app_on_reg(bitmans_gatts_callbacks_t *pCb, esp_ble_gatts_cb_param_t *pParam)
 {
-    app_gatts_context *pAppContext = (app_gatts_context *)pCb->pContext;
+    app_context *pAppContext = (app_context *)pCb->pContext;
     bitmans_gatts_create_service128(pCb->gatts_if, &pAppContext->battery_service_uuid);
 }
 
 static void app_on_create(bitmans_gatts_callbacks_t *pCb, esp_ble_gatts_cb_param_t *pParam)
 {
     // Here we create the characteristic for the battery level.
-    app_gatts_context *pAppContext = (app_gatts_context *)pCb->pContext;
+    app_context *pAppContext = (app_context *)pCb->pContext;
     bitmans_gatts_create_char128(
         pCb->gatts_if, pCb->service_handle, &pAppContext->battery_level_uuid,
         ESP_GATT_CHAR_PROP_BIT_READ | ESP_GATT_CHAR_PROP_BIT_NOTIFY, //TODO: handle notifications
@@ -34,7 +34,7 @@ static void app_on_create(bitmans_gatts_callbacks_t *pCb, esp_ble_gatts_cb_param
 
 static void app_on_add_char(bitmans_gatts_callbacks_t *pCb, esp_ble_gatts_cb_param_t *pParam)
 {
-    app_gatts_context *pAppContext = (app_gatts_context *)pCb->pContext;
+    app_context *pAppContext = (app_context *)pCb->pContext;
     if (bitmans_ble_uuid_try_match(&pParam->add_char.char_uuid, &pAppContext->battery_level_uuid))
     {
         pAppContext->battery_level_handle = pParam->add_char.attr_handle;
@@ -54,8 +54,8 @@ static void app_on_add_char_desc(bitmans_gatts_callbacks_t *pCb, esp_ble_gatts_c
 
 static void app_on_start(bitmans_gatts_callbacks_t *pCb, esp_ble_gatts_cb_param_t *pParam)
 {
-    app_gatts_context *pAppContext = (app_gatts_context *)pCb->pContext;
-    bitmans_gatts_begin_advertise128(pAppContext->pszAdvName, &pAppContext->battery_service_uuid);
+    app_context *pAppContext = (app_context *)pCb->pContext;
+    bitmans_gatts_begin_advert_data_set128(pAppContext->pszAdvName, &pAppContext->battery_service_uuid);
 }
 
 static void app_on_connect(bitmans_gatts_callbacks_t *pCb, esp_ble_gatts_cb_param_t *pParam)
@@ -69,7 +69,7 @@ static void app_on_connect(bitmans_gatts_callbacks_t *pCb, esp_ble_gatts_cb_para
 
 static void app_on_read(bitmans_gatts_callbacks_t *pCb, esp_ble_gatts_cb_param_t *pParam)
 {
-    app_gatts_context *pAppContext = (app_gatts_context *)pCb->pContext;
+    app_context *pAppContext = (app_context *)pCb->pContext;
 
     // This is a read request for the battery level characteristic
     if (pParam->read.handle == pAppContext->battery_level_handle)
@@ -85,15 +85,15 @@ static void app_on_read(bitmans_gatts_callbacks_t *pCb, esp_ble_gatts_cb_param_t
 
 static void app_on_disconnect(bitmans_gatts_callbacks_t *pCb, esp_ble_gatts_cb_param_t *pParam)
 {
-    app_gatts_context *pAppContext = (app_gatts_context *)pCb->pContext;
-    bitmans_gatts_begin_advertise128(pAppContext->pszAdvName, &pAppContext->battery_service_uuid);
+    app_context *pAppContext = (app_context *)pCb->pContext;
+    bitmans_gatts_begin_advert_data_set128(pAppContext->pszAdvName, &pAppContext->battery_service_uuid);
 }
 
 static void app_on_unreg(bitmans_gatts_callbacks_t *pCb, esp_ble_gatts_cb_param_t *pParam)
 {
 }
 
-static void app_context_term(app_gatts_context *pContext)
+static void app_context_term(app_context *pContext)
 {
     pContext->pszAdvName = NULL;
     pContext->battery_level_handle = 0;
@@ -108,7 +108,7 @@ static void app_context_term(app_gatts_context *pContext)
 //
 // The 0x2902 descriptor is simply a mechanism that allows clients to subscribe to notifications. 
 // It's a general BLE feature that the battery service uses, but it's not specifically a battery thing.
-static void app_context_init(app_gatts_context *pContext)
+static void app_context_init(app_context *pContext)
 {
     // https://www.bluetooth.com/specifications/gatt/characteristics/
     pContext->battery_level_handle = 0;
@@ -130,7 +130,7 @@ void app_main(void)
 {
 #define BITMANS_APP_ID 0x56
 
-    app_gatts_context appContext;
+    app_context appContext;
     bitmans_gatts_callbacks_t callbacks = {
         .on_reg = app_on_reg,
         .on_read = app_on_read,

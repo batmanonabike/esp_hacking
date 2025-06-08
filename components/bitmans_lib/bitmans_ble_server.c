@@ -22,6 +22,7 @@ static const char *TAG = "bitmans_lib:ble_server";
 // The GATTS interface is a unique identifier for each GATT server instance, we get that during registration.
 static bitmans_hash_table_t app_cb_table;   // Hash table to map app IDs to GATTS callbacks.
 static bitmans_hash_table_t gatts_cb_table; // Hash table to map GATTS interfaces to callbacks.
+static bitmans_gaps_callbacks_t *g_pGapCallbacks = NULL;
 
 static esp_ble_adv_params_t adv_params = {
     .adv_int_min = 0x20,
@@ -32,10 +33,6 @@ static esp_ble_adv_params_t adv_params = {
     .adv_filter_policy = ADV_FILTER_ALLOW_SCAN_ANY_CON_ANY,
 };
 
-void bitman_gatts_no_op(bitmans_gatts_callbacks_t *pCb, esp_ble_gatts_cb_param_t *pParam)
-{
-}
-
 // GAP (Generic Access Profile) events to about BLE advertising, scanning, connection, and security events.
 // Common events include:
 // - ESP_GAP_BLE_ADV_START_COMPLETE_EVT: Advertising has started.
@@ -45,35 +42,25 @@ void bitman_gatts_no_op(bitmans_gatts_callbacks_t *pCb, esp_ble_gatts_cb_param_t
 // - ESP_GAP_BLE_UPDATE_CONN_PARAMS_EVT: Connection parameters updated.
 // - ESP_GAP_BLE_SEC_REQ_EVT: Security request from peer device.
 // https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/bluetooth/esp_gap_ble.html#_CPPv426esp_gap_ble_cb_event_t
-static void bitmans_gap_event_handler(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *param)
+static void bitmans_gap_event_handler(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *pParam)
 {
+    assert(g_pGapCallbacks != NULL); // call bitmans_ble_gaps_callbacks_init!
+
     switch (event)
     {
     case ESP_GAP_BLE_ADV_DATA_SET_COMPLETE_EVT:
-        ESP_LOGI(TAG, "Advertising data set, starting advertising");
-        esp_ble_gap_start_advertising(&adv_params);
+        ESP_LOGI(TAG, "ESP_GAP_BLE_ADV_DATA_SET_COMPLETE_EVT");
+        g_pGapCallbacks->on_advert_data_set(g_pGapCallbacks, pParam);
         break;
 
     case ESP_GAP_BLE_ADV_START_COMPLETE_EVT:
-        if (param->adv_start_cmpl.status == ESP_BT_STATUS_SUCCESS)
-        {
-            ESP_LOGI(TAG, "Advertising started successfully");
-        }
-        else
-        {
-            ESP_LOGE(TAG, "Advertising start failed, status=0x%x", param->adv_start_cmpl.status);
-        }
+        ESP_LOGI(TAG, "ESP_GAP_BLE_ADV_START_COMPLETE_EVT");
+        g_pGapCallbacks->on_advert_start(g_pGapCallbacks, pParam);
         break;
 
     case ESP_GAP_BLE_ADV_STOP_COMPLETE_EVT:
-        if (param->adv_stop_cmpl.status == ESP_BT_STATUS_SUCCESS)
-        {
-            ESP_LOGI(TAG, "Advertising stopped successfully");
-        }
-        else
-        {
-            ESP_LOGE(TAG, "Advertising stop failed, status=0x%x", param->adv_stop_cmpl.status);
-        }
+        ESP_LOGI(TAG, "ESP_GAP_BLE_ADV_STOP_COMPLETE_EVT");
+        g_pGapCallbacks->on_advert_stop(g_pGapCallbacks, pParam);
         break;
 
     default:
@@ -104,7 +91,7 @@ static bitmans_gatts_callbacks_t *bitmans_gatts_callbacks_create_mapping(
     return NULL;
 }
 
-esp_err_t bitmans_gatts_begin_advertise(const char *pszAdvertisedName, uint8_t *pId, uint8_t idLen)
+esp_err_t bitmans_gatts_begin_advert_data_set(const char *pszAdvertisedName, uint8_t *pId, uint8_t idLen)
 {
     esp_err_t err = ESP_OK;
     if (pszAdvertisedName != NULL)
@@ -143,9 +130,9 @@ esp_err_t bitmans_gatts_begin_advertise(const char *pszAdvertisedName, uint8_t *
     return ESP_OK;
 }
 
-esp_err_t bitmans_gatts_begin_advertise128(const char *pszAdvertisedName, bitmans_ble_uuid128_t *pId)
+esp_err_t bitmans_gatts_begin_advert_data_set128(const char *pszAdvertisedName, bitmans_ble_uuid128_t *pId)
 {
-    return bitmans_gatts_begin_advertise(pszAdvertisedName, pId->uuid, ESP_UUID_LEN_128);
+    return bitmans_gatts_begin_advert_data_set(pszAdvertisedName, pId->uuid, ESP_UUID_LEN_128);
 }
 
 static esp_err_t bitmans_gatts_create_service(esp_gatt_if_t gatts_if, esp_gatt_srvc_id_t *pId)
@@ -172,6 +159,21 @@ esp_err_t bitmans_gatts_create_service128(esp_gatt_if_t gatts_if, bitmans_ble_uu
     esp_gatt_srvc_id_t service_id = {.id = id, .is_primary = true};
 
     return bitmans_gatts_create_service(gatts_if, &service_id);
+}
+
+esp_err_t bitmans_gatts_start_advertising()
+{
+    esp_err_t err = esp_ble_gap_start_advertising(&adv_params);
+    if (err != ESP_OK)
+    {
+        ESP_LOGE(TAG, "Failed to start advertising: %s", esp_err_to_name(err));
+        return err;
+    }
+    else
+    {
+        ESP_LOGI(TAG, "Advertising started successfully");
+    }
+    return ESP_OK;
 }
 
 // Permissions control what operations a client is allowed to perform on the characteristic value.
@@ -481,6 +483,10 @@ esp_err_t bitmans_ble_server_term()
     return ESP_OK;
 }
 
+void bitman_gatts_no_op(bitmans_gatts_callbacks_t *pCb, esp_ble_gatts_cb_param_t *pParam)
+{
+}
+
 void bitmans_ble_gatts_callbacks_init(bitmans_gatts_callbacks_t *pCallbacks, void *pContext)
 {
     pCallbacks->service_handle = 0;
@@ -552,4 +558,22 @@ esp_err_t bitmans_ble_gatts_unregister(bitmans_gatts_app_id app_id)
     }
 
     return bitmans_hash_table_remove(&app_cb_table, app_id);
+}
+
+void bitmans_gaps_no_op(struct bitmans_gaps_callbacks_t *pCb, esp_ble_gap_cb_param_t *pParam)
+{
+}
+
+void bitmans_ble_gaps_callbacks_init(bitmans_gaps_callbacks_t *pCb, void *pContext)
+{
+    assert(pCb != NULL);
+
+    g_pGapCallbacks = pCb;
+    g_pGapCallbacks->pContext = pContext;
+    if (g_pGapCallbacks->on_advert_stop == NULL)
+        g_pGapCallbacks->on_advert_stop = bitmans_gaps_no_op;
+    if (g_pGapCallbacks->on_advert_start == NULL)
+        g_pGapCallbacks->on_advert_start = bitmans_gaps_no_op;
+    if (g_pGapCallbacks->on_advert_data_set == NULL)
+        g_pGapCallbacks->on_advert_data_set = bitmans_gaps_no_op;
 }

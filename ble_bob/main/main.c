@@ -10,10 +10,10 @@
 
 static const char *TAG = "ble_bob_app";
 
-typedef struct app_gatts_context
+typedef struct app_context
 {
     const char *pszAdvName;
-} app_gatts_context;
+} app_context;
 
 static esp_err_t app_create_service(esp_gatt_if_t gatts_if)
 {
@@ -48,8 +48,8 @@ static void app_on_create(bitmans_gatts_callbacks_t *pCb, esp_ble_gatts_cb_param
 
 static void app_on_start(bitmans_gatts_callbacks_t *pCb, esp_ble_gatts_cb_param_t *pParam)
 {
-    app_gatts_context *pAppContext = (app_gatts_context *)pCb->pContext;
-    bitmans_gatts_begin_advertise(pAppContext->pszAdvName, NULL, 0);
+    app_context *pAppContext = (app_context *)pCb->pContext;
+    bitmans_gatts_begin_advert_data_set(pAppContext->pszAdvName, NULL, 0);
 }
 
 static const char *bob_insults[] = {
@@ -83,7 +83,7 @@ void app_main(void)
     ESP_ERROR_CHECK(bitmans_lib_init());
     ESP_ERROR_CHECK(bitmans_ble_server_init());
 
-    app_gatts_context appContext = { 
+    app_context appContext = { 
         .pszAdvName = pick_random_bob_insult()
     };
 
