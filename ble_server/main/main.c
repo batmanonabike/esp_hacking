@@ -148,12 +148,16 @@ void app_context_init(app_context *pContext)
     ESP_ERROR_CHECK(bitmans_ble_string36_to_uuid128(bitmans_get_server_id(), &pContext->service_uuid));
 }
 
-bool handle_flags_error(esp_err_t err, EventBits_t flags)
+bool handle_flags_error(esp_err_t err, EventBits_t flags, int stage)
 {
-    if (err == ESP_OK && ((flags & ERROR_BIT) == 0))
+    if (err == ESP_OK && ((flags & ERROR_BIT) == 0) && flags != 0)
         return false;
 
-    ESP_LOGE(TAG, "Error: %s", esp_err_to_name(err));
+    if (err != ESP_OK)
+        ESP_LOGE(TAG, "Error: %s, stage: %d", esp_err_to_name(err), stage);
+    else 
+        ESP_LOGE(TAG, "Error: Flags=0x%08lx, stage: %d", (unsigned long)flags, stage);
+
     return true;
 }
 
@@ -176,6 +180,7 @@ void app_main(void)
     };
 
     ESP_ERROR_CHECK(bitmans_lib_init());
+    ESP_ERROR_CHECK(bitmans_blink_init(-1));
     ESP_ERROR_CHECK(bitmans_ble_server_init());
 
     app_context appContext;
@@ -189,50 +194,51 @@ void app_main(void)
     while (true)
     {
 #define BITMANS_APP_ID 0x55
+        bitmans_set_blink_mode(BLINK_MODE_BASIC);
         err = bitmans_ble_gatts_register(BITMANS_APP_ID, &gatts_callbacks, &appContext);
-        if (handle_flags_error(err, flags))
+        if (handle_flags_error(err, ~ERROR_BIT, 100))
             break;
 
         ESP_LOGI(TAG, "Wait for start advertising event");
         err = bitmans_waitbits_forever(appContext.ble_events, GAPS_STARTADVERTISING_BIT | ERROR_BIT, &flags);
-        if (handle_flags_error(err, flags))
+        if (handle_flags_error(err, flags, 200))
             break;
 
+        bitmans_set_blink_mode(BLINK_MODE_BREATHING);
         ESP_LOGI(TAG, "Running");
         vTaskDelay(10000 / portTICK_PERIOD_MS);
 
+        bitmans_set_blink_mode(BLINK_MODE_SLOW);
         err = bitmans_gatts_stop_advertising();
-        if (handle_flags_error(err, flags))
+        if (handle_flags_error(err, ~ERROR_BIT, 300))
             break;
 
         ESP_LOGI(TAG, "Wait for stop advertising event");
         err = bitmans_waitbits_forever(appContext.ble_events, GAPS_STOPADVERTISING_BIT | ERROR_BIT, &flags);
-        if (handle_flags_error(err, flags))
+        if (handle_flags_error(err, flags, 400))
             break;
 
         err = bitmans_ble_gatts_unregister(BITMANS_APP_ID);
-        if (handle_flags_error(err, flags))
+        if (handle_flags_error(err, ~ERROR_BIT, 500))
             break;
 
         ESP_LOGI(TAG, "Wait for unregister event");
         err = bitmans_waitbits_forever(appContext.ble_events, GATTS_UNREGISTER_BIT | ERROR_BIT, &flags);
-        if (handle_flags_error(err, flags))
+        if (handle_flags_error(err, flags, 600))
             break;
 
         // We shouldn't need this delay, but there might be some race condition.  From the log...
         // E (1965) BT_BTC: bta_to_btc_uuid UUID len is invalid 56080
-        vTaskDelay(70000 / portTICK_PERIOD_MS);
+        // vTaskDelay(1000 / portTICK_PERIOD_MS);
     }
 
+    bitmans_set_blink_mode(BLINK_MODE_VERY_FAST);
     vTaskDelay(5000 / portTICK_PERIOD_MS);
-
-    // ESP_LOGI(TAG, "Stop advertising");
-    // bitmans_gatts_stop_advertising();
-    // vTaskDelay(10000 / portTICK_PERIOD_MS);
 
     ESP_LOGI(TAG, "Term BLE");
     bitmans_ble_gatts_unregister(BITMANS_APP_ID);
     bitmans_ble_server_term();
+    bitmans_blink_term();
 
     app_context_term(&appContext);
     ESP_LOGI(TAG, "App terminated");
