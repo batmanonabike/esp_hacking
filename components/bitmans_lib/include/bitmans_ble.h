@@ -18,6 +18,8 @@ esp_err_t bitmans_ble_uuid16_to_uuid128(bitmans_ble_uuid16_t, bitmans_ble_uuid12
 esp_err_t bitmans_ble_string4_to_uuid128(const char *pszUUID, bitmans_ble_uuid128_t *);
 esp_err_t bitmans_ble_string36_to_uuid128(const char *pszUUID, bitmans_ble_uuid128_t *);
 esp_err_t bitmans_ble_uuid_match(const esp_bt_uuid_t *, const bitmans_ble_uuid128_t *, bool *pResult);
+
+void bitmans_ble_log_uuid128(const char *context, const uint8_t *uuid_bytes);
 bool bitmans_ble_uuid_try_match(const esp_bt_uuid_t *pEspId, const bitmans_ble_uuid128_t *pUuid);
 
 #ifdef __cplusplus

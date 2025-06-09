@@ -184,4 +184,14 @@ bool bitmans_ble_uuid_try_match(const esp_bt_uuid_t *pEspId, const bitmans_ble_u
     bool result = false;
     bitmans_ble_uuid_match(pEspId, pUuid, &result);
     return result;
-}   
+}
+
+void bitmans_ble_log_uuid128(const char *context, const uint8_t *uuid_bytes)
+{
+    ESP_LOGI(TAG, "%s: %02x%02x%02x%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x%02x%02x%02x%02x",
+             context ? context : "UUID",
+             uuid_bytes[15], uuid_bytes[14], uuid_bytes[13], uuid_bytes[12],
+             uuid_bytes[11], uuid_bytes[10], uuid_bytes[9], uuid_bytes[8],
+             uuid_bytes[7], uuid_bytes[6], uuid_bytes[5], uuid_bytes[4],
+             uuid_bytes[3], uuid_bytes[2], uuid_bytes[1], uuid_bytes[0]);
+}

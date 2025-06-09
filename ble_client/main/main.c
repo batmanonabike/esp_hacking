@@ -8,15 +8,24 @@ typedef struct app_gap_context
 {
     uint32_t scan_duration_secs;
     bitmans_ble_uuid128_t service_uuid;
-    
+
 } app_gap_context;
 
-void app_on_scan_param_set_complete(struct bitmans_gapc_callbacks_t *pCb, esp_ble_gap_cb_param_t *pParam)
+void app_context_init(app_gap_context *pContext)
 {
-    bitmans_ble_client_set_scan_params();
+    pContext->scan_duration_secs = 0; // Set to 0 for indefinite scanning - we'll stop manually after one sweep
+    ESP_ERROR_CHECK(bitmans_ble_string36_to_uuid128(bitmans_get_server_id(), &pContext->service_uuid));
 }
 
-void app_on_scan_start_complete(struct bitmans_gapc_callbacks_t *pCb, esp_ble_gap_cb_param_t *pParam)
+///////////////////////////////////////////////////////////////////////////////////////////////////////
+// GAP Client Callbacks
+void app_on_gapc_scan_param_set_complete(struct bitmans_gapc_callbacks_t *pCb, esp_ble_gap_cb_param_t *pParam)
+{
+    app_gap_context *pAppContext = (app_gap_context *)pCb->pContext;
+    bitmans_ble_start_scanning(pAppContext->scan_duration_secs);
+}
+
+void app_on_gapc_scan_start_complete(struct bitmans_gapc_callbacks_t *pCb, esp_ble_gap_cb_param_t *pParam)
 {
     if (pParam->scan_start_cmpl.status != ESP_BT_STATUS_SUCCESS)
     {
@@ -28,7 +37,7 @@ void app_on_scan_start_complete(struct bitmans_gapc_callbacks_t *pCb, esp_ble_ga
     }
 }
 
-void app_on_update_conn_params(struct bitmans_gapc_callbacks_t *pCb, esp_ble_gap_cb_param_t *pParam)
+void app_on_gapc_update_conn_params(struct bitmans_gapc_callbacks_t *pCb, esp_ble_gap_cb_param_t *pParam)
 {
     ESP_LOGI(TAG, "Connection parameters updated: min_int=%d, max_int=%d, latency=%d, timeout=%d",
              pParam->update_conn_params.min_int,
@@ -39,7 +48,7 @@ void app_on_update_conn_params(struct bitmans_gapc_callbacks_t *pCb, esp_ble_gap
     bitmans_bda_context_lookup(&pParam->update_conn_params.bda);
 }
 
-void app_on_sec_req(struct bitmans_gapc_callbacks_t *pCb, esp_ble_gap_cb_param_t *pParam)
+void app_on_gapc_sec_req(struct bitmans_gapc_callbacks_t *pCb, esp_ble_gap_cb_param_t *pParam)
 {
     bitmans_bda_context_lookup(&pParam->ble_security.ble_req.bd_addr);
 }
@@ -56,7 +65,7 @@ void app_on_sec_req(struct bitmans_gapc_callbacks_t *pCb, esp_ble_gap_cb_param_t
 // esp_ble_gattc_open(g_gattc_handles[GATTC_APP0], g_target_bda, g_target_addr_type, true);
 // // This results in calls to the GATT Client callbacks, where you can handle the connection establishment.
 
-void app_on_scan_result(struct bitmans_gapc_callbacks_t *pCb, esp_ble_gap_cb_param_t *pParam)
+void app_on_gapc_scan_result(struct bitmans_gapc_callbacks_t *pCb, esp_ble_gap_cb_param_t *pParam)
 {
     app_gap_context *pAppContext = (app_gap_context *)pCb->pContext;
     esp_ble_gap_cb_param_t *scan_result = (esp_ble_gap_cb_param_t *)pParam;
@@ -64,8 +73,19 @@ void app_on_scan_result(struct bitmans_gapc_callbacks_t *pCb, esp_ble_gap_cb_par
     switch (scan_result->scan_rst.search_evt)
     {
     // Triggered for each device found during scanning.
-    case ESP_GAP_SEARCH_INQ_RES_EVT: 
-        bitmans_log_ble_scan(&scan_result->scan_rst, true);
+    case ESP_GAP_SEARCH_INQ_RES_EVT:
+        if (!bitmans_ble_advname_matches(&scan_result->scan_rst, "BitmansGATTS_0"))
+            return;
+
+        // bitmans_log_ble_scan(&scan_result->scan_rst, true);
+
+        // Use comprehensive logging for detailed advertising packet analysis
+        ESP_LOGI(TAG, "=== Using Comprehensive BLE Logging ===");
+        bitmans_log_verbose_ble_scan(&scan_result->scan_rst, true);
+
+        // Enable debug logging to investigate esp_ble_resolve_adv_data zero-length issues
+        ESP_LOGI(TAG, "=== Debug Analysis for Device #%d ===", debug_device_count + 1);
+        bitmans_debug_esp_ble_resolve_adv_data(&scan_result->scan_rst);
 
         // Here you would check if this is the server you want to connect to
         // For example, by checking the advertised name or service UUID
@@ -81,12 +101,18 @@ void app_on_scan_result(struct bitmans_gapc_callbacks_t *pCb, esp_ble_gap_cb_par
             // memcpy(g_target_bda, scan_result->scan_rst.bda, ESP_BD_ADDR_LEN);
             // g_target_addr_type = scan_result->scan_rst.ble_addr_type;
 
-            esp_err_t err = bitmans_bda_context_set(&scan_result->scan_rst.bda, NULL); // TODO!
-            if (err == ESP_OK)
-                esp_ble_gap_stop_scanning();
+            // esp_err_t err = bitmans_bda_context_set(&scan_result->scan_rst.bda, NULL); // TODO!
+            //if (err == ESP_OK)
+                bitmans_ble_client_stop_scanning();
 
             // The connection attempt should ideally happen in ESP_GAP_BLE_SCAN_STOP_COMPLETE_EVT
         }
+        break;
+
+    // Triggered when one complete scan sweep is finished
+    case ESP_GAP_SEARCH_INQ_CMPL_EVT:
+        ESP_LOGI(TAG, "Scan inquiry complete - one sweep finished. Stopping scan.");
+        bitmans_ble_client_stop_scanning();
         break;
 
     default:
@@ -94,16 +120,12 @@ void app_on_scan_result(struct bitmans_gapc_callbacks_t *pCb, esp_ble_gap_cb_par
     }
 }
 
-void on_scan_stop_complete(struct bitmans_gapc_callbacks_t *pCb, esp_ble_gap_cb_param_t *pParam)
+void app_on_gapc_scan_stop_complete(struct bitmans_gapc_callbacks_t *pCb, esp_ble_gap_cb_param_t *pParam)
 {
     // If you stopped scanning to connect, initiate connection here
 }
 
-void app_context_init(app_gap_context *pContext)
-{
-    pContext->scan_duration_secs = 30; // Default scan duration
-    ESP_ERROR_CHECK(bitmans_ble_string36_to_uuid128(bitmans_get_server_id(), &pContext->service_uuid));
-}
+///////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void app_main(void)
 {
@@ -116,11 +138,12 @@ void app_main(void)
     app_gap_context app_context;
     bitmans_gapc_callbacks_t gap_callbacks = {
         .pContext = NULL,
-        .on_sec_req = app_on_sec_req,
-        .on_scan_result = app_on_scan_result,
-        .on_update_conn_params = app_on_update_conn_params,
-        .on_scan_start_complete = app_on_scan_start_complete,
-        .on_scan_param_set_complete = app_on_scan_param_set_complete,
+        .on_sec_req = app_on_gapc_sec_req,
+        .on_scan_result = app_on_gapc_scan_result,
+        .on_scan_stop_complete = app_on_gapc_scan_stop_complete,
+        .on_update_conn_params = app_on_gapc_update_conn_params,
+        .on_scan_start_complete = app_on_gapc_scan_start_complete,
+        .on_scan_param_set_complete = app_on_gapc_scan_param_set_complete,
     };
     app_context_init(&app_context);
     bitmans_ble_gapc_callbacks_init(&gap_callbacks, &app_context);

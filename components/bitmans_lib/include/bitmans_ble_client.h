@@ -41,13 +41,16 @@ extern "C"
 
     esp_err_t bitmans_ble_client_init();
     esp_err_t bitmans_ble_client_term();
-    esp_err_t bitmans_ble_client_stop_scanning();
-    esp_err_t bitmans_ble_client_set_scan_params(); // Effectively initiates scanning.
-    esp_err_t bitmans_ble_client_get_advertised_name(bitmans_scan_result_t *, bitmans_advertised_name_t *);
-    bool bitmans_ble_client_find_service_uuid(bitmans_scan_result_t *pScanResult, bitmans_ble_uuid128_t * pId);
-    
     esp_err_t bitmans_ble_register_gattc(bitmans_gattc_app_id_t);
     esp_err_t bitmans_ble_unregister_gattc(bitmans_gattc_app_id_t);
+
+    esp_err_t bitmans_ble_client_set_scan_params(); // Effectively initiates scanning.
+    esp_err_t bitmans_ble_start_scanning(uint32_t scan_duration_secs);
+    esp_err_t bitmans_ble_client_stop_scanning();
+
+    esp_err_t bitmans_ble_client_get_advertised_name(bitmans_scan_result_t *, bitmans_advertised_name_t *);
+    bool bitmans_ble_advname_matches(bitmans_scan_result_t *, const char *pszName);
+    bool bitmans_ble_client_find_service_uuid(bitmans_scan_result_t *pScanResult, bitmans_ble_uuid128_t * pId);
     
     // Callbacks from scanning and connection management. 
     typedef struct bitmans_gapc_callbacks_t
@@ -68,6 +71,7 @@ extern "C"
     void bitmans_bda_context_reset(const esp_bd_addr_t *pbda);
     void *bitmans_bda_context_lookup(const esp_bd_addr_t *pbda);
     esp_err_t bitmans_bda_context_set(const esp_bd_addr_t *pbda, void *pContext);
+
 
 #ifdef __cplusplus
 }

@@ -9,7 +9,9 @@ extern "C"
 {
 #endif
 
+    void bitmans_debug_esp_ble_resolve_adv_data(bitmans_scan_result_t *pScanResult);
     void bitmans_log_ble_scan(bitmans_scan_result_t *pScanResult, bool ignoreNoAdvertisedName);
+    void bitmans_log_verbose_ble_scan(bitmans_scan_result_t *pScanResult, bool ignoreNoAdvertisedName);
 
 #ifdef __cplusplus
 }

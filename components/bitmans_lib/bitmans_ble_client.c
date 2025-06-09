@@ -36,9 +36,9 @@ typedef struct
 
 #define GAP_CB_TABLE_SIZE 16
 static gap_bda_callback_entry_t gap_cb_table[GAP_CB_TABLE_SIZE] = {0}; // Array for per-BDA callbacks
-static esp_gatt_if_t g_gattc_handles[GATTC_APPLAST + 1]; // AppIds to GATT Client handles mapping
+static esp_gatt_if_t g_gattc_handles[GATTC_APPLAST + 1];               // AppIds to GATT Client handles mapping
 
-static bitmans_gapc_callbacks_t *g_pGapCallbacks = NULL; 
+static bitmans_gapc_callbacks_t *g_pGapCallbacks = NULL;
 
 // GAP (Generic Access Profile) events notify about BLE advertising, scanning, connection management, and security events.
 // Common events include:
@@ -51,6 +51,36 @@ static bitmans_gapc_callbacks_t *g_pGapCallbacks = NULL;
 // - ESP_GAP_BLE_UPDATE_CONN_PARAMS_EVT: Connection parameters updated.
 // - ESP_GAP_BLE_SEC_REQ_EVT: Security request from peer device.
 // https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/bluetooth/esp_gap_ble.html#_CPPv426esp_gap_ble_cb_event_t
+//
+// Expected order/flow of events for scanning:
+// 1. esp_bt_controller_init() - Initializes BT controller with configuration
+// 2. esp_bt_controller_enable() - Enables the BT controller in BLE mode
+// 3. esp_bluedroid_init() - Initializes bluedroid stack
+// 4. esp_bluedroid_enable() - Enables bluedroid stack
+// 5. esp_ble_gap_register_callback() - Registers GAP callback function
+// 6. esp_ble_gattc_register_callback() - Registers GATTC callback function
+// 7. esp_ble_gattc_app_register() - Registers application with GATT client
+// 8. esp_ble_gap_set_scan_params() - Sets scan parameters
+// 9. ESP_GAP_BLE_SCAN_PARAM_SET_COMPLETE_EVT - Received when scan parameters are set
+// 10. esp_ble_gap_start_scanning() - Starts scanning with the set parameters
+// 11. ESP_GAP_BLE_SCAN_START_COMPLETE_EVT - Received when scanning has started
+// 12. ESP_GAP_BLE_SCAN_RESULT_EVT - Received for each device found while scanning
+// 13. esp_ble_gap_stop_scanning() - Called to stop scanning (or timeout occurs)
+// 14. ESP_GAP_BLE_SCAN_STOP_COMPLETE_EVT - Received when scanning has stopped
+//
+// When a target device is found, the typical connection flow:
+// 1. Store target device's BDA (Bluetooth Device Address)
+// 2. esp_ble_gap_stop_scanning() - Stop scanning before connecting
+// 3. esp_ble_gattc_open() - Open connection to device (usually in scan_stop_complete)
+// 4. ESP_GATTC_CONNECT_EVT - Physical link established
+// 5. ESP_GATTC_OPEN_EVT - GATT connection established
+// 6. esp_ble_gattc_search_service() - Discover services (usually in open_evt handler)
+// 7. ESP_GATTC_SEARCH_RES_EVT - Service discovered (multiple times, one per service)
+// 8. ESP_GATTC_SEARCH_CMPL_EVT - Service discovery complete
+// 9. esp_ble_gattc_get_characteristic() - Get characteristic details if needed
+// 10. ESP_GATTC_GET_CHAR_EVT - Characteristic information received
+// 11. esp_ble_gattc_read_char() / esp_ble_gattc_write_char() - Read or write characteristics
+
 static void bitmans_gap_event_handler(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *pParam)
 {
     assert(g_pGapCallbacks != NULL); // call bitmans_ble_gapc_callbacks_init!
@@ -182,11 +212,13 @@ static void bitmans_gattc_event_handler(esp_gattc_cb_event_t event, esp_gatt_if_
         }
         else if (srvc_uuid->len == ESP_UUID_LEN_128)
         {
-            ESP_LOGI(TAG, "SERVICE UUID (128-bit): %02x%02x%02x%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x%02x%02x%02x%02x",
-                     srvc_uuid->uuid.uuid128[0], srvc_uuid->uuid.uuid128[1], srvc_uuid->uuid.uuid128[2], srvc_uuid->uuid.uuid128[3],
-                     srvc_uuid->uuid.uuid128[4], srvc_uuid->uuid.uuid128[5], srvc_uuid->uuid.uuid128[6], srvc_uuid->uuid.uuid128[7],
-                     srvc_uuid->uuid.uuid128[8], srvc_uuid->uuid.uuid128[9], srvc_uuid->uuid.uuid128[10], srvc_uuid->uuid.uuid128[11],
-                     srvc_uuid->uuid.uuid128[12], srvc_uuid->uuid.uuid128[13], srvc_uuid->uuid.uuid128[14], srvc_uuid->uuid.uuid128[15]);
+            bitmans_ble_log_uuid128("SERVICE UUID (128-bit)", srvc_uuid->uuid.uuid128);
+
+            // ESP_LOGI(TAG, "SERVICE UUID (128-bit): %02x%02x%02x%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x%02x%02x%02x%02x",
+            //          srvc_uuid->uuid.uuid128[0], srvc_uuid->uuid.uuid128[1], srvc_uuid->uuid.uuid128[2], srvc_uuid->uuid.uuid128[3],
+            //          srvc_uuid->uuid.uuid128[4], srvc_uuid->uuid.uuid128[5], srvc_uuid->uuid.uuid128[6], srvc_uuid->uuid.uuid128[7],
+            //          srvc_uuid->uuid.uuid128[8], srvc_uuid->uuid.uuid128[9], srvc_uuid->uuid.uuid128[10], srvc_uuid->uuid.uuid128[11],
+            //          srvc_uuid->uuid.uuid128[12], srvc_uuid->uuid.uuid128[13], srvc_uuid->uuid.uuid128[14], srvc_uuid->uuid.uuid128[15]);
         }
         else
         {
@@ -308,13 +340,16 @@ static bool bitmans_ble_find_service_uuid_by_type(bitmans_scan_result_t *pScanRe
     uint8_t adv_data_len = 0;
     uint8_t *adv_data = esp_ble_resolve_adv_data(pScanResult->ble_adv, type, &adv_data_len);
 
+    ESP_LOGI(TAG, "Resolved advert length: %d", adv_data_len);
+
     if (adv_data != NULL && adv_data_len > 0)
     {
         for (int i = 0; i < adv_data_len; i += ESP_UUID_LEN_128)
         {
+            bitmans_ble_log_uuid128("Checking UUID", &adv_data[i]);
             if (memcmp(&adv_data[i], pId, ESP_UUID_LEN_128) == 0)
             {
-                ESP_LOGI(TAG, "Found custom service UUID (complete list)!");
+                ESP_LOGI(TAG, "FOUND UUID");
                 return true;
             }
         }
@@ -325,15 +360,17 @@ static bool bitmans_ble_find_service_uuid_by_type(bitmans_scan_result_t *pScanRe
 
 bool bitmans_ble_client_find_service_uuid(bitmans_scan_result_t *pScanResult, bitmans_ble_uuid128_t *pId)
 {
+    bitmans_ble_log_uuid128("Looking for UUID", pId->uuid);
+
     if (bitmans_ble_find_service_uuid_by_type(pScanResult, pId, ESP_BLE_AD_TYPE_128SRV_CMPL))
     {
-        ESP_LOGI(TAG, "Found custom service UUID (complete list)!");
+        ESP_LOGI(TAG, "Found custom service UUID in complete list");
         return true;
     }
 
     if (bitmans_ble_find_service_uuid_by_type(pScanResult, pId, ESP_BLE_AD_TYPE_128SRV_PART))
     {
-        ESP_LOGI(TAG, "Found custom service UUID (partial list)!");
+        ESP_LOGI(TAG, "Found custom service UUID in partial list");
         return true;
     }
 
@@ -465,6 +502,22 @@ esp_err_t bitmans_ble_client_set_scan_params()
     return ret;
 }
 
+esp_err_t bitmans_ble_start_scanning(uint32_t scan_duration_secs)
+{
+    esp_err_t ret = esp_ble_gap_start_scanning(scan_duration_secs);
+
+    if (ret == ESP_OK)
+    {
+        ESP_LOGI(TAG, "Scanning started for %lu seconds.", scan_duration_secs);
+    }
+    else
+    {
+        ESP_LOGE(TAG, "esp_ble_gap_start_scanning failed, error code = %x", ret);
+    }
+
+    return ret;
+}
+
 esp_err_t bitmans_ble_client_stop_scanning()
 {
     ESP_LOGI(TAG, "Stopping BLE scan...");
@@ -515,6 +568,22 @@ esp_err_t bitmans_ble_client_get_advertised_name(bitmans_scan_result_t *pScanRes
     return (pAdvertisedName->name[0] == '\0') ? ESP_ERR_NOT_FOUND : ESP_OK;
 }
 
+bool bitmans_ble_advname_matches(bitmans_scan_result_t * pScanResult, const char *pszName)
+{
+    assert(pszName != NULL);
+    assert(pScanResult != NULL);
+
+    bitmans_advertised_name_t adv_name = {0};
+    esp_err_t err = bitmans_ble_client_get_advertised_name(pScanResult, &adv_name);
+    if (err == ESP_OK)
+    {
+        ESP_LOGI(TAG, "Comparing advname: %s, %s", adv_name.name, pszName);
+        return (strncmp(adv_name.name, pszName, sizeof(adv_name.name)) == 0);
+    }
+
+    return false;
+}
+
 void *bitmans_bda_context_lookup(const esp_bd_addr_t *pbda)
 {
     for (int i = 0; i < GAP_CB_TABLE_SIZE; ++i)
@@ -523,22 +592,6 @@ void *bitmans_bda_context_lookup(const esp_bd_addr_t *pbda)
             return gap_cb_table[i].pContext;
     }
     return NULL;
-}
-
-esp_err_t bitmans_ble_start_scanning(uint32_t scan_duration_secs)
-{
-    esp_err_t ret = esp_ble_gap_start_scanning(scan_duration_secs);
-
-    if (ret == ESP_OK)
-    {
-        ESP_LOGI(TAG, "Scanning started for %lu seconds.", scan_duration_secs);
-    }
-    else
-    {
-        ESP_LOGE(TAG, "esp_ble_gap_start_scanning failed, error code = %x", ret);
-    }
-
-    return ret;
 }
 
 esp_err_t bitmans_bda_context_set(const esp_bd_addr_t *pbda, void *pContext)
