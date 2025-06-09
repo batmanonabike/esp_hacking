@@ -481,7 +481,8 @@ esp_err_t bitmans_ble_client_set_scan_params()
 
     // https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/bluetooth/esp_gap_ble.html#_CPPv421esp_ble_scan_params_t
     esp_ble_scan_params_t ble_scan_params = {
-        .scan_type = BLE_SCAN_TYPE_ACTIVE,
+        .scan_type = BLE_SCAN_TYPE_PASSIVE,
+        //.scan_type = BLE_SCAN_TYPE_ACTIVE,
         .own_addr_type = BLE_ADDR_TYPE_PUBLIC,
         .scan_filter_policy = BLE_SCAN_FILTER_ALLOW_ALL,
         .scan_interval = 0x50, // N * 0.625ms

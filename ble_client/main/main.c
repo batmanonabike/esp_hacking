@@ -74,39 +74,40 @@ void app_on_gapc_scan_result(struct bitmans_gapc_callbacks_t *pCb, esp_ble_gap_c
     {
     // Triggered for each device found during scanning.
     case ESP_GAP_SEARCH_INQ_RES_EVT:
-        if (!bitmans_ble_advname_matches(&scan_result->scan_rst, "BitmansGATTS_0"))
+        // if (!bitmans_ble_advname_matches(&scan_result->scan_rst, "BitmansGATTS_0"))
+        //     return;
+
+        if (!bitmans_ble_client_find_service_uuid(&scan_result->scan_rst, &pAppContext->service_uuid))
             return;
 
         // bitmans_log_ble_scan(&scan_result->scan_rst, true);
 
         // Use comprehensive logging for detailed advertising packet analysis
         ESP_LOGI(TAG, "=== Using Comprehensive BLE Logging ===");
-        bitmans_log_verbose_ble_scan(&scan_result->scan_rst, true);
+        bitmans_log_verbose_ble_scan(&scan_result->scan_rst, false);
 
         // Enable debug logging to investigate esp_ble_resolve_adv_data zero-length issues
-        ESP_LOGI(TAG, "=== Debug Analysis for Device #%d ===", debug_device_count + 1);
+        ESP_LOGI(TAG, "=== Debug Analysis ===");
         bitmans_debug_esp_ble_resolve_adv_data(&scan_result->scan_rst);
 
         // Here you would check if this is the server you want to connect to
         // For example, by checking the advertised name or service UUID
         // If it is, you would call esp_ble_gap_stop_scanning() and then esp_ble_gattc_open()
-        if (bitmans_ble_client_find_service_uuid(&scan_result->scan_rst, &pAppContext->service_uuid))
-        {
-            ESP_LOGI(TAG, "Device with custom service UUID found. BDA: %02x:%02x:%02x:%02x:%02x:%02x",
-                     scan_result->scan_rst.bda[0], scan_result->scan_rst.bda[1],
-                     scan_result->scan_rst.bda[2], scan_result->scan_rst.bda[3],
-                     scan_result->scan_rst.bda[4], scan_result->scan_rst.bda[5]);
 
-            // Store BDA for connection if needed:
-            // memcpy(g_target_bda, scan_result->scan_rst.bda, ESP_BD_ADDR_LEN);
-            // g_target_addr_type = scan_result->scan_rst.ble_addr_type;
+        ESP_LOGI(TAG, "Device with custom service UUID found. BDA: %02x:%02x:%02x:%02x:%02x:%02x",
+                 scan_result->scan_rst.bda[0], scan_result->scan_rst.bda[1],
+                 scan_result->scan_rst.bda[2], scan_result->scan_rst.bda[3],
+                 scan_result->scan_rst.bda[4], scan_result->scan_rst.bda[5]);
 
-            // esp_err_t err = bitmans_bda_context_set(&scan_result->scan_rst.bda, NULL); // TODO!
-            //if (err == ESP_OK)
-                bitmans_ble_client_stop_scanning();
+        // Store BDA for connection if needed:
+        // memcpy(g_target_bda, scan_result->scan_rst.bda, ESP_BD_ADDR_LEN);
+        // g_target_addr_type = scan_result->scan_rst.ble_addr_type;
 
-            // The connection attempt should ideally happen in ESP_GAP_BLE_SCAN_STOP_COMPLETE_EVT
-        }
+        // esp_err_t err = bitmans_bda_context_set(&scan_result->scan_rst.bda, NULL); // TODO!
+        // if (err == ESP_OK)
+        bitmans_ble_client_stop_scanning();
+
+        // The connection attempt should ideally happen in ESP_GAP_BLE_SCAN_STOP_COMPLETE_EVT
         break;
 
     // Triggered when one complete scan sweep is finished

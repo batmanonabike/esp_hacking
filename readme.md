@@ -63,7 +63,7 @@ idf.py size-components
 ## Other notes:
 
 ### Opening a workspace, such as `bitman_windows.code-workspace` is useful for allowing sub projects for the ESP-IDF vscode extension.
- 
+
 ### If you find that compilations are missing header files and you have added the dependencies...
 
 Ensure that menuconfig is enabling the required feature in the TOP level project (e.g. BLE).  Header files can be hidden otherwise.
@@ -148,7 +148,7 @@ Also note that you can reduce binary size wrt logging but *ONLY* via menuconfig/
 ```
 CONFIG_LOG_DEFAULT_LEVEL_ERROR=y
 CONFIG_LOG_DEFAULT_LEVEL=1
-``` 
+```
 
 ## JTAG Debugging
 
@@ -185,14 +185,14 @@ https://espressif.github.io/esptool-js/
 
 Regarding the chipsets:
 
-- Labels: **A, B** hardware is esp32-devkitC-32, `WROOM-32`, `CH340C`  
-- Labels: **C, D, E**: `WROOM-32`, `CP2102`  
+- Labels: **A, B** hardware is esp32-devkitC-32, `WROOM-32`, `CH340C`
+- Labels: **C, D, E**: `WROOM-32`, `CP2102`
 I think I blew up `D` by drunken incorrect battery insertion.
-- Label: **F**: `TODO`, no UART, Need ESP Prog + JTAG (no USB)  
-- Label: **G**: `WROOM-S3-1`, ESP32-S3 (QFN56) (revision v0.2)  
-Embedded PSRAM 8MB (AP_3v3) [Build issues to address]  
-- Label: **H**: `TODO`   
-- Label: **I**: ESP32-S3 Sense, `ESP32-S3` (QFN56) (revision v0.2)  
+- Label: **F**: `TODO`, no UART, Need ESP Prog + JTAG (no USB)
+- Label: **G**: `WROOM-S3-1`, ESP32-S3 (QFN56) (revision v0.2)
+Embedded PSRAM 8MB (AP_3v3) [Build issues to address]
+- Label: **H**: `TODO`
+- Label: **I**: ESP32-S3 Sense, `ESP32-S3` (QFN56) (revision v0.2)
 Wi-Fi,BLE,Embedded PSRAM 8MB (AP_3v3)
 
 ## Troubleshooting
@@ -218,9 +218,9 @@ In `.vscode/c_cpp_properties.json`:
     "configurations": [
         {
             "name": "BitmansESP-IDF",
-            "compilerPath": "${env:IDF_TOOLS_PATH}/tools/xtensa-esp-elf/esp-13.2.0_20240530/xtensa-esp-elf/bin/xtensa-esp32-elf-gcc.exe",  
+            "compilerPath": "${env:IDF_TOOLS_PATH}/tools/xtensa-esp-elf/esp-13.2.0_20240530/xtensa-esp-elf/bin/xtensa-esp32-elf-gcc.exe",
 ```
-Also note that there is a *default* compiler path (`C_Cpp.default.compilerPath`) in `.vscode/settings.json`. 
+Also note that there is a *default* compiler path (`C_Cpp.default.compilerPath`) in `.vscode/settings.json`.
 
 ### Example
 On my windows PC:
@@ -241,7 +241,7 @@ You can use the command pallette to select the correct configiuration...
 ```
 C/C++: Select IntelliSense Configuration
 ```
-Then the `name` in `.vscode/c_cpp_properties.json` (e.g. `BitmansESP-IDF`) should appear in the status bar (bottom-right corner of VS Code).  
+Then the `name` in `.vscode/c_cpp_properties.json` (e.g. `BitmansESP-IDF`) should appear in the status bar (bottom-right corner of VS Code).
 Alternatively you click on that part of the status bar to select the configuration.
 
 ### Debug Compiler Path for Intellisense
@@ -276,7 +276,7 @@ I (5764) bitmans_lib:ble_client_logging: Advertising Data Length: 31 bytes
 I (5774) bitmans_lib:ble_client_logging: Scan Response Length: 16 bytes
 I (5774) bitmans_lib:ble_client_logging: Raw Advertising Data:
 I (5784) bitmans_lib:ble_client_logging: 02 01 06 03 19 44 09 11 07 12 56 12 56 78 56 34
-I (5794) bitmans_lib:ble_client_logging: 12 12 34 56 78 9a bc de f0 05 12 06 00 10 00 
+I (5794) bitmans_lib:ble_client_logging: 12 12 34 56 78 9a bc de f0 05 12 06 00 10 00
 I (5804) bitmans_lib:ble_client_logging: Advertised Name: BitmansGATTS_0
 I (5804) bitmans_lib:ble_client_logging: Flags (len 1): 0x06
 I (5814) bitmans_lib:ble_client_logging:   - LE General Discoverable Mode
@@ -287,7 +287,7 @@ I (5844) bitmans_lib:ble_client_logging: Complete 128-bit Service UUIDs (count 1
 I (5854) bitmans_lib:ble_client_logging:   - f0debc9a-7856-3412-1234-567856125612
 I (5854) bitmans_lib:ble_client_logging: === SCAN RESPONSE DATA ===
 I (5864) bitmans_lib:ble_client_logging: Scan Response Data (len 16):
-I (5874) bitmans_lib:ble_client_logging: 0f 09 42 69 74 6d 61 6e 73 47 41 54 54 53 5f 30 
+I (5874) bitmans_lib:ble_client_logging: 0f 09 42 69 74 6d 61 6e 73 47 41 54 54 53 5f 30
 I (5884) bitmans_lib:ble_client_logging: ============================================
 I (5894) ble_client_app: === Debug Analysis for Device #1 ===
 I (5894) bitmans_lib:ble_client_logging: === DEBUG esp_ble_resolve_adv_data FUNCTION ===
@@ -295,11 +295,11 @@ I (5904) bitmans_lib:ble_client_logging: Device Address: f4:65:0b:57:5c:3a
 I (5914) bitmans_lib:ble_client_logging: Advertising Data Length: 31
 I (5924) bitmans_lib:ble_client_logging: Scan Response Length: 16
 I (5924) bitmans_lib:ble_client_logging: Raw advertising data:
-I (5934) bitmans_lib:ble_client_logging: 02 01 06 03 19 44 09 11 07 12 56 12 56 78 56 34 
+I (5934) bitmans_lib:ble_client_logging: 02 01 06 03 19 44 09 11 07 12 56 12 56 78 56 34
 I (5944) bitmans_lib:ble_client_logging: 12 12 34 56 78 9a bc de f0 05 12 06 00 10 00
 I (5954) bitmans_lib:ble_client_logging: Type 0x01 (FLAGS): ptr=0x3ffce1de, len=1
 I (5954) bitmans_lib:ble_client_logging:   Data:
-I (5964) bitmans_lib:ble_client_logging: 06 
+I (5964) bitmans_lib:ble_client_logging: 06
 I (5964) bitmans_lib:ble_client_logging: Type 0x02 (16SRV_PART): ptr=0x0, len=0
 I (5974) bitmans_lib:ble_client_logging: Type 0x03 (16SRV_CMPL): ptr=0x0, len=0
 I (5984) bitmans_lib:ble_client_logging: Type 0x04 (32SRV_PART): ptr=0x0, len=0
@@ -307,17 +307,17 @@ I (5994) bitmans_lib:ble_client_logging: Type 0x05 (32SRV_CMPL): ptr=0x0, len=0
 I (6004) bitmans_lib:ble_client_logging: Type 0x06 (128SRV_PART): ptr=0x0, len=0
 I (6004) bitmans_lib:ble_client_logging: Type 0x07 (128SRV_CMPL): ptr=0x3ffce1e5, len=16
 I (6014) bitmans_lib:ble_client_logging:   Data:
-I (6024) bitmans_lib:ble_client_logging: 12 56 12 56 78 56 34 12 12 34 56 78 9a bc de f0 
+I (6024) bitmans_lib:ble_client_logging: 12 56 12 56 78 56 34 12 12 34 56 78 9a bc de f0
 I (6034) bitmans_lib:ble_client_logging: Type 0x08 (NAME_SHORT): ptr=0x0, len=0
 I (6044) bitmans_lib:ble_client_logging: Type 0x09 (NAME_CMPL): ptr=0x3ffce1fd, len=14
 I (6044) bitmans_lib:ble_client_logging:   Data:
-I (6054) bitmans_lib:ble_client_logging: 42 69 74 6d 61 6e 73 47 41 54 54 53 5f 30 
+I (6054) bitmans_lib:ble_client_logging: 42 69 74 6d 61 6e 73 47 41 54 54 53 5f 30
 I (6064) bitmans_lib:ble_client_logging: Type 0x0a (TX_PWR): ptr=0x0, len=0
 I (6074) bitmans_lib:ble_client_logging: Type 0x0d (DEV_CLASS): ptr=0x0, len=0
 I (6074) bitmans_lib:ble_client_logging: Type 0x16 (SERVICE_DATA): ptr=0x0, len=0
 I (6084) bitmans_lib:ble_client_logging: Type 0x19 (APPEARANCE): ptr=0x3ffce1e1, len=2
 I (6094) bitmans_lib:ble_client_logging:   Data:
-I (6104) bitmans_lib:ble_client_logging: 44 09 
+I (6104) bitmans_lib:ble_client_logging: 44 09
 I (6104) bitmans_lib:ble_client_logging: Type 0x1a (ADV_INT): ptr=0x0, len=0
 I (6114) bitmans_lib:ble_client_logging: Type 0x20 (32SERVICE_DATA): ptr=0x0, len=0
 I (6124) bitmans_lib:ble_client_logging: Type 0x21 (128SERVICE_DATA): ptr=0x0, len=0
@@ -331,3 +331,70 @@ I (6174) bitmans_lib:ble_client: Found custom service UUID in complete list
 I (6184) ble_client_app: Device with custom service UUID found. BDA: f4:65:0b:57:5c:3a
 I (6194) bitmans_lib:ble_client: Stopping BLE scan...
 ```
+
+### Log from a an active scan against ble_server
+
+```C
+esp_ble_scan_params_t ble_scan_params = {
+    .scan_type = BLE_SCAN_TYPE_PASSIVE,
+```
+
+```
+I (4643) ble_client_app: === Using Comprehensive BLE Logging ===
+I (4653) bitmans_lib:ble_client_logging: === COMPREHENSIVE BLE DEVICE SCAN RESULT ===
+I (4663) bitmans_lib:ble_client_logging: Device Address: f4:65:0b:57:5c:3a
+I (4663) bitmans_lib:ble_client_logging: RSSI: -50 dBm
+I (4673) bitmans_lib:ble_client_logging: Address Type: Public
+I (4683) bitmans_lib:ble_client_logging: Device Type: BLE
+I (4683) bitmans_lib:ble_client_logging: Advertising Data Length: 31 bytes
+I (4693) bitmans_lib:ble_client_logging: Scan Response Length: 0 bytes
+I (4703) bitmans_lib:ble_client_logging: Raw Advertising Data:
+I (4703) bitmans_lib:ble_client_logging: 02 01 06 03 19 44 09 11 07 12 56 12 56 78 56 34
+I (4713) bitmans_lib:ble_client_logging: 12 12 34 56 78 9a bc de f0 05 12 06 00 10 00
+I (4723) bitmans_lib:ble_client_logging: Advertised Name:
+I (4733) bitmans_lib:ble_client_logging: Flags (len 1): 0x06
+I (4733) bitmans_lib:ble_client_logging:   - LE General Discoverable Mode
+I (4743) bitmans_lib:ble_client_logging:   - BR/EDR Not Supported
+I (4753) bitmans_lib:ble_client_logging: Appearance: 0x0944
+I (4753) bitmans_lib:ble_client_logging: === SERVICE UUIDs ===
+I (4763) bitmans_lib:ble_client_logging: Complete 128-bit Service UUIDs (count 1):
+I (4773) bitmans_lib:ble_client_logging:   - f0debc9a-7856-3412-1234-567856125612
+I (4783) bitmans_lib:ble_client_logging: ============================================
+I (4783) ble_client_app: === Debug Analysis ===
+I (4793) bitmans_lib:ble_client_logging: === DEBUG esp_ble_resolve_adv_data FUNCTION ===
+I (4803) bitmans_lib:ble_client_logging: Device Address: f4:65:0b:57:5c:3a
+I (4813) bitmans_lib:ble_client_logging: Advertising Data Length: 31
+I (4813) bitmans_lib:ble_client_logging: Scan Response Length: 0
+I (4823) bitmans_lib:ble_client_logging: Raw advertising data:
+I (4833) bitmans_lib:ble_client_logging: 02 01 06 03 19 44 09 11 07 12 56 12 56 78 56 34
+I (4843) bitmans_lib:ble_client_logging: 12 12 34 56 78 9a bc de f0 05 12 06 00 10 00
+I (4843) bitmans_lib:ble_client_logging: Type 0x01 (FLAGS): ptr=0x3ffcdc5a, len=1
+I (4853) bitmans_lib:ble_client_logging:   Data:
+I (4863) bitmans_lib:ble_client_logging: 06
+I (4863) bitmans_lib:ble_client_logging: Type 0x02 (16SRV_PART): ptr=0x0, len=0
+I (4873) bitmans_lib:ble_client_logging: Type 0x03 (16SRV_CMPL): ptr=0x0, len=0
+I (4883) bitmans_lib:ble_client_logging: Type 0x04 (32SRV_PART): ptr=0x0, len=0
+I (4893) bitmans_lib:ble_client_logging: Type 0x05 (32SRV_CMPL): ptr=0x0, len=0
+I (4893) bitmans_lib:ble_client_logging: Type 0x06 (128SRV_PART): ptr=0x0, len=0
+I (4903) bitmans_lib:ble_client_logging: Type 0x07 (128SRV_CMPL): ptr=0x3ffcdc61, len=16
+I (4913) bitmans_lib:ble_client_logging:   Data:
+I (4923) bitmans_lib:ble_client_logging: 12 56 12 56 78 56 34 12 12 34 56 78 9a bc de f0
+I (4933) bitmans_lib:ble_client_logging: Type 0x08 (NAME_SHORT): ptr=0x0, len=0
+I (4933) bitmans_lib:ble_client_logging: Type 0x09 (NAME_CMPL): ptr=0x0, len=0
+I (4943) bitmans_lib:ble_client_logging: Type 0x0a (TX_PWR): ptr=0x0, len=0
+I (4953) bitmans_lib:ble_client_logging: Type 0x0d (DEV_CLASS): ptr=0x0, len=0
+I (4963) bitmans_lib:ble_client_logging: Type 0x16 (SERVICE_DATA): ptr=0x0, len=0
+I (4973) bitmans_lib:ble_client_logging: Type 0x19 (APPEARANCE): ptr=0x3ffcdc5d, len=2
+I (4973) bitmans_lib:ble_client_logging:   Data:
+I (4983) bitmans_lib:ble_client_logging: 44 09
+I (4983) bitmans_lib:ble_client_logging: Type 0x1a (ADV_INT): ptr=0x0, len=0
+I (4993) bitmans_lib:ble_client_logging: Type 0x20 (32SERVICE_DATA): ptr=0x0, len=0
+I (5003) bitmans_lib:ble_client_logging: Type 0x21 (128SERVICE_DATA): ptr=0x0, len=0
+I (5013) bitmans_lib:ble_client_logging: Type 0xff (MANUFACTURER_SPECIFIC): ptr=0x0, len=0
+I (5023) bitmans_lib:ble_client_logging: ===============================================
+I (5033) ble_client_app: Device with custom service UUID found. BDA: f4:65:0b:57:5c:3a
+I (5043) bitmans_lib:ble_client: Stopping BLE scan...
+```
+
+Noting that there is NO advert name here because we opted to send the advert name in the `scan response` packet.
+Only scans in active mode get the scan response packet.
