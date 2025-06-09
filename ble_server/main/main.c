@@ -78,7 +78,6 @@ static void app_on_gatts_add_char(bitmans_gatts_callbacks_t *pCb, esp_ble_gatts_
 static void app_on_gatts_start(bitmans_gatts_callbacks_t *pCb, esp_ble_gatts_cb_param_t *pParam)
 {
     app_context *pAppContext = (app_context *)pCb->pContext;
-    assert(pAppContext->pszAdvName != NULL);
 
     esp_err_t err = bitmans_gatts_begin_advert_data_set128(pAppContext->pszAdvName, &pAppContext->service_uuid);
     try_handle_error(pAppContext, err, "app_on_gatts_start");

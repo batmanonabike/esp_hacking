@@ -91,28 +91,75 @@ static bitmans_gatts_callbacks_t *bitmans_gatts_callbacks_create_mapping(
     return NULL;
 }
 
-esp_err_t bitmans_gatts_begin_advert_data_set(const char *pszAdvertisedName, uint8_t *pId, uint8_t idLen)
+// Note that this type of esp log...
+//    W (3601141) BT_BTM: BTM_BleWriteAdvData, Partial data write into ADV
+// .. indicates that the packet is not big enough to hold all the advertised data.
+// This means that passive scanners which don't listen for an additional scam response packet will only
+// see a subset of what you are advertising.
+// The order priority is:
+//   Flags (mandatory) - Always included first
+//   Service UUID - Typically gets priority over the device name
+//   Device name - Gets truncated or dropped if space is limited.
+// See also: esp_ble_adv_params_t
+//
+// Stick to max 10 characers for the device name to ensure it fits in the advertising packet IF you also
+// advertise a service UUID.
+esp_err_t bitmans_gatts_begin_advert_data_set(const char *pszAdvName, uint8_t *pId, uint8_t idLen)
 {
     esp_err_t err = ESP_OK;
-    if (pszAdvertisedName != NULL)
-    {
-        err = esp_ble_gap_set_device_name(pszAdvertisedName);
-        if (err != ESP_OK)
-        {
-            ESP_LOGE(TAG, "Failed to set device name for: %s, %s", pszAdvertisedName, esp_err_to_name(err));
-            return err;
-        }
-    }
+
+    // `esp_ble_adv_data_t` describes the advertising data that will be sent while advertising.
+    // This is a limited size packet (31 user bytes), so we need to be careful about what we include if
+    // we want passive scans to see enough data to determine interest.
+    //
+    // Active scanners can request additional data via a single `scan response` packet, which is larger
+    // and can include more information.
+
+    // Optional data we can include in the advertising data:
+    // 'Connection Interval Range' (an extra 6 bytes) in the advertising data...
+    //   .min_interval = 0x0006,
+    //   .max_interval = 0x0010,
+    // The code seems to function fine without this.
+    //
+    // Appearance is a 16-bit value which indicates the type of device being advertised.
+    // This adds 3 bytes in total.
+    //   0x0000: Unknown
+    //   0x0080: Generic Phone
+    //   0x0040: Generic Computer
+    //   0x0180: Generic Watch
+    //   0x0181: Sports Watch
+    //   0x0340: Generic Thermometer
+    //   0x0380: Generic Heart Rate Sensor
+    //   0x03C0: Generic Blood Pressure
+    //   0x0940: Generic Audio Source
+    //   0x0941: Generic Audio Sink
+    //   0x0942: Microphone
+    //   0x0943: Speaker
+    //   0x0944: Headphones
+    //   0x0945: Portable Audio Player
+
+    // There are also flags that can be set in the advertising data, which indicate the type of device:
+    //   ESP_BLE_ADV_FLAG_GEN_DISC: General discoverable mode
+    //   ESP_BLE_ADV_FLAG_LIMIT_DISC: For devices that only want to be discoverable for a short time.
+    //   ESP_BLE_ADV_FLAG_BREDR_NOT_SPT: Bluetooth classic not supported
+
+    // An *active* scan will get this as part of the advert response.
+    //   esp_ble_scan_params_t
+    //     .scan_type = BLE_SCAN_TYPE_ACTIVE 
+
+    // Advertisement packet. 
+    // For example we might just include the service UUID which means that *passive* scan can find 
+    // if they are interested in the service quicker and without handshaking.
 
     esp_ble_adv_data_t adv_data = {
         .p_service_uuid = pId,
         .service_uuid_len = idLen,
         .set_scan_rsp = false,
-        .include_name = true,
+        .include_name = false, // Don't include name in adv packet
         .include_txpower = false,
         .min_interval = 0x0006,
         .max_interval = 0x0010,
-        .appearance = 0x00,
+        .appearance = 0x0944, // Headphones
         .manufacturer_len = 0,
         .p_manufacturer_data = NULL,
         .service_data_len = 0,
@@ -120,13 +167,42 @@ esp_err_t bitmans_gatts_begin_advert_data_set(const char *pszAdvertisedName, uin
         .flag = (ESP_BLE_ADV_FLAG_GEN_DISC | ESP_BLE_ADV_FLAG_BREDR_NOT_SPT),
     };
 
+    // Set main advertisement data.
     err = esp_ble_gap_config_adv_data(&adv_data);
     if (err != ESP_OK)
     {
         ESP_LOGE(TAG, "Failed to configure advertising data: %s", esp_err_to_name(err));
         return err;
     }
-    ESP_LOGV(TAG, "Advertising succeeded");
+
+    if (pszAdvName != NULL)
+    {
+        // We can send one (optional) additional `Scan response` packet.
+        // This packet can include more data than the main advertisement packet but won't be seen by
+        // passive scanners.
+        esp_ble_adv_data_t scan_rsp_data = {
+            .set_scan_rsp = true,
+            .include_name = true, // Include name in scan response (pszAdvertisedName)
+            .include_txpower = false,
+            .flag = 0 // No flags in scan response
+        };
+
+        err = esp_ble_gap_set_device_name(pszAdvName);
+        if (err != ESP_OK)
+        {
+            ESP_LOGE(TAG, "Failed to set device name for: %s, %s", pszAdvName, esp_err_to_name(err));
+            return err;
+        }
+
+        err = esp_ble_gap_config_adv_data(&scan_rsp_data);
+        if (err != ESP_OK)
+        {
+            ESP_LOGE(TAG, "Failed to configure scan response data: %s", esp_err_to_name(err));
+            return err;
+        }
+    }
+
+    ESP_LOGV(TAG, "Advertising data setup succeeded");
     return ESP_OK;
 }
 
