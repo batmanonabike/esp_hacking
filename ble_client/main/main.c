@@ -65,39 +65,44 @@ void app_on_gapc_sec_req(struct bitmans_gapc_callbacks_t *pCb, esp_ble_gap_cb_pa
 // esp_ble_gattc_open(g_gattc_handles[GATTC_APP0], g_target_bda, g_target_addr_type, true);
 // // This results in calls to the GATT Client callbacks, where you can handle the connection establishment.
 
-void app_on_gapc_scan_result(struct bitmans_gapc_callbacks_t *pCb, esp_ble_gap_cb_param_t *pParam)
+static bool is_server_recognised(struct bitmans_gapc_callbacks_t *pCb, esp_ble_gap_cb_param_t *pParam)
 {
     app_gap_context *pAppContext = (app_gap_context *)pCb->pContext;
-    esp_ble_gap_cb_param_t *scan_result = (esp_ble_gap_cb_param_t *)pParam;
 
-    switch (scan_result->scan_rst.search_evt)
+    // Check if the device advertises the expected name
+    if (bitmans_ble_advname_matches(&pParam->scan_rst, "BitmansGATTS_0"))
+        return true;
+
+    // Check if the device advertises the custom service UUID
+    if (bitmans_ble_client_find_service_uuid(&pParam->scan_rst, &pAppContext->service_uuid))
+        return true;
+
+    return false;
+}
+
+void app_on_gapc_scan_result(struct bitmans_gapc_callbacks_t *pCb, esp_ble_gap_cb_param_t *pParam)
+{
+    switch (pParam->scan_rst.search_evt)
     {
     // Triggered for each device found during scanning.
     case ESP_GAP_SEARCH_INQ_RES_EVT:
-        // if (!bitmans_ble_advname_matches(&scan_result->scan_rst, "BitmansGATTS_0"))
-        //     return;
-
-        if (!bitmans_ble_client_find_service_uuid(&scan_result->scan_rst, &pAppContext->service_uuid))
+        if (!is_server_recognised(pCb, pParam))
             return;
 
-        // bitmans_log_ble_scan(&scan_result->scan_rst, true);
+        // Next we vould call esp_ble_gap_stop_scanning() and then esp_ble_gattc_open()
 
         // Use comprehensive logging for detailed advertising packet analysis
         ESP_LOGI(TAG, "=== Using Comprehensive BLE Logging ===");
-        bitmans_log_verbose_ble_scan(&scan_result->scan_rst, false);
+        bitmans_log_verbose_ble_scan(&pParam->scan_rst, false);
 
         // Enable debug logging to investigate esp_ble_resolve_adv_data zero-length issues
-        ESP_LOGI(TAG, "=== Debug Analysis ===");
-        bitmans_debug_esp_ble_resolve_adv_data(&scan_result->scan_rst);
-
-        // Here you would check if this is the server you want to connect to
-        // For example, by checking the advertised name or service UUID
-        // If it is, you would call esp_ble_gap_stop_scanning() and then esp_ble_gattc_open()
+        // ESP_LOGI(TAG, "=== Debug Analysis ===");
+        // bitmans_debug_esp_ble_resolve_adv_data(&pParam->scan_rst);
 
         ESP_LOGI(TAG, "Device with custom service UUID found. BDA: %02x:%02x:%02x:%02x:%02x:%02x",
-                 scan_result->scan_rst.bda[0], scan_result->scan_rst.bda[1],
-                 scan_result->scan_rst.bda[2], scan_result->scan_rst.bda[3],
-                 scan_result->scan_rst.bda[4], scan_result->scan_rst.bda[5]);
+                 pParam->scan_rst.bda[0], pParam->scan_rst.bda[1],
+                 pParam->scan_rst.bda[2], pParam->scan_rst.bda[3],
+                 pParam->scan_rst.bda[4], pParam->scan_rst.bda[5]);
 
         // Store BDA for connection if needed:
         // memcpy(g_target_bda, scan_result->scan_rst.bda, ESP_BD_ADDR_LEN);
@@ -105,7 +110,7 @@ void app_on_gapc_scan_result(struct bitmans_gapc_callbacks_t *pCb, esp_ble_gap_c
 
         // esp_err_t err = bitmans_bda_context_set(&scan_result->scan_rst.bda, NULL); // TODO!
         // if (err == ESP_OK)
-        bitmans_ble_client_stop_scanning();
+        bitmans_ble_client_stop_scanning(); // Stop scanning before connecting
 
         // The connection attempt should ideally happen in ESP_GAP_BLE_SCAN_STOP_COMPLETE_EVT
         break;

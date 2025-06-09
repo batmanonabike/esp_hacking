@@ -340,16 +340,16 @@ static bool bitmans_ble_find_service_uuid_by_type(bitmans_scan_result_t *pScanRe
     uint8_t adv_data_len = 0;
     uint8_t *adv_data = esp_ble_resolve_adv_data(pScanResult->ble_adv, type, &adv_data_len);
 
-    ESP_LOGI(TAG, "Resolved advert length: %d", adv_data_len);
+    //ESP_LOGI(TAG, "Resolved advert length: %d", adv_data_len);
 
     if (adv_data != NULL && adv_data_len > 0)
     {
         for (int i = 0; i < adv_data_len; i += ESP_UUID_LEN_128)
         {
-            bitmans_ble_log_uuid128("Checking UUID", &adv_data[i]);
+            //bitmans_ble_log_uuid128("Checking UUID", &adv_data[i]);
             if (memcmp(&adv_data[i], pId, ESP_UUID_LEN_128) == 0)
             {
-                ESP_LOGI(TAG, "FOUND UUID");
+                //ESP_LOGI(TAG, "FOUND UUID");
                 return true;
             }
         }
@@ -360,7 +360,7 @@ static bool bitmans_ble_find_service_uuid_by_type(bitmans_scan_result_t *pScanRe
 
 bool bitmans_ble_client_find_service_uuid(bitmans_scan_result_t *pScanResult, bitmans_ble_uuid128_t *pId)
 {
-    bitmans_ble_log_uuid128("Looking for UUID", pId->uuid);
+    //bitmans_ble_log_uuid128("Looking for UUID", pId->uuid);
 
     if (bitmans_ble_find_service_uuid_by_type(pScanResult, pId, ESP_BLE_AD_TYPE_128SRV_CMPL))
     {
