@@ -1,5 +1,6 @@
 {
   "C_Cpp.intelliSenseEngine": "default",
-  "idf.portWin": "COM13",
-  "idf.monitorPort": "COM13"
+  "idf.portWin": "COM10",
+  "idf.monitorPort": "COM10",
+  "idf.flashType": "UART"
 }
