@@ -2,7 +2,7 @@
     "configurations": [
         {
             "name": "BitmansESP-IDF",
-            "compilerPath": "${env:IDF_TOOLS_PATH}/tools/xtensa-esp-elf/esp-13.2.0_20240530/xtensa-esp-elf/bin/xtensa-esp32-elf-gcc.exe",            
+            "compilerPath": "${BITMANS_ESP32_GCC}",
             "cStandard": "c11",
             "cppStandard": "c++17",
             "includePath": [

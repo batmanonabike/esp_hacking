@@ -398,3 +398,12 @@ I (5043) bitmans_lib:ble_client: Stopping BLE scan...
 
 Noting that there is NO advert name here because we opted to send the advert name in the `scan response` packet.
 Only scans in active mode get the scan response packet.
+
+### Scratch pad
+
+For: `c_cpp_properties.json`
+
+```
+SET BITMANS_ESP32_GCC=%IDF_TOOLS_PATH%\tools\xtensa-esp-elf\esp-14.2.0_20241119\xtensa-esp-elf\bin\xtensa-esp32-elf-gcc.exe
+SET BITMANS_ESP32_GCC=%IDF_TOOLS_PATH%\tools\xtensa-esp-elf\esp-13.2.0_20240530\xtensa-esp-elf/bin/xtensa-esp32-elf-gcc.exe
+```
