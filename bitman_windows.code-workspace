@@ -26,6 +26,9 @@
         },
         {
             "path": "./deep_sleep"
+        },
+        {
+            "path": "./basic_esp_fsm"
         }
     ],
     "settings": {

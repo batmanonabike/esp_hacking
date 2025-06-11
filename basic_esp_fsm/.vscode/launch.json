@@ -1,0 +1,10 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Launch basic_esp_fsm",
+            "type": "espidf",
+            "request": "launch"
+        }
+    ]
+}

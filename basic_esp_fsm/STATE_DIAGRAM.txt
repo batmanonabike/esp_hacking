@@ -1,0 +1,82 @@
+
+ESP32 Finite State Machine - State Transition Diagram
+=====================================================
+
+    ┌─────────────────┐
+    │   DISCONNECTED  │◄──────────────────────────────────┐
+    │                 │                                   │
+    └─────────────────┘                                   │
+             │                                            │
+             │ CONNECT_REQUEST                            │
+             ▼                                            │
+    ┌─────────────────┐                                   │
+    │   CONNECTING    │                                   │
+    │                 │                                   │
+    └─────────────────┘                                   │
+             │                                            │
+        ┌────┼────┐                                       │
+        │         │                                       │
+        │ SUCCESS │ FAILED/TIMEOUT                        │
+        ▼         ▼                                       │
+    ┌─────────────────┐                                   │
+    │   CONNECTED     │                                   │
+    │                 │                                   │
+    └─────────────────┘                                   │
+             │                                            │
+        ┌────┼────┐                                       │
+        │         │                                       │
+        │DISCON   │CONNECTION_LOST                        │
+        │REQUEST  │                                       │
+        ▼         ▼                                       │
+    ┌─────────────────┐                                   │
+    │ DISCONNECTING   │───────────────────────────────────┘
+    │                 │ TIMEOUT/CONNECTION_LOST
+    └─────────────────┘
+
+Events Legend:
+==============
+CONNECT_REQUEST     - User/Application requests connection
+CONNECTION_SUCCESS  - Connection established successfully  
+CONNECTION_FAILED   - Connection attempt failed
+DISCONNECT_REQUEST  - User/Application requests disconnection
+CONNECTION_LOST     - Unexpected connection loss
+TIMEOUT            - Periodic timeout for state maintenance
+
+State Behaviors:
+===============
+DISCONNECTED:
+  - Idle state, ready to accept connection requests
+  - Resets connection statistics
+  - Logs connection attempts and final statistics
+
+CONNECTING: 
+  - Attempting to establish connection
+  - Increments connection attempt counter
+  - May timeout after configured period
+  - Can be interrupted by disconnect request
+
+CONNECTED:
+  - Active connection maintained
+  - Periodic timeout events update connection time
+  - Simulates data transfer (bytes sent/received)
+  - Sends keepalive data via callbacks
+  - Monitors for unexpected disconnections
+
+DISCONNECTING:
+  - Gracefully terminating connection
+  - Logs final connection statistics
+  - Waits for connection cleanup completion
+  - Returns to DISCONNECTED when complete
+
+Function Pointer Usage:
+======================
+Each state has a dedicated handler function:
+- fsm_state_disconnected_handler()
+- fsm_state_connecting_handler() 
+- fsm_state_connected_handler()
+- fsm_state_disconnecting_handler()
+
+These are stored in an array indexed by state enum:
+stateHandlers[FSM_STATE_DISCONNECTED] = fsm_state_disconnected_handler;
+
+Event processing calls: stateHandlers[currentState](context, event)
