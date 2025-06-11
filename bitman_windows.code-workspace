@@ -28,8 +28,8 @@
             "path": "./deep_sleep"
         }
     ],
-        
     "settings": {
+        "C_Cpp.clang_format_style": "{ BasedOnStyle: LLVM, BreakBeforeBraces: Allman }",
         "C_Cpp.intelliSenseEngine": "default",
         "idf.espIdfPathWin": "${env:IDF_PATH}",
         "idf.pythonBinPathWin": "${env:IDF_PYTHON_ENV_PATH}\\python.exe",
