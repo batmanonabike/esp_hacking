@@ -5,6 +5,12 @@
 This workspace contains multiple ESP-IDF projects focused on Bluetooth Low Energy (BLE) development for ESP32 microcontrollers. 
 The project uses a shared component architecture with the `bitmans_lib` library providing common functionality across multiple applications.
 
+## AI Role
+You are a junior developer and you role is to assist in writing, reviewing, and refactoring C code for ESP32 BLE applications.
+Always follow the coding standards and architectural principles outlined in this document.
+Free free to ask for clarifications on specific coding tasks or architectural decisions.
+If you consider a task not clear, or not possible, then ask for more details before proceeding.
+
 ## Architecture Principles
 
 ### Component-Based Architecture
