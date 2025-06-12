@@ -94,33 +94,33 @@ To filter log output to see only specific components when using `idf.py monitor`
 
 The command is `idf.py -p <PORT> monitor --print-filter="TAG:LEVEL"`.
 
-**Example:** To see only logs from the tag `bitmans_lib:wifi_logging`:
+**Example:** To see only logs from the tag `bat_lib:wifi_logging`:
 
 1.  **Try with a specific level first (e.g., `I` for INFO, `V` for VERBOSE):**
     This helps identify if the `*` wildcard is causing issues with the monitor script.
     ```bash
-    # Show INFO (and higher) logs for bitmans_lib:wifi_logging
-    idf.py -p COM11 monitor --print-filter="bitmans_lib:wifi_logging:I"
+    # Show INFO (and higher) logs for bat_lib:wifi_logging
+    idf.py -p COM11 monitor --print-filter="bat_lib:wifi_logging:I"
     ```
     ```bash
-    # Show VERBOSE (and higher) logs for bitmans_lib:wifi_logging
-    idf.py -p COM11 monitor --print-filter="bitmans_lib:wifi_logging:V"
+    # Show VERBOSE (and higher) logs for bat_lib:wifi_logging
+    idf.py -p COM11 monitor --print-filter="bat_lib:wifi_logging:V"
     ```
 
 2.  **If a specific level works, and you need all levels for that tag (equivalent to `*`):**
     Using `V` (VERBOSE) is often equivalent to seeing all messages for that tag. If `*` specifically causes a crash in `idf_monitor.py`, using `V` is a good alternative.
     ```bash
-    idf.py -p COM11 monitor --print-filter="bitmans_lib:wifi_logging:V"
+    idf.py -p COM11 monitor --print-filter="bat_lib:wifi_logging:V"
     ```
 
 3.  **To silence other tags and only show yours:**
     ```bash
-    # Show only VERBOSE messages from bitmans_lib:wifi_logging, and ERROR from others
-    idf.py -p COM11 monitor --print-filter="*:E,bitmans_lib:wifi_logging:V"
+    # Show only VERBOSE messages from bat_lib:wifi_logging, and ERROR from others
+    idf.py -p COM11 monitor --print-filter="*:E,bat_lib:wifi_logging:V"
     ```
     ```bash
-    # Show only VERBOSE messages from bitmans_lib:wifi_logging, and silence all others
-    idf.py -p COM11 monitor --print-filter="*:N,bitmans_lib:wifi_logging:V"
+    # Show only VERBOSE messages from bat_lib:wifi_logging, and silence all others
+    idf.py -p COM11 monitor --print-filter="*:N,bat_lib:wifi_logging:V"
     ```
 
 **If command-line filtering still causes errors in `idf_monitor.py`:**
@@ -133,7 +133,7 @@ void app_main(void) {
     // Set all other tags to ERROR level
     esp_log_level_set("*", ESP_LOG_ERROR);
     // Set your specific tag to VERBOSE
-    esp_log_level_set("bitmans_lib:wifi_logging", ESP_LOG_VERBOSE);
+    esp_log_level_set("bat_lib:wifi_logging", ESP_LOG_VERBOSE);
 
     // ... rest of your app_main code
 }
@@ -196,7 +196,7 @@ Embedded PSRAM 8MB (AP_3v3) [Build issues to address]
 Wi-Fi,BLE,Embedded PSRAM 8MB (AP_3v3)
 
 ## Troubleshooting
-This is needed for BLE on ESP32-*S3* (for bitmans_lib)...
+This is needed for BLE on ESP32-*S3* (for bat_lib)...
 
 MenuConfig:
 ```
@@ -264,72 +264,72 @@ esp_ble_scan_params_t ble_scan_params = {
 ```
 
 ```
-I (5704) bitmans_lib:ble_client: ESP_GAP_BLE_SCAN_RESULT_EVT
-I (5714) bitmans_lib:ble_client: Comparing advname: BitmansGATTS_0, BitmansGATTS_0
+I (5704) bat_lib:ble_client: ESP_GAP_BLE_SCAN_RESULT_EVT
+I (5714) bat_lib:ble_client: Comparing advname: BitmansGATTS_0, BitmansGATTS_0
 I (5724) ble_client_app: === Using Comprehensive BLE Logging ===
-I (5724) bitmans_lib:ble_client_logging: === COMPREHENSIVE BLE DEVICE SCAN RESULT ===
-I (5734) bitmans_lib:ble_client_logging: Device Address: f4:65:0b:57:5c:3a
-I (5744) bitmans_lib:ble_client_logging: RSSI: -58 dBm
-I (5754) bitmans_lib:ble_client_logging: Address Type: Public
-I (5754) bitmans_lib:ble_client_logging: Device Type: BLE
-I (5764) bitmans_lib:ble_client_logging: Advertising Data Length: 31 bytes
-I (5774) bitmans_lib:ble_client_logging: Scan Response Length: 16 bytes
-I (5774) bitmans_lib:ble_client_logging: Raw Advertising Data:
-I (5784) bitmans_lib:ble_client_logging: 02 01 06 03 19 44 09 11 07 12 56 12 56 78 56 34
-I (5794) bitmans_lib:ble_client_logging: 12 12 34 56 78 9a bc de f0 05 12 06 00 10 00
-I (5804) bitmans_lib:ble_client_logging: Advertised Name: BitmansGATTS_0
-I (5804) bitmans_lib:ble_client_logging: Flags (len 1): 0x06
-I (5814) bitmans_lib:ble_client_logging:   - LE General Discoverable Mode
-I (5824) bitmans_lib:ble_client_logging:   - BR/EDR Not Supported
-I (5834) bitmans_lib:ble_client_logging: Appearance: 0x0944
-I (5834) bitmans_lib:ble_client_logging: === SERVICE UUIDs ===
-I (5844) bitmans_lib:ble_client_logging: Complete 128-bit Service UUIDs (count 1):
-I (5854) bitmans_lib:ble_client_logging:   - f0debc9a-7856-3412-1234-567856125612
-I (5854) bitmans_lib:ble_client_logging: === SCAN RESPONSE DATA ===
-I (5864) bitmans_lib:ble_client_logging: Scan Response Data (len 16):
-I (5874) bitmans_lib:ble_client_logging: 0f 09 42 69 74 6d 61 6e 73 47 41 54 54 53 5f 30
-I (5884) bitmans_lib:ble_client_logging: ============================================
+I (5724) bat_lib:ble_client_logging: === COMPREHENSIVE BLE DEVICE SCAN RESULT ===
+I (5734) bat_lib:ble_client_logging: Device Address: f4:65:0b:57:5c:3a
+I (5744) bat_lib:ble_client_logging: RSSI: -58 dBm
+I (5754) bat_lib:ble_client_logging: Address Type: Public
+I (5754) bat_lib:ble_client_logging: Device Type: BLE
+I (5764) bat_lib:ble_client_logging: Advertising Data Length: 31 bytes
+I (5774) bat_lib:ble_client_logging: Scan Response Length: 16 bytes
+I (5774) bat_lib:ble_client_logging: Raw Advertising Data:
+I (5784) bat_lib:ble_client_logging: 02 01 06 03 19 44 09 11 07 12 56 12 56 78 56 34
+I (5794) bat_lib:ble_client_logging: 12 12 34 56 78 9a bc de f0 05 12 06 00 10 00
+I (5804) bat_lib:ble_client_logging: Advertised Name: BitmansGATTS_0
+I (5804) bat_lib:ble_client_logging: Flags (len 1): 0x06
+I (5814) bat_lib:ble_client_logging:   - LE General Discoverable Mode
+I (5824) bat_lib:ble_client_logging:   - BR/EDR Not Supported
+I (5834) bat_lib:ble_client_logging: Appearance: 0x0944
+I (5834) bat_lib:ble_client_logging: === SERVICE UUIDs ===
+I (5844) bat_lib:ble_client_logging: Complete 128-bit Service UUIDs (count 1):
+I (5854) bat_lib:ble_client_logging:   - f0debc9a-7856-3412-1234-567856125612
+I (5854) bat_lib:ble_client_logging: === SCAN RESPONSE DATA ===
+I (5864) bat_lib:ble_client_logging: Scan Response Data (len 16):
+I (5874) bat_lib:ble_client_logging: 0f 09 42 69 74 6d 61 6e 73 47 41 54 54 53 5f 30
+I (5884) bat_lib:ble_client_logging: ============================================
 I (5894) ble_client_app: === Debug Analysis for Device #1 ===
-I (5894) bitmans_lib:ble_client_logging: === DEBUG esp_ble_resolve_adv_data FUNCTION ===
-I (5904) bitmans_lib:ble_client_logging: Device Address: f4:65:0b:57:5c:3a
-I (5914) bitmans_lib:ble_client_logging: Advertising Data Length: 31
-I (5924) bitmans_lib:ble_client_logging: Scan Response Length: 16
-I (5924) bitmans_lib:ble_client_logging: Raw advertising data:
-I (5934) bitmans_lib:ble_client_logging: 02 01 06 03 19 44 09 11 07 12 56 12 56 78 56 34
-I (5944) bitmans_lib:ble_client_logging: 12 12 34 56 78 9a bc de f0 05 12 06 00 10 00
-I (5954) bitmans_lib:ble_client_logging: Type 0x01 (FLAGS): ptr=0x3ffce1de, len=1
-I (5954) bitmans_lib:ble_client_logging:   Data:
-I (5964) bitmans_lib:ble_client_logging: 06
-I (5964) bitmans_lib:ble_client_logging: Type 0x02 (16SRV_PART): ptr=0x0, len=0
-I (5974) bitmans_lib:ble_client_logging: Type 0x03 (16SRV_CMPL): ptr=0x0, len=0
-I (5984) bitmans_lib:ble_client_logging: Type 0x04 (32SRV_PART): ptr=0x0, len=0
-I (5994) bitmans_lib:ble_client_logging: Type 0x05 (32SRV_CMPL): ptr=0x0, len=0
-I (6004) bitmans_lib:ble_client_logging: Type 0x06 (128SRV_PART): ptr=0x0, len=0
-I (6004) bitmans_lib:ble_client_logging: Type 0x07 (128SRV_CMPL): ptr=0x3ffce1e5, len=16
-I (6014) bitmans_lib:ble_client_logging:   Data:
-I (6024) bitmans_lib:ble_client_logging: 12 56 12 56 78 56 34 12 12 34 56 78 9a bc de f0
-I (6034) bitmans_lib:ble_client_logging: Type 0x08 (NAME_SHORT): ptr=0x0, len=0
-I (6044) bitmans_lib:ble_client_logging: Type 0x09 (NAME_CMPL): ptr=0x3ffce1fd, len=14
-I (6044) bitmans_lib:ble_client_logging:   Data:
-I (6054) bitmans_lib:ble_client_logging: 42 69 74 6d 61 6e 73 47 41 54 54 53 5f 30
-I (6064) bitmans_lib:ble_client_logging: Type 0x0a (TX_PWR): ptr=0x0, len=0
-I (6074) bitmans_lib:ble_client_logging: Type 0x0d (DEV_CLASS): ptr=0x0, len=0
-I (6074) bitmans_lib:ble_client_logging: Type 0x16 (SERVICE_DATA): ptr=0x0, len=0
-I (6084) bitmans_lib:ble_client_logging: Type 0x19 (APPEARANCE): ptr=0x3ffce1e1, len=2
-I (6094) bitmans_lib:ble_client_logging:   Data:
-I (6104) bitmans_lib:ble_client_logging: 44 09
-I (6104) bitmans_lib:ble_client_logging: Type 0x1a (ADV_INT): ptr=0x0, len=0
-I (6114) bitmans_lib:ble_client_logging: Type 0x20 (32SERVICE_DATA): ptr=0x0, len=0
-I (6124) bitmans_lib:ble_client_logging: Type 0x21 (128SERVICE_DATA): ptr=0x0, len=0
-I (6134) bitmans_lib:ble_client_logging: Type 0xff (MANUFACTURER_SPECIFIC): ptr=0x0, len=0
-I (6134) bitmans_lib:ble_client_logging: ===============================================
-I (6144) bitmans_lib:ble: Looking for UUID: f0debc9a-7856-3412-1234-567856125612
-I (6154) bitmans_lib:ble_client: Resolved advert length: 16
-I (6164) bitmans_lib:ble: Checking UUID: f0debc9a-7856-3412-1234-567856125612
-I (6174) bitmans_lib:ble_client: FOUND UUID
-I (6174) bitmans_lib:ble_client: Found custom service UUID in complete list
+I (5894) bat_lib:ble_client_logging: === DEBUG esp_ble_resolve_adv_data FUNCTION ===
+I (5904) bat_lib:ble_client_logging: Device Address: f4:65:0b:57:5c:3a
+I (5914) bat_lib:ble_client_logging: Advertising Data Length: 31
+I (5924) bat_lib:ble_client_logging: Scan Response Length: 16
+I (5924) bat_lib:ble_client_logging: Raw advertising data:
+I (5934) bat_lib:ble_client_logging: 02 01 06 03 19 44 09 11 07 12 56 12 56 78 56 34
+I (5944) bat_lib:ble_client_logging: 12 12 34 56 78 9a bc de f0 05 12 06 00 10 00
+I (5954) bat_lib:ble_client_logging: Type 0x01 (FLAGS): ptr=0x3ffce1de, len=1
+I (5954) bat_lib:ble_client_logging:   Data:
+I (5964) bat_lib:ble_client_logging: 06
+I (5964) bat_lib:ble_client_logging: Type 0x02 (16SRV_PART): ptr=0x0, len=0
+I (5974) bat_lib:ble_client_logging: Type 0x03 (16SRV_CMPL): ptr=0x0, len=0
+I (5984) bat_lib:ble_client_logging: Type 0x04 (32SRV_PART): ptr=0x0, len=0
+I (5994) bat_lib:ble_client_logging: Type 0x05 (32SRV_CMPL): ptr=0x0, len=0
+I (6004) bat_lib:ble_client_logging: Type 0x06 (128SRV_PART): ptr=0x0, len=0
+I (6004) bat_lib:ble_client_logging: Type 0x07 (128SRV_CMPL): ptr=0x3ffce1e5, len=16
+I (6014) bat_lib:ble_client_logging:   Data:
+I (6024) bat_lib:ble_client_logging: 12 56 12 56 78 56 34 12 12 34 56 78 9a bc de f0
+I (6034) bat_lib:ble_client_logging: Type 0x08 (NAME_SHORT): ptr=0x0, len=0
+I (6044) bat_lib:ble_client_logging: Type 0x09 (NAME_CMPL): ptr=0x3ffce1fd, len=14
+I (6044) bat_lib:ble_client_logging:   Data:
+I (6054) bat_lib:ble_client_logging: 42 69 74 6d 61 6e 73 47 41 54 54 53 5f 30
+I (6064) bat_lib:ble_client_logging: Type 0x0a (TX_PWR): ptr=0x0, len=0
+I (6074) bat_lib:ble_client_logging: Type 0x0d (DEV_CLASS): ptr=0x0, len=0
+I (6074) bat_lib:ble_client_logging: Type 0x16 (SERVICE_DATA): ptr=0x0, len=0
+I (6084) bat_lib:ble_client_logging: Type 0x19 (APPEARANCE): ptr=0x3ffce1e1, len=2
+I (6094) bat_lib:ble_client_logging:   Data:
+I (6104) bat_lib:ble_client_logging: 44 09
+I (6104) bat_lib:ble_client_logging: Type 0x1a (ADV_INT): ptr=0x0, len=0
+I (6114) bat_lib:ble_client_logging: Type 0x20 (32SERVICE_DATA): ptr=0x0, len=0
+I (6124) bat_lib:ble_client_logging: Type 0x21 (128SERVICE_DATA): ptr=0x0, len=0
+I (6134) bat_lib:ble_client_logging: Type 0xff (MANUFACTURER_SPECIFIC): ptr=0x0, len=0
+I (6134) bat_lib:ble_client_logging: ===============================================
+I (6144) bat_lib:ble: Looking for UUID: f0debc9a-7856-3412-1234-567856125612
+I (6154) bat_lib:ble_client: Resolved advert length: 16
+I (6164) bat_lib:ble: Checking UUID: f0debc9a-7856-3412-1234-567856125612
+I (6174) bat_lib:ble_client: FOUND UUID
+I (6174) bat_lib:ble_client: Found custom service UUID in complete list
 I (6184) ble_client_app: Device with custom service UUID found. BDA: f4:65:0b:57:5c:3a
-I (6194) bitmans_lib:ble_client: Stopping BLE scan...
+I (6194) bat_lib:ble_client: Stopping BLE scan...
 ```
 
 ### Log from a an active scan against ble_server
@@ -341,59 +341,59 @@ esp_ble_scan_params_t ble_scan_params = {
 
 ```
 I (4643) ble_client_app: === Using Comprehensive BLE Logging ===
-I (4653) bitmans_lib:ble_client_logging: === COMPREHENSIVE BLE DEVICE SCAN RESULT ===
-I (4663) bitmans_lib:ble_client_logging: Device Address: f4:65:0b:57:5c:3a
-I (4663) bitmans_lib:ble_client_logging: RSSI: -50 dBm
-I (4673) bitmans_lib:ble_client_logging: Address Type: Public
-I (4683) bitmans_lib:ble_client_logging: Device Type: BLE
-I (4683) bitmans_lib:ble_client_logging: Advertising Data Length: 31 bytes
-I (4693) bitmans_lib:ble_client_logging: Scan Response Length: 0 bytes
-I (4703) bitmans_lib:ble_client_logging: Raw Advertising Data:
-I (4703) bitmans_lib:ble_client_logging: 02 01 06 03 19 44 09 11 07 12 56 12 56 78 56 34
-I (4713) bitmans_lib:ble_client_logging: 12 12 34 56 78 9a bc de f0 05 12 06 00 10 00
-I (4723) bitmans_lib:ble_client_logging: Advertised Name:
-I (4733) bitmans_lib:ble_client_logging: Flags (len 1): 0x06
-I (4733) bitmans_lib:ble_client_logging:   - LE General Discoverable Mode
-I (4743) bitmans_lib:ble_client_logging:   - BR/EDR Not Supported
-I (4753) bitmans_lib:ble_client_logging: Appearance: 0x0944
-I (4753) bitmans_lib:ble_client_logging: === SERVICE UUIDs ===
-I (4763) bitmans_lib:ble_client_logging: Complete 128-bit Service UUIDs (count 1):
-I (4773) bitmans_lib:ble_client_logging:   - f0debc9a-7856-3412-1234-567856125612
-I (4783) bitmans_lib:ble_client_logging: ============================================
+I (4653) bat_lib:ble_client_logging: === COMPREHENSIVE BLE DEVICE SCAN RESULT ===
+I (4663) bat_lib:ble_client_logging: Device Address: f4:65:0b:57:5c:3a
+I (4663) bat_lib:ble_client_logging: RSSI: -50 dBm
+I (4673) bat_lib:ble_client_logging: Address Type: Public
+I (4683) bat_lib:ble_client_logging: Device Type: BLE
+I (4683) bat_lib:ble_client_logging: Advertising Data Length: 31 bytes
+I (4693) bat_lib:ble_client_logging: Scan Response Length: 0 bytes
+I (4703) bat_lib:ble_client_logging: Raw Advertising Data:
+I (4703) bat_lib:ble_client_logging: 02 01 06 03 19 44 09 11 07 12 56 12 56 78 56 34
+I (4713) bat_lib:ble_client_logging: 12 12 34 56 78 9a bc de f0 05 12 06 00 10 00
+I (4723) bat_lib:ble_client_logging: Advertised Name:
+I (4733) bat_lib:ble_client_logging: Flags (len 1): 0x06
+I (4733) bat_lib:ble_client_logging:   - LE General Discoverable Mode
+I (4743) bat_lib:ble_client_logging:   - BR/EDR Not Supported
+I (4753) bat_lib:ble_client_logging: Appearance: 0x0944
+I (4753) bat_lib:ble_client_logging: === SERVICE UUIDs ===
+I (4763) bat_lib:ble_client_logging: Complete 128-bit Service UUIDs (count 1):
+I (4773) bat_lib:ble_client_logging:   - f0debc9a-7856-3412-1234-567856125612
+I (4783) bat_lib:ble_client_logging: ============================================
 I (4783) ble_client_app: === Debug Analysis ===
-I (4793) bitmans_lib:ble_client_logging: === DEBUG esp_ble_resolve_adv_data FUNCTION ===
-I (4803) bitmans_lib:ble_client_logging: Device Address: f4:65:0b:57:5c:3a
-I (4813) bitmans_lib:ble_client_logging: Advertising Data Length: 31
-I (4813) bitmans_lib:ble_client_logging: Scan Response Length: 0
-I (4823) bitmans_lib:ble_client_logging: Raw advertising data:
-I (4833) bitmans_lib:ble_client_logging: 02 01 06 03 19 44 09 11 07 12 56 12 56 78 56 34
-I (4843) bitmans_lib:ble_client_logging: 12 12 34 56 78 9a bc de f0 05 12 06 00 10 00
-I (4843) bitmans_lib:ble_client_logging: Type 0x01 (FLAGS): ptr=0x3ffcdc5a, len=1
-I (4853) bitmans_lib:ble_client_logging:   Data:
-I (4863) bitmans_lib:ble_client_logging: 06
-I (4863) bitmans_lib:ble_client_logging: Type 0x02 (16SRV_PART): ptr=0x0, len=0
-I (4873) bitmans_lib:ble_client_logging: Type 0x03 (16SRV_CMPL): ptr=0x0, len=0
-I (4883) bitmans_lib:ble_client_logging: Type 0x04 (32SRV_PART): ptr=0x0, len=0
-I (4893) bitmans_lib:ble_client_logging: Type 0x05 (32SRV_CMPL): ptr=0x0, len=0
-I (4893) bitmans_lib:ble_client_logging: Type 0x06 (128SRV_PART): ptr=0x0, len=0
-I (4903) bitmans_lib:ble_client_logging: Type 0x07 (128SRV_CMPL): ptr=0x3ffcdc61, len=16
-I (4913) bitmans_lib:ble_client_logging:   Data:
-I (4923) bitmans_lib:ble_client_logging: 12 56 12 56 78 56 34 12 12 34 56 78 9a bc de f0
-I (4933) bitmans_lib:ble_client_logging: Type 0x08 (NAME_SHORT): ptr=0x0, len=0
-I (4933) bitmans_lib:ble_client_logging: Type 0x09 (NAME_CMPL): ptr=0x0, len=0
-I (4943) bitmans_lib:ble_client_logging: Type 0x0a (TX_PWR): ptr=0x0, len=0
-I (4953) bitmans_lib:ble_client_logging: Type 0x0d (DEV_CLASS): ptr=0x0, len=0
-I (4963) bitmans_lib:ble_client_logging: Type 0x16 (SERVICE_DATA): ptr=0x0, len=0
-I (4973) bitmans_lib:ble_client_logging: Type 0x19 (APPEARANCE): ptr=0x3ffcdc5d, len=2
-I (4973) bitmans_lib:ble_client_logging:   Data:
-I (4983) bitmans_lib:ble_client_logging: 44 09
-I (4983) bitmans_lib:ble_client_logging: Type 0x1a (ADV_INT): ptr=0x0, len=0
-I (4993) bitmans_lib:ble_client_logging: Type 0x20 (32SERVICE_DATA): ptr=0x0, len=0
-I (5003) bitmans_lib:ble_client_logging: Type 0x21 (128SERVICE_DATA): ptr=0x0, len=0
-I (5013) bitmans_lib:ble_client_logging: Type 0xff (MANUFACTURER_SPECIFIC): ptr=0x0, len=0
-I (5023) bitmans_lib:ble_client_logging: ===============================================
+I (4793) bat_lib:ble_client_logging: === DEBUG esp_ble_resolve_adv_data FUNCTION ===
+I (4803) bat_lib:ble_client_logging: Device Address: f4:65:0b:57:5c:3a
+I (4813) bat_lib:ble_client_logging: Advertising Data Length: 31
+I (4813) bat_lib:ble_client_logging: Scan Response Length: 0
+I (4823) bat_lib:ble_client_logging: Raw advertising data:
+I (4833) bat_lib:ble_client_logging: 02 01 06 03 19 44 09 11 07 12 56 12 56 78 56 34
+I (4843) bat_lib:ble_client_logging: 12 12 34 56 78 9a bc de f0 05 12 06 00 10 00
+I (4843) bat_lib:ble_client_logging: Type 0x01 (FLAGS): ptr=0x3ffcdc5a, len=1
+I (4853) bat_lib:ble_client_logging:   Data:
+I (4863) bat_lib:ble_client_logging: 06
+I (4863) bat_lib:ble_client_logging: Type 0x02 (16SRV_PART): ptr=0x0, len=0
+I (4873) bat_lib:ble_client_logging: Type 0x03 (16SRV_CMPL): ptr=0x0, len=0
+I (4883) bat_lib:ble_client_logging: Type 0x04 (32SRV_PART): ptr=0x0, len=0
+I (4893) bat_lib:ble_client_logging: Type 0x05 (32SRV_CMPL): ptr=0x0, len=0
+I (4893) bat_lib:ble_client_logging: Type 0x06 (128SRV_PART): ptr=0x0, len=0
+I (4903) bat_lib:ble_client_logging: Type 0x07 (128SRV_CMPL): ptr=0x3ffcdc61, len=16
+I (4913) bat_lib:ble_client_logging:   Data:
+I (4923) bat_lib:ble_client_logging: 12 56 12 56 78 56 34 12 12 34 56 78 9a bc de f0
+I (4933) bat_lib:ble_client_logging: Type 0x08 (NAME_SHORT): ptr=0x0, len=0
+I (4933) bat_lib:ble_client_logging: Type 0x09 (NAME_CMPL): ptr=0x0, len=0
+I (4943) bat_lib:ble_client_logging: Type 0x0a (TX_PWR): ptr=0x0, len=0
+I (4953) bat_lib:ble_client_logging: Type 0x0d (DEV_CLASS): ptr=0x0, len=0
+I (4963) bat_lib:ble_client_logging: Type 0x16 (SERVICE_DATA): ptr=0x0, len=0
+I (4973) bat_lib:ble_client_logging: Type 0x19 (APPEARANCE): ptr=0x3ffcdc5d, len=2
+I (4973) bat_lib:ble_client_logging:   Data:
+I (4983) bat_lib:ble_client_logging: 44 09
+I (4983) bat_lib:ble_client_logging: Type 0x1a (ADV_INT): ptr=0x0, len=0
+I (4993) bat_lib:ble_client_logging: Type 0x20 (32SERVICE_DATA): ptr=0x0, len=0
+I (5003) bat_lib:ble_client_logging: Type 0x21 (128SERVICE_DATA): ptr=0x0, len=0
+I (5013) bat_lib:ble_client_logging: Type 0xff (MANUFACTURER_SPECIFIC): ptr=0x0, len=0
+I (5023) bat_lib:ble_client_logging: ===============================================
 I (5033) ble_client_app: Device with custom service UUID found. BDA: f4:65:0b:57:5c:3a
-I (5043) bitmans_lib:ble_client: Stopping BLE scan...
+I (5043) bat_lib:ble_client: Stopping BLE scan...
 ```
 
 Noting that there is NO advert name here because we opted to send the advert name in the `scan response` packet.
@@ -404,6 +404,6 @@ Only scans in active mode get the scan response packet.
 For: `c_cpp_properties.json`
 
 ```
-SET BITMANS_ESP32_GCC=%IDF_TOOLS_PATH%\tools\xtensa-esp-elf\esp-14.2.0_20241119\xtensa-esp-elf\bin\xtensa-esp32-elf-gcc.exe
-SET BITMANS_ESP32_GCC=%IDF_TOOLS_PATH%\tools\xtensa-esp-elf\esp-13.2.0_20240530\xtensa-esp-elf/bin/xtensa-esp32-elf-gcc.exe
+SET BAT_ESP32_GCC=%IDF_TOOLS_PATH%\tools\xtensa-esp-elf\esp-14.2.0_20241119\xtensa-esp-elf\bin\xtensa-esp32-elf-gcc.exe
+SET BAT_ESP32_GCC=%IDF_TOOLS_PATH%\tools\xtensa-esp-elf\esp-13.2.0_20240530\xtensa-esp-elf/bin/xtensa-esp32-elf-gcc.exe
 ```

@@ -1,10 +1,10 @@
 #include <string.h>
 #include "esp_log.h"
-#include "bitmans_ble.h"
+#include "bat_ble.h"
 
-static const char *TAG = "bitmans_lib:ble";
+static const char *TAG = "bat_lib:ble";
 
-static int8_t bitmans_ble_hex_value(char c)
+static int8_t bat_ble_hex_value(char c)
 {
     if (c >= '0' && c <= '9')
         return c - '0';
@@ -15,10 +15,10 @@ static int8_t bitmans_ble_hex_value(char c)
     return -1; // Invalid hex character
 }
 
-static esp_err_t bitmans_ble_parse_uuid(const char *psz, uint8_t *pValue)
+static esp_err_t bat_ble_parse_uuid(const char *psz, uint8_t *pValue)
 {
-    int8_t high = bitmans_ble_hex_value(psz[0]);
-    int8_t low = bitmans_ble_hex_value(psz[1]);
+    int8_t high = bat_ble_hex_value(psz[0]);
+    int8_t low = bat_ble_hex_value(psz[1]);
 
     if (high == -1 || low == -1)
     {
@@ -30,7 +30,7 @@ static esp_err_t bitmans_ble_parse_uuid(const char *psz, uint8_t *pValue)
     return ESP_OK;
 }
 
-esp_err_t bitmans_ble_string36_to_uuid128(const char *psz, bitmans_ble_uuid128_t *pId)
+esp_err_t bat_ble_string36_to_uuid128(const char *psz, bat_ble_uuid128_t *pId)
 {
     if (psz == NULL || pId == NULL)
     {
@@ -59,7 +59,7 @@ esp_err_t bitmans_ble_string36_to_uuid128(const char *psz, bitmans_ble_uuid128_t
         if (i == 4 || i == 6 || i == 8 || i == 10)
             pszMarker++; // Skip hyphens
 
-        esp_err_t err = bitmans_ble_parse_uuid(pszMarker, &big_endian[i]);
+        esp_err_t err = bat_ble_parse_uuid(pszMarker, &big_endian[i]);
         if (err != ESP_OK)
         {
             ESP_LOGE(TAG, "Failed to parse UUID string component at index %d.", i);
@@ -78,7 +78,7 @@ esp_err_t bitmans_ble_string36_to_uuid128(const char *psz, bitmans_ble_uuid128_t
 
 // Converts a standard 16-bit UUID value to a 128-bit UUID
 // Uses the Bluetooth Base UUID: 0000xxxx-0000-1000-8000-00805F9B34FB
-esp_err_t bitmans_ble_uuid16_to_uuid128(bitmans_ble_uuid16_t uuid16, bitmans_ble_uuid128_t *pId)
+esp_err_t bat_ble_uuid16_to_uuid128(bat_ble_uuid16_t uuid16, bat_ble_uuid128_t *pId)
 {
     if (pId == NULL)
     {
@@ -107,8 +107,8 @@ esp_err_t bitmans_ble_uuid16_to_uuid128(bitmans_ble_uuid16_t uuid16, bitmans_ble
 }
 
 // Converts a 16-bit UUID string (e.g., "180F") to a 128-bit UUID
-// by parsing the string and using the existing bitmans_ble_uuid16_to_uuid128 function
-esp_err_t bitmans_ble_string4_to_uuid128(const char *psz, bitmans_ble_uuid128_t *pId)
+// by parsing the string and using the existing bat_ble_uuid16_to_uuid128 function
+esp_err_t bat_ble_string4_to_uuid128(const char *psz, bat_ble_uuid128_t *pId)
 {
     if (psz == NULL || pId == NULL)
     {
@@ -124,19 +124,19 @@ esp_err_t bitmans_ble_string4_to_uuid128(const char *psz, bitmans_ble_uuid128_t 
 
     // Parse the 4-character hex string into a 16-bit value
     uint8_t high_byte, low_byte;
-    esp_err_t err = bitmans_ble_parse_uuid(&psz[0], &high_byte);
+    esp_err_t err = bat_ble_parse_uuid(&psz[0], &high_byte);
     if (err != ESP_OK)
         return err;
 
-    err = bitmans_ble_parse_uuid(&psz[2], &low_byte);
+    err = bat_ble_parse_uuid(&psz[2], &low_byte);
     if (err != ESP_OK)
         return err;
 
     uint16_t uuid16 = (high_byte << 8) | low_byte;
-    return bitmans_ble_uuid16_to_uuid128(uuid16, pId);
+    return bat_ble_uuid16_to_uuid128(uuid16, pId);
 }
 
-esp_err_t bitmans_ble_uuid_match(const esp_bt_uuid_t *pEspId, const bitmans_ble_uuid128_t *pUuid, bool *pResult)
+esp_err_t bat_ble_uuid_match(const esp_bt_uuid_t *pEspId, const bat_ble_uuid128_t *pUuid, bool *pResult)
 {
     *pResult = false;
     if (pEspId == NULL || pUuid == NULL || pResult == NULL)
@@ -155,8 +155,8 @@ esp_err_t bitmans_ble_uuid_match(const esp_bt_uuid_t *pEspId, const bitmans_ble_
     // Handle 16-bit UUID conversion and comparison
     if (pEspId->len == ESP_UUID_LEN_16)
     {
-        bitmans_ble_uuid128_t temp_uuid;
-        esp_err_t err = bitmans_ble_uuid16_to_uuid128(pEspId->uuid.uuid16, &temp_uuid);
+        bat_ble_uuid128_t temp_uuid;
+        esp_err_t err = bat_ble_uuid16_to_uuid128(pEspId->uuid.uuid16, &temp_uuid);
 
         if (err != ESP_OK)
         {
@@ -179,14 +179,14 @@ esp_err_t bitmans_ble_uuid_match(const esp_bt_uuid_t *pEspId, const bitmans_ble_
     return ESP_ERR_INVALID_SIZE;
 }
 
-bool bitmans_ble_uuid_try_match(const esp_bt_uuid_t *pEspId, const bitmans_ble_uuid128_t *pUuid)
+bool bat_ble_uuid_try_match(const esp_bt_uuid_t *pEspId, const bat_ble_uuid128_t *pUuid)
 {
     bool result = false;
-    bitmans_ble_uuid_match(pEspId, pUuid, &result);
+    bat_ble_uuid_match(pEspId, pUuid, &result);
     return result;
 }
 
-void bitmans_ble_log_uuid128(const char *context, const uint8_t *uuid_bytes)
+void bat_ble_log_uuid128(const char *context, const uint8_t *uuid_bytes)
 {
     ESP_LOGI(TAG, "%s: %02x%02x%02x%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x%02x%02x%02x%02x",
              context ? context : "UUID",

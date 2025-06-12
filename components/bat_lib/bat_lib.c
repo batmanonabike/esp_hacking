@@ -7,14 +7,14 @@
 #include "nvs_flash.h"
 #include "esp_netif.h"
 
-#include "bitmans_lib.h"
+#include "bat_lib.h"
 
-static const char *TAG = "bitmans_lib";
+static const char *TAG = "bat_lib";
 static const char *VERSION = "1.0.2";
 
-esp_err_t bitmans_lib_init(void)
+esp_err_t bat_lib_init(void)
 {
-    ESP_LOGI(TAG, "Initializing bitmans_lib version %s", VERSION);
+    ESP_LOGI(TAG, "Initializing bat_lib version %s", VERSION);
 
     // Initialize Non-Volatile Storage (NVS)
     esp_err_t ret = nvs_flash_init();
@@ -33,17 +33,17 @@ esp_err_t bitmans_lib_init(void)
     return ESP_OK;
 }
 
-void bitmans_lib_log_message(const char *message)
+void bat_lib_log_message(const char *message)
 {
     ESP_LOGI(TAG, "User message: %s", message);
 }
 
-const char *bitmans_lib_get_version(void)
+const char *bat_lib_get_version(void)
 {
     return VERSION;
 }
 
-esp_err_t bitmans_waitbits(
+esp_err_t bat_waitbits(
     EventGroupHandle_t ble_events, int bit,
     TickType_t xTicksToWait, EventBits_t *pResult)
 {
@@ -69,12 +69,12 @@ esp_err_t bitmans_waitbits(
     return ESP_OK;
 }
 
-esp_err_t bitmans_waitbits_forever(EventGroupHandle_t ble_events, int bit, EventBits_t *pResult)
+esp_err_t bat_waitbits_forever(EventGroupHandle_t ble_events, int bit, EventBits_t *pResult)
 {
-    return bitmans_waitbits(ble_events, bit, portMAX_DELAY, pResult);
+    return bat_waitbits(ble_events, bit, portMAX_DELAY, pResult);
 }
 
-void _bitmans_error_check_restart(esp_err_t rc, const char *file, int line, const char *function, const char *expression)
+void _bat_error_check_restart(esp_err_t rc, const char *file, int line, const char *function, const char *expression)
 {
     printf("ESP_ERROR_CHECK_RESTART failed: esp_err_t 0x%x", rc);
     printf(" (%s)", esp_err_to_name(rc));

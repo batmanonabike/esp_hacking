@@ -26,7 +26,7 @@ typedef enum {
  * @param gpio_pin GPIO pin number for the LED (defaults to GPIO_NUM_2 if set to -1)
  * @return esp_err_t ESP_OK on success, or an error code
  */
-esp_err_t bitmans_blink_init(int gpio_pin);
+esp_err_t bat_blink_init(int gpio_pin);
 
 /**
  * @brief Set the current blink mode
@@ -34,14 +34,14 @@ esp_err_t bitmans_blink_init(int gpio_pin);
  * @param mode The blink mode to set
  * @return esp_err_t ESP_OK on success, or an error code
  */
-esp_err_t bitmans_set_blink_mode(blink_mode_t mode);
+esp_err_t bat_set_blink_mode(blink_mode_t mode);
 
 /**
  * @brief Get the current blink mode
  * 
  * @return blink_mode_t The current blink mode
  */
-blink_mode_t bitmans_get_blink_mode(void);
+blink_mode_t bat_get_blink_mode(void);
 
 
 /**
@@ -49,7 +49,7 @@ blink_mode_t bitmans_get_blink_mode(void);
  * 
  * @return esp_err_t ESP_OK on success, or an error code
  */
-esp_err_t bitmans_blink_deinit(void);
+esp_err_t bat_blink_deinit(void);
 
 #ifdef __cplusplus
 }

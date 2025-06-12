@@ -1,9 +1,9 @@
-#include "bitmans_hash_table.h"
+#include "bat_hash_table.h"
 #include <stdlib.h>
 #include <string.h>
 
 // Robert Sedgwicks's simple hash function for uint16_t
-uint16_t bitmans_rs_hash_uint16(uint16_t key, size_t size)
+uint16_t bat_rs_hash_uint16(uint16_t key, size_t size)
 {
     uint32_t hash = 0;
     uint32_t a = 63689;
@@ -16,14 +16,14 @@ uint16_t bitmans_rs_hash_uint16(uint16_t key, size_t size)
     return (uint16_t)(hash % size);
 }
 
-esp_err_t bitmans_hash_table_init(
-    bitmans_hash_table_t *pTable, size_t size,
-    bitmans_hash_value_cleanup_cb_t value_cleanup_cb, void *pContext)
+esp_err_t bat_hash_table_init(
+    bat_hash_table_t *pTable, size_t size,
+    bat_hash_value_cleanup_cb_t value_cleanup_cb, void *pContext)
 {
     if (pTable == NULL || size == 0)
         return ESP_ERR_INVALID_ARG;
 
-    pTable->pEntries = (bitmans_hash_entry_t *)calloc(size, sizeof(bitmans_hash_entry_t));
+    pTable->pEntries = (bat_hash_entry_t *)calloc(size, sizeof(bat_hash_entry_t));
     if (pTable->pEntries != NULL)
     {
         size_t bitmap_size = (size / 8) + ((size % 8) ? 1 : 0);
@@ -46,28 +46,28 @@ esp_err_t bitmans_hash_table_init(
 }
 
 // Helper macros check the bitmap for used/unused entries.
-#define BITMANS_IS_BUCKET_USED(bitmap, idx) (bitmap[(idx) / 8] & (1 << ((idx) % 8)))
-#define BITMANS_SET_BUCKET_USED(bitmap, idx) (bitmap[(idx) / 8] |= (1 << ((idx) % 8)))
-#define BITMANS_SET_BUCKET_UNUSED(bitmap, idx) (bitmap[(idx) / 8] &= ~(1 << ((idx) % 8)))
+#define BAT_IS_BUCKET_USED(bitmap, idx) (bitmap[(idx) / 8] & (1 << ((idx) % 8)))
+#define BAT_SET_BUCKET_USED(bitmap, idx) (bitmap[(idx) / 8] |= (1 << ((idx) % 8)))
+#define BAT_SET_BUCKET_UNUSED(bitmap, idx) (bitmap[(idx) / 8] &= ~(1 << ((idx) % 8)))
 
-void bitmans_hash_table_cleanup(bitmans_hash_table_t *pTable)
+void bat_hash_table_cleanup(bat_hash_table_t *pTable)
 {
     if (pTable != NULL && pTable->pEntries != NULL)
     {
         for (size_t i = 0; i < pTable->size; ++i)
         {
-            if (!BITMANS_IS_BUCKET_USED(pTable->pUsedEntries, i))
+            if (!BAT_IS_BUCKET_USED(pTable->pUsedEntries, i))
                 continue;    
 
-            bitmans_hash_entry_t *pFirstEntry = &pTable->pEntries[i];
+            bat_hash_entry_t *pFirstEntry = &pTable->pEntries[i];
 
             if (pTable->value_cleanup_cb != NULL)
                 pTable->value_cleanup_cb(pFirstEntry->pValue, pTable->pContext);
 
-            bitmans_hash_entry_t *pEntry = pFirstEntry->pNext;
+            bat_hash_entry_t *pEntry = pFirstEntry->pNext;
             while (pEntry != NULL)
             {
-                bitmans_hash_entry_t *pNext = pEntry->pNext;
+                bat_hash_entry_t *pNext = pEntry->pNext;
 
                 if (pTable->value_cleanup_cb != NULL)
                     pTable->value_cleanup_cb(pEntry->pValue, pTable->pContext);
@@ -88,13 +88,13 @@ void bitmans_hash_table_cleanup(bitmans_hash_table_t *pTable)
 
 typedef struct
 {
-    bitmans_hash_entry_t *pPrev;
-    bitmans_hash_entry_t *pFound;
-} bitmans_hash_find_result_t;
+    bat_hash_entry_t *pPrev;
+    bat_hash_entry_t *pFound;
+} bat_hash_find_result_t;
 
-static bitmans_hash_find_result_t bitmans_hash_table_find_entry(bitmans_hash_entry_t *pEntry, uint16_t key)
+static bat_hash_find_result_t bat_hash_table_find_entry(bat_hash_entry_t *pEntry, uint16_t key)
 {
-    bitmans_hash_find_result_t result = {NULL, NULL};
+    bat_hash_find_result_t result = {NULL, NULL};
 
     for (; pEntry != NULL; pEntry = pEntry->pNext)
     {
@@ -111,7 +111,7 @@ static bitmans_hash_find_result_t bitmans_hash_table_find_entry(bitmans_hash_ent
     return result;
 }
 
-static void bitmans_hash_table_free_entry(bitmans_hash_table_t *pTable, bitmans_hash_entry_t *pPrev, bitmans_hash_entry_t *pEntry)
+static void bat_hash_table_free_entry(bat_hash_table_t *pTable, bat_hash_entry_t *pPrev, bat_hash_entry_t *pEntry)
 {
     if (pTable->value_cleanup_cb != NULL)
         pTable->value_cleanup_cb(pEntry->pValue, pTable->pContext);
@@ -129,49 +129,49 @@ static void bitmans_hash_table_free_entry(bitmans_hash_table_t *pTable, bitmans_
     }
 }
 
-esp_err_t bitmans_hash_table_remove(bitmans_hash_table_t *pTable, uint16_t key)
+esp_err_t bat_hash_table_remove(bat_hash_table_t *pTable, uint16_t key)
 {
     if (pTable == NULL || pTable->pEntries == NULL || pTable->pUsedEntries == NULL)
         return ESP_ERR_INVALID_ARG;
 
-    uint16_t idx = bitmans_rs_hash_uint16(key, pTable->size);
-    if (BITMANS_IS_BUCKET_USED(pTable->pUsedEntries, idx))
+    uint16_t idx = bat_rs_hash_uint16(key, pTable->size);
+    if (BAT_IS_BUCKET_USED(pTable->pUsedEntries, idx))
     {
-        bitmans_hash_entry_t *pFirstEntry = &pTable->pEntries[idx];
-        bitmans_hash_find_result_t findResult = bitmans_hash_table_find_entry(pFirstEntry, key);
+        bat_hash_entry_t *pFirstEntry = &pTable->pEntries[idx];
+        bat_hash_find_result_t findResult = bat_hash_table_find_entry(pFirstEntry, key);
 
         if (findResult.pFound != NULL)
         {
-            bitmans_hash_table_free_entry(pTable, findResult.pPrev, findResult.pFound);
+            bat_hash_table_free_entry(pTable, findResult.pPrev, findResult.pFound);
 
             // We were the first *AND* last...
             if (findResult.pPrev == NULL && pFirstEntry->pNext == NULL)
-                BITMANS_SET_BUCKET_UNUSED(pTable->pUsedEntries, idx);
+                BAT_SET_BUCKET_UNUSED(pTable->pUsedEntries, idx);
         }
     }
 
     return ESP_OK;
 }
 
-esp_err_t bitmans_hash_table_set(bitmans_hash_table_t *pTable, uint16_t key, void *pValue)
+esp_err_t bat_hash_table_set(bat_hash_table_t *pTable, uint16_t key, void *pValue)
 {
     if (pTable == NULL || pTable->pEntries == NULL || pTable->pUsedEntries == NULL)
         return ESP_ERR_INVALID_ARG;
 
-    uint16_t idx = bitmans_rs_hash_uint16(key, pTable->size);
-    bitmans_hash_entry_t *pFirstEntry = &pTable->pEntries[idx];
+    uint16_t idx = bat_rs_hash_uint16(key, pTable->size);
+    bat_hash_entry_t *pFirstEntry = &pTable->pEntries[idx];
 
     // Optimal case.
-    if (!BITMANS_IS_BUCKET_USED(pTable->pUsedEntries, idx))
+    if (!BAT_IS_BUCKET_USED(pTable->pUsedEntries, idx))
     {
         pFirstEntry->key = key;
         pFirstEntry->pNext = NULL;
         pFirstEntry->pValue = pValue;
-        BITMANS_SET_BUCKET_USED(pTable->pUsedEntries, idx);
+        BAT_SET_BUCKET_USED(pTable->pUsedEntries, idx);
     }
     else
     {
-        bitmans_hash_find_result_t findResult = bitmans_hash_table_find_entry(pFirstEntry, key);
+        bat_hash_find_result_t findResult = bat_hash_table_find_entry(pFirstEntry, key);
         if (findResult.pFound != NULL) // Key already exists, update value
         {
             if (pTable->value_cleanup_cb != NULL)
@@ -182,7 +182,7 @@ esp_err_t bitmans_hash_table_set(bitmans_hash_table_t *pTable, uint16_t key, voi
         else
         {
             // Key doesn't exist, add new.
-            bitmans_hash_entry_t *pNewEntry = (bitmans_hash_entry_t *)calloc(1, sizeof(bitmans_hash_entry_t));
+            bat_hash_entry_t *pNewEntry = (bat_hash_entry_t *)calloc(1, sizeof(bat_hash_entry_t));
             if (pNewEntry == NULL)
                 return ESP_ERR_NO_MEM;
 
@@ -202,16 +202,16 @@ esp_err_t bitmans_hash_table_set(bitmans_hash_table_t *pTable, uint16_t key, voi
     return ESP_OK;
 }
 
-esp_err_t bitmans_hash_table_get(bitmans_hash_table_t *pTable, uint16_t key, void **ppValue)
+esp_err_t bat_hash_table_get(bat_hash_table_t *pTable, uint16_t key, void **ppValue)
 {
     if (pTable == NULL || pTable->pEntries == NULL || pTable->pUsedEntries == NULL || ppValue == NULL)
         return ESP_ERR_INVALID_ARG;
 
-    uint16_t idx = bitmans_rs_hash_uint16(key, pTable->size);
-    if (BITMANS_IS_BUCKET_USED(pTable->pUsedEntries, idx))
+    uint16_t idx = bat_rs_hash_uint16(key, pTable->size);
+    if (BAT_IS_BUCKET_USED(pTable->pUsedEntries, idx))
     {
-        bitmans_hash_entry_t *pFirstEntry = &pTable->pEntries[idx];
-        bitmans_hash_find_result_t findResult = bitmans_hash_table_find_entry(pFirstEntry, key);
+        bat_hash_entry_t *pFirstEntry = &pTable->pEntries[idx];
+        bat_hash_find_result_t findResult = bat_hash_table_find_entry(pFirstEntry, key);
         if (findResult.pFound != NULL)
         {
             *ppValue = findResult.pFound->pValue;
@@ -223,9 +223,9 @@ esp_err_t bitmans_hash_table_get(bitmans_hash_table_t *pTable, uint16_t key, voi
     return ESP_ERR_NOT_FOUND;
 }
 
-void * bitmans_hash_table_try_get(bitmans_hash_table_t * pTable, uint16_t key)
+void * bat_hash_table_try_get(bat_hash_table_t * pTable, uint16_t key)
 {
     void *pValue = NULL;
-    esp_err_t err = bitmans_hash_table_get(pTable, key, &pValue);
+    esp_err_t err = bat_hash_table_get(pTable, key, &pValue);
     return (err == ESP_OK) ? pValue : NULL;
 }

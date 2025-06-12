@@ -15,16 +15,16 @@
 #include "esp_bt_defs.h"
 #include "esp_gatt_defs.h" // Added for ESP_UUID_LEN_XX and potentially esp_bt_uuid_t resolution
 
-#include "bitmans_ble_client_logging.h"
+#include "bat_ble_client_logging.h"
 
-static const char *TAG = "bitmans_lib:ble_client_logging";
+static const char *TAG = "bat_lib:ble_client_logging";
 
-void bitmans_log_ble_scan(bitmans_scan_result_t *pScanResult, bool ignoreNoAdvertisedName) // Changed type to esp_ble_scan_result_evt_param_t
+void bat_log_ble_scan(bat_scan_result_t *pScanResult, bool ignoreNoAdvertisedName) // Changed type to esp_ble_scan_result_evt_param_t
 {
     assert(pScanResult != NULL);
 
-    bitmans_advertised_name_t advertised_name;
-    if ((bitmans_ble_client_get_advertised_name(pScanResult, &advertised_name) != ESP_OK) && ignoreNoAdvertisedName)
+    bat_advertised_name_t advertised_name;
+    if ((bat_ble_client_get_advertised_name(pScanResult, &advertised_name) != ESP_OK) && ignoreNoAdvertisedName)
         return;
 
     ESP_LOGI(TAG, "Device found (ptr): ADDR: %02x:%02x:%02x:%02x:%02x:%02x",
@@ -132,12 +132,12 @@ void bitmans_log_ble_scan(bitmans_scan_result_t *pScanResult, bool ignoreNoAdver
     }
 }
 
-void bitmans_log_verbose_ble_scan(bitmans_scan_result_t *pScanResult, bool ignoreNoAdvertisedName)
+void bat_log_verbose_ble_scan(bat_scan_result_t *pScanResult, bool ignoreNoAdvertisedName)
 {
     assert(pScanResult != NULL);
 
-    bitmans_advertised_name_t advertised_name;
-    if ((bitmans_ble_client_get_advertised_name(pScanResult, &advertised_name) != ESP_OK) && ignoreNoAdvertisedName)
+    bat_advertised_name_t advertised_name;
+    if ((bat_ble_client_get_advertised_name(pScanResult, &advertised_name) != ESP_OK) && ignoreNoAdvertisedName)
         return;
 
     ESP_LOGI(TAG, "=== COMPREHENSIVE BLE DEVICE SCAN RESULT ===");
@@ -423,7 +423,7 @@ void bitmans_log_verbose_ble_scan(bitmans_scan_result_t *pScanResult, bool ignor
     ESP_LOGI(TAG, "============================================");
 }
 
-void bitmans_debug_esp_ble_resolve_adv_data(bitmans_scan_result_t *pScanResult)
+void bat_debug_esp_ble_resolve_adv_data(bat_scan_result_t *pScanResult)
 {
     ESP_LOGI(TAG, "=== DEBUG esp_ble_resolve_adv_data FUNCTION ===");
     ESP_LOGI(TAG, "Device Address: %02x:%02x:%02x:%02x:%02x:%02x",

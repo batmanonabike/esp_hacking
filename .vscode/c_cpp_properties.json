@@ -2,7 +2,7 @@
     "configurations": [
         {
             "name": "BitmansESP-IDF",
-            "compilerPath": "${BITMANS_ESP32_GCC}",
+            "compilerPath": "${BAT_ESP32_GCC}",
             "cStandard": "c11",
             "cppStandard": "c++17",
             "includePath": [
@@ -11,8 +11,8 @@
                 "${env:IDF_PATH}/components/*/*/include",
                 "${env:IDF_TOOLS_PATH}/tools/**",
                 "${workspaceFolder}/components/**/include",
-                "${workspaceFolder}/components/bitmans_lib/include",
-                "${workspaceFolder}/components/bitmans_config/include"
+                "${workspaceFolder}/components/bat_lib/include",
+                "${workspaceFolder}/components/bat_config/include"
             ],
             "browse": {
                 "path": [

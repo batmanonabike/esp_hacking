@@ -3,7 +3,7 @@
 ## Project Overview
 
 This workspace contains multiple ESP-IDF projects focused on Bluetooth Low Energy (BLE) development for ESP32 microcontrollers. 
-The project uses a shared component architecture with the `bitmans_lib` library providing common functionality across multiple applications.
+The project uses a shared component architecture with the `bat_lib` library providing common functionality across multiple applications.
 
 ## AI Role
 You are a senior developer and your role is to assist in writing, reviewing, and refactoring C code for ESP32 BLE applications.
@@ -14,7 +14,7 @@ If you consider a task not clear, or not possible, then ask for more details bef
 ## Architecture Principles
 
 ### Component-Based Architecture
-- **Shared Components**: Common functionality is encapsulated in reusable components (`bitmans_lib`, `bitmans_config`)
+- **Shared Components**: Common functionality is encapsulated in reusable components (`bat_lib`, `bat_config`)
 - **Project Structure**: Each project is self-contained but references shared components via `EXTRA_COMPONENT_DIRS`
 - **Separation of Concerns**: Distinct modules for BLE client, BLE server, WiFi, LED control, and logging
 
@@ -55,19 +55,19 @@ EventBits_t bits = xEventGroupWaitBits(event_group, TARGET_BIT | ERROR_BIT,
 ## Code Style Guidelines
 
 ### Naming Conventions
-- **Functions**: Use `bitmans_` prefix for library functions, followed by module name
-  - Examples: `bitmans_ble_server_init()`, `bitmans_gatts_start_service()`
+- **Functions**: Use `bat_` prefix for library functions, followed by module name
+  - Examples: `bat_ble_server_init()`, `bat_gatts_start_service()`
 - **Types**: Use `_t` suffix for type definitions
-  - Examples: `bitmans_gatts_callbacks_t`, `app_context`
+  - Examples: `bat_gatts_callbacks_t`, `app_context`
 - **Constants**: Use UPPER_CASE with descriptive prefixes
-  - Examples: `BITMANS_APP_ID`, `ERROR_BIT`, `GATTS_READY_TO_START_BIT`
+  - Examples: `BAT_APP_ID`, `ERROR_BIT`, `GATTS_READY_TO_START_BIT`
 - **Variables**: Use descriptive names with context
   - Pointers: Use `p` prefix (e.g., `pContext`, `pCallbacks`)
   - Arrays/strings: Use descriptive names (e.g., `szAdvName`)
 - **Brackets**: For C, C++ and C# use Allman style for function definitions and control structures
   - Example:
 ```c
-void bitmans_ble_server_init(bitmans_gatts_callbacks_t *pCallbacks) 
+void bat_ble_server_init(bat_gatts_callbacks_t *pCallbacks) 
 {
     // Function implementation
 }

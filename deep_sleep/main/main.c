@@ -40,7 +40,7 @@
 #include "esp_timer.h"
 #include "freertos/portmacro.h" 
 
-#include "bitmans_lib.h"
+#include "bat_lib.h"
 
 static const char *TAG = "deep_sleep";
 
@@ -51,7 +51,7 @@ RTC_DATA_ATTR static int rtc_wake_count = 0;             // Counts wakeups
 
 void app_first_boot(esp_sleep_wakeup_cause_t wakeup_reason)
 {
-    bitmans_set_blink_mode(BLINK_MODE_BASIC);
+    bat_set_blink_mode(BLINK_MODE_BASIC);
     ESP_LOGI(TAG, "Boot or other wakeup (reason: %d). Going to deep sleep for 5 seconds...", wakeup_reason);
 
     rtc_wake_count = 0;
@@ -60,7 +60,7 @@ void app_first_boot(esp_sleep_wakeup_cause_t wakeup_reason)
 
 void app_wake_from_timer()
 {
-    bitmans_set_blink_mode(BLINK_MODE_BREATHING);
+    bat_set_blink_mode(BLINK_MODE_BREATHING);
 
     rtc_wake_count++;
     ESP_LOGI(TAG, "Woke from timer! Wake count: %d", rtc_wake_count);
@@ -78,8 +78,8 @@ void app_main(void)
     int64_t now = esp_timer_get_time(); // microseconds since initialization of the ESP Timer.
     esp_sleep_wakeup_cause_t wakeup_reason = esp_sleep_get_wakeup_cause();
 
-    ESP_ERROR_CHECK(bitmans_lib_init());
-    ESP_ERROR_CHECK(bitmans_blink_init(-1));
+    ESP_ERROR_CHECK(bat_lib_init());
+    ESP_ERROR_CHECK(bat_blink_init(-1));
 
     // Log startup time (since power-on or last reset)
     ESP_LOGI(TAG, "Startup time: %lld ms since boot", now / 1000);
@@ -90,7 +90,7 @@ void app_main(void)
         app_wake_from_timer();
 
     ESP_LOGI(TAG, "Going to deep sleep for 5 seconds...");
-    bitmans_set_blink_mode(BLINK_MODE_VERY_FAST);
+    bat_set_blink_mode(BLINK_MODE_VERY_FAST);
     vTaskDelay(3000 / portTICK_PERIOD_MS);
 
     vTaskDelay(1000 / portTICK_PERIOD_MS);  // Ensure logs are flushed before deep sleep
@@ -99,5 +99,5 @@ void app_main(void)
     esp_deep_sleep_start();    
 	
 	// Code never reaches here due to deep sleep reset
-    /* bitmans_blink_deinit(); */
+    /* bat_blink_deinit(); */
 }

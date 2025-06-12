@@ -11,10 +11,10 @@
 #include "esp_system.h"
 #include "nvs.h"  // Add specific NVS header
 
-#include "bitmans_wifi_logging.h"
-#include "bitmans_wifi_connect.h"
+#include "bat_wifi_logging.h"
+#include "bat_wifi_connect.h"
 
-static const char *TAG = "bitmans_lib:wifi_connect";
+static const char *TAG = "bat_lib:wifi_connect";
 
 // Default configuration values
 #define DEFAULT_WIFI_SSID      "Jelly Star_8503"
@@ -27,8 +27,8 @@ static EventGroupHandle_t wifi_event_group = NULL;
 static const int WIFI_CONNECTED_BIT = BIT0;
 
 // WiFi configuration and status
-static bitmans_wifi_config_t wifi_config;
-static bitmans_wifi_status_t current_status = BITMANS_WIFI_DISCONNECTED;
+static bat_wifi_config_t wifi_config;
+static bat_wifi_status_t current_status = BAT_WIFI_DISCONNECTED;
 static esp_netif_t *sta_netif = NULL;
 
 // Heartbeat variables
@@ -36,7 +36,7 @@ static TaskHandle_t heartbeat_task_handle = NULL;
 static volatile bool heartbeat_failed = false;
 
 // User callback for status changes
-static void (*user_callback)(bitmans_wifi_status_t) = NULL;
+static void (*user_callback)(bat_wifi_status_t) = NULL;
 
 // Private function declarations
 static void heartbeat_task(void *pvParameters);
@@ -52,22 +52,22 @@ static void wifi_event_handler(void* arg, esp_event_base_t event_base, int32_t e
 static void wifi_event_handler(void* arg, esp_event_base_t event_base, int32_t event_id, void* event_data) 
 {
     if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_START) 
-        bitmans_wifi_connect();
+        bat_wifi_connect();
     else if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_DISCONNECTED) 
     {
         wifi_event_sta_disconnected_t* disconn = (wifi_event_sta_disconnected_t*) event_data;
-        const char * pszReason = bitmans_get_disconnect_reason(disconn->reason);
+        const char * pszReason = bat_get_disconnect_reason(disconn->reason);
         ESP_LOGW(TAG, "Disconnected from SSID: %s, reason: %d, %s", wifi_config.ssid, disconn->reason, pszReason);
 
         // Clear the connected bit when disconnected
         xEventGroupClearBits(wifi_event_group, WIFI_CONNECTED_BIT);
-        current_status = BITMANS_WIFI_DISCONNECTED;
+        current_status = BAT_WIFI_DISCONNECTED;
         if (user_callback) 
             user_callback(current_status);
 
         ESP_LOGI(TAG, "Retrying in 5 seconds...");
         vTaskDelay(5000 / portTICK_PERIOD_MS);
-        bitmans_wifi_connect();
+        bat_wifi_connect();
     } 
     else if (event_base == IP_EVENT && event_id == IP_EVENT_STA_GOT_IP) 
     {
@@ -77,7 +77,7 @@ static void wifi_event_handler(void* arg, esp_event_base_t event_base, int32_t e
 
         heartbeat_failed = false;
         xEventGroupSetBits(wifi_event_group, WIFI_CONNECTED_BIT);
-        current_status = BITMANS_WIFI_CONNECTED;
+        current_status = BAT_WIFI_CONNECTED;
         if (user_callback) 
             user_callback(current_status);
     }
@@ -138,13 +138,13 @@ static void connection_monitor_task(void *pvParameters) {
 /**
  * @brief Initialize WiFi subsystem and start connection monitoring
  */
-esp_err_t bitmans_wifi_init(const bitmans_wifi_config_t *config) 
+esp_err_t bat_wifi_init(const bat_wifi_config_t *config) 
 {
     ESP_LOGI(TAG, "Initializing WiFi connection module");
         
     // Set default config or use user-provided config
     if (config != NULL) 
-        memcpy(&wifi_config, config, sizeof(bitmans_wifi_config_t));
+        memcpy(&wifi_config, config, sizeof(bat_wifi_config_t));
     else 
     {
         strcpy(wifi_config.ssid, DEFAULT_WIFI_SSID);
@@ -209,7 +209,7 @@ esp_err_t bitmans_wifi_init(const bitmans_wifi_config_t *config)
 /**
  * @brief Get current WiFi status
  */
-bitmans_wifi_status_t bitmans_wifi_get_status(void) 
+bat_wifi_status_t bat_wifi_get_status(void) 
 {
     return current_status;
 }
@@ -217,12 +217,12 @@ bitmans_wifi_status_t bitmans_wifi_get_status(void)
 /**
  * @brief Get current IP address as string
  */
-esp_err_t bitmans_wifi_get_ip(char *ip_str, size_t len) 
+esp_err_t bat_wifi_get_ip(char *ip_str, size_t len) 
 {
     if (ip_str == NULL || len < 16)
         return ESP_ERR_INVALID_ARG;
     
-    if (current_status != BITMANS_WIFI_CONNECTED) 
+    if (current_status != BAT_WIFI_CONNECTED) 
     {
         strncpy(ip_str, "0.0.0.0", len);
         return ESP_ERR_WIFI_NOT_CONNECT;
@@ -243,7 +243,7 @@ esp_err_t bitmans_wifi_get_ip(char *ip_str, size_t len)
 /**
  * @brief Disconnect from WiFi network
  */
-esp_err_t bitmans_wifi_disconnect(void) 
+esp_err_t bat_wifi_disconnect(void) 
 {
     return esp_wifi_disconnect();
 }
@@ -251,10 +251,10 @@ esp_err_t bitmans_wifi_disconnect(void)
 /**
  * @brief Connect to WiFi network
  */
-esp_err_t bitmans_wifi_connect(void) 
+esp_err_t bat_wifi_connect(void) 
 {
     ESP_LOGI(TAG, "Attempting to connect to SSID: %s", wifi_config.ssid);
-    current_status = BITMANS_WIFI_CONNECTING;
+    current_status = BAT_WIFI_CONNECTING;
     if (user_callback) 
         user_callback(current_status);
 
@@ -264,13 +264,13 @@ esp_err_t bitmans_wifi_connect(void)
 /**
  * @brief Update WiFi configuration
  */
-esp_err_t bitmans_wifi_update_config(const bitmans_wifi_config_t *config) 
+esp_err_t bat_wifi_update_config(const bat_wifi_config_t *config) 
 {
     if (config == NULL) 
         return ESP_ERR_INVALID_ARG;
     
     // Update internal config
-    memcpy(&wifi_config, config, sizeof(bitmans_wifi_config_t));
+    memcpy(&wifi_config, config, sizeof(bat_wifi_config_t));
     
     // Update ESP WiFi config
     wifi_config_t esp_wifi_config = {
@@ -290,7 +290,7 @@ esp_err_t bitmans_wifi_update_config(const bitmans_wifi_config_t *config)
 /**
  * @brief Register callback for status changes
  */
-esp_err_t bitmans_wifi_register_callback(void (*callback)(bitmans_wifi_status_t status)) 
+esp_err_t bat_wifi_register_callback(void (*callback)(bat_wifi_status_t status)) 
 {
     if (callback == NULL) 
         return ESP_ERR_INVALID_ARG;
@@ -302,7 +302,7 @@ esp_err_t bitmans_wifi_register_callback(void (*callback)(bitmans_wifi_status_t 
 /**
  * @brief Terminate WiFi connection module
  */
-esp_err_t bitmans_wifi_deinit(void) 
+esp_err_t bat_wifi_deinit(void) 
 {
     ESP_LOGI(TAG, "Terminating WiFi connection module");
     
@@ -326,7 +326,7 @@ esp_err_t bitmans_wifi_deinit(void)
     }
     
     // Reset state
-    current_status = BITMANS_WIFI_DISCONNECTED;
+    current_status = BAT_WIFI_DISCONNECTED;
     user_callback = NULL;
     
     return ESP_OK;

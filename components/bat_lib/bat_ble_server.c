@@ -11,18 +11,18 @@
 #include "esp_bt_defs.h"
 #include "esp_gatt_defs.h"
 
-#include "bitmans_ble.h"
-#include "bitmans_hash_table.h"
-#include "bitmans_ble_server.h"
+#include "bat_ble.h"
+#include "bat_hash_table.h"
+#include "bat_ble_server.h"
 
 // See: /docs/ble_intro.md
 // GATT Server implementation for Bitman's BLE server
-static const char *TAG = "bitmans_lib:ble_server";
+static const char *TAG = "bat_lib:ble_server";
 
 // The GATTS interface is a unique identifier for each GATT server instance, we get that during registration.
-static bitmans_hash_table_t app_cb_table;   // Hash table to map app IDs to GATTS callbacks.
-static bitmans_hash_table_t gatts_cb_table; // Hash table to map GATTS interfaces to callbacks.
-static bitmans_gaps_callbacks_t *g_pGapCallbacks = NULL;
+static bat_hash_table_t app_cb_table;   // Hash table to map app IDs to GATTS callbacks.
+static bat_hash_table_t gatts_cb_table; // Hash table to map GATTS interfaces to callbacks.
+static bat_gaps_callbacks_t *g_pGapCallbacks = NULL;
 
 static esp_ble_adv_params_t adv_params = {
     .adv_int_min = 0x20,
@@ -42,9 +42,9 @@ static esp_ble_adv_params_t adv_params = {
 // - ESP_GAP_BLE_UPDATE_CONN_PARAMS_EVT: Connection parameters updated.
 // - ESP_GAP_BLE_SEC_REQ_EVT: Security request from peer device.
 // https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/bluetooth/esp_gap_ble.html#_CPPv426esp_gap_ble_cb_event_t
-static void bitmans_gap_event_handler(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *pParam)
+static void bat_gap_event_handler(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *pParam)
 {
-    assert(g_pGapCallbacks != NULL); // call bitmans_ble_gaps_callbacks_init!
+    assert(g_pGapCallbacks != NULL); // call bat_ble_gaps_callbacks_init!
 
     switch (event)
     {
@@ -69,15 +69,15 @@ static void bitmans_gap_event_handler(esp_gap_ble_cb_event_t event, esp_ble_gap_
     }
 }
 
-static bitmans_gatts_callbacks_t *bitmans_gatts_callbacks_create_mapping(
-    esp_gatt_if_t gatts_if, bitmans_gatts_app_id app_id)
+static bat_gatts_callbacks_t *bat_gatts_callbacks_create_mapping(
+    esp_gatt_if_t gatts_if, bat_gatts_app_id app_id)
 {
-    bitmans_gatts_callbacks_t *pCallbacks = NULL;
-    esp_err_t err = bitmans_hash_table_get(&app_cb_table, app_id, (void **)&pCallbacks);
+    bat_gatts_callbacks_t *pCallbacks = NULL;
+    esp_err_t err = bat_hash_table_get(&app_cb_table, app_id, (void **)&pCallbacks);
 
     if (err == ESP_OK && pCallbacks != NULL)
     {
-        err = bitmans_hash_table_set(&gatts_cb_table, gatts_if, pCallbacks);
+        err = bat_hash_table_set(&gatts_cb_table, gatts_if, pCallbacks);
         if (err == ESP_OK)
         {
             ESP_LOGI(TAG, "Callback registered for appId: %d, gatts_if: %d", app_id, gatts_if);
@@ -104,7 +104,7 @@ static bitmans_gatts_callbacks_t *bitmans_gatts_callbacks_create_mapping(
 //
 // Stick to max 10 characers for the device name to ensure it fits in the advertising packet IF you also
 // advertise a service UUID.
-esp_err_t bitmans_gatts_begin_advert_data_set(const char *pszAdvName, uint8_t *pId, uint8_t idLen)
+esp_err_t bat_gatts_begin_advert_data_set(const char *pszAdvName, uint8_t *pId, uint8_t idLen)
 {
     esp_err_t err = ESP_OK;
 
@@ -206,12 +206,12 @@ esp_err_t bitmans_gatts_begin_advert_data_set(const char *pszAdvName, uint8_t *p
     return ESP_OK;
 }
 
-esp_err_t bitmans_gatts_begin_advert_data_set128(const char *pszAdvertisedName, bitmans_ble_uuid128_t *pId)
+esp_err_t bat_gatts_begin_advert_data_set128(const char *pszAdvertisedName, bat_ble_uuid128_t *pId)
 {
-    return bitmans_gatts_begin_advert_data_set(pszAdvertisedName, pId->uuid, ESP_UUID_LEN_128);
+    return bat_gatts_begin_advert_data_set(pszAdvertisedName, pId->uuid, ESP_UUID_LEN_128);
 }
 
-static esp_err_t bitmans_gatts_create_service(esp_gatt_if_t gatts_if, esp_gatt_srvc_id_t *pId)
+static esp_err_t bat_gatts_create_service(esp_gatt_if_t gatts_if, esp_gatt_srvc_id_t *pId)
 {
     esp_err_t err = esp_ble_gatts_create_service(gatts_if, pId, 8);
     if (err != ESP_OK)
@@ -223,7 +223,7 @@ static esp_err_t bitmans_gatts_create_service(esp_gatt_if_t gatts_if, esp_gatt_s
     return ESP_OK;
 }
 
-esp_err_t bitmans_gatts_create_service128(esp_gatt_if_t gatts_if, bitmans_ble_uuid128_t *pId)
+esp_err_t bat_gatts_create_service128(esp_gatt_if_t gatts_if, bat_ble_uuid128_t *pId)
 {
     esp_gatt_id_t id = {
         .inst_id = 0,
@@ -234,10 +234,10 @@ esp_err_t bitmans_gatts_create_service128(esp_gatt_if_t gatts_if, bitmans_ble_uu
 
     esp_gatt_srvc_id_t service_id = {.id = id, .is_primary = true};
 
-    return bitmans_gatts_create_service(gatts_if, &service_id);
+    return bat_gatts_create_service(gatts_if, &service_id);
 }
 
-esp_err_t bitmans_gatts_start_advertising()
+esp_err_t bat_gatts_start_advertising()
 {
     esp_err_t err = esp_ble_gap_start_advertising(&adv_params);
     if (err != ESP_OK)
@@ -268,8 +268,8 @@ esp_err_t bitmans_gatts_start_advertising()
 // Example for Battery Level characteristic:
 //   Permissions: ESP_GATT_PERM_READ
 //   Properties:  ESP_GATT_CHAR_PROP_BIT_READ | ESP_GATT_CHAR_PROP_BIT_NOTIFY
-static esp_err_t bitmans_gatts_create_char(
-    esp_gatt_if_t gatts_if, bitmans_gatts_service_handle service_handle,
+static esp_err_t bat_gatts_create_char(
+    esp_gatt_if_t gatts_if, bat_gatts_service_handle service_handle,
     esp_bt_uuid_t *pId, esp_gatt_char_prop_t properties, esp_gatt_perm_t permissions)
 {
     esp_err_t err = esp_ble_gatts_add_char(service_handle, pId, permissions, properties, NULL, NULL);
@@ -281,15 +281,15 @@ static esp_err_t bitmans_gatts_create_char(
     return ESP_OK;
 }
 
-esp_err_t bitmans_gatts_create_char128(
-    esp_gatt_if_t gatts_if, bitmans_gatts_service_handle service_handle,
-    bitmans_ble_uuid128_t *pId, esp_gatt_char_prop_t properties, esp_gatt_perm_t permissions)
+esp_err_t bat_gatts_create_char128(
+    esp_gatt_if_t gatts_if, bat_gatts_service_handle service_handle,
+    bat_ble_uuid128_t *pId, esp_gatt_char_prop_t properties, esp_gatt_perm_t permissions)
 {
     esp_bt_uuid_t char_uuid = {
         .len = ESP_UUID_LEN_128,
         .uuid = {.uuid128 = {0}}};
     memcpy(char_uuid.uuid.uuid128, pId->uuid, sizeof(pId->uuid));
-    return bitmans_gatts_create_char(gatts_if, service_handle, &char_uuid, properties, permissions);
+    return bat_gatts_create_char(gatts_if, service_handle, &char_uuid, properties, permissions);
 }
 
 // The Client Characteristic Configuration Descriptor (CCCD, UUID 0x2902) is required for any
@@ -297,7 +297,7 @@ esp_err_t bitmans_gatts_create_char128(
 // It allows each client to enable or disable notifications/indications for itself by writing to this descriptor.
 // Without the CCCD, clients cannot subscribe to battery level notifications, even if the characteristic supports them.
 // https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/bluetooth/esp_gatts.html
-esp_err_t bitmans_gatts_add_cccd(uint16_t service_handle, uint16_t char_handle)
+esp_err_t bat_gatts_add_cccd(uint16_t service_handle, uint16_t char_handle)
 {
     // 0x2902 is the standard UUID for CCCD
     esp_bt_uuid_t cccd_uuid = {
@@ -320,10 +320,10 @@ esp_err_t bitmans_gatts_add_cccd(uint16_t service_handle, uint16_t char_handle)
     return err;
 }
 
-static bitmans_gatts_callbacks_t *bitmans_gatts_callbacks_lookup(esp_gatt_if_t gatts_if)
+static bat_gatts_callbacks_t *bat_gatts_callbacks_lookup(esp_gatt_if_t gatts_if)
 {
-    bitmans_gatts_callbacks_t *pCallbacks = NULL;
-    esp_err_t err = bitmans_hash_table_get(&gatts_cb_table, gatts_if, (void **)&pCallbacks);
+    bat_gatts_callbacks_t *pCallbacks = NULL;
+    esp_err_t err = bat_hash_table_get(&gatts_cb_table, gatts_if, (void **)&pCallbacks);
 
     if (err == ESP_OK && pCallbacks != NULL)
     {
@@ -335,7 +335,7 @@ static bitmans_gatts_callbacks_t *bitmans_gatts_callbacks_lookup(esp_gatt_if_t g
     return NULL;
 }
 
-esp_err_t bitmans_gatts_start_service(bitmans_gatts_service_handle service_handle)
+esp_err_t bat_gatts_start_service(bat_gatts_service_handle service_handle)
 {
     esp_err_t err = esp_ble_gatts_start_service(service_handle);
     if (err != ESP_OK)
@@ -349,7 +349,7 @@ esp_err_t bitmans_gatts_start_service(bitmans_gatts_service_handle service_handl
     return ESP_OK;
 }
 
-esp_err_t bitmans_gatts_stop_service(bitmans_gatts_service_handle service_handle)
+esp_err_t bat_gatts_stop_service(bat_gatts_service_handle service_handle)
 {
     esp_err_t err = esp_ble_gatts_stop_service(service_handle);
     if (err != ESP_OK)
@@ -363,7 +363,7 @@ esp_err_t bitmans_gatts_stop_service(bitmans_gatts_service_handle service_handle
     return ESP_OK;
 }
 
-esp_err_t bitmans_gatts_send_response(
+esp_err_t bat_gatts_send_response(
     esp_gatt_if_t gatts_if, uint16_t conn_id, uint32_t trans_id,
     esp_gatt_status_t status, esp_gatt_rsp_t *pResponse)
 {
@@ -379,7 +379,7 @@ esp_err_t bitmans_gatts_send_response(
     return ESP_OK;
 }
 
-esp_err_t bitmans_gatts_send_uint8(
+esp_err_t bat_gatts_send_uint8(
     esp_gatt_if_t gatts_if, uint16_t handle, uint16_t conn_id, uint32_t trans_id,
     esp_gatt_status_t status, uint8_t value)
 {
@@ -387,7 +387,7 @@ esp_err_t bitmans_gatts_send_uint8(
     response.attr_value.len = 1;
     response.attr_value.handle = handle;
     response.attr_value.value[0] = value;
-    return bitmans_gatts_send_response(gatts_if, conn_id, trans_id, status, &response);
+    return bat_gatts_send_response(gatts_if, conn_id, trans_id, status, &response);
 }
 
 // GATTS (GATT Server) events notify about BLE server events.
@@ -409,20 +409,20 @@ esp_err_t bitmans_gatts_send_uint8(
 // ESP_GATTS_ADD_CHAR_EVT: The characteristic is added. Now add descriptors (like CCCD).
 // ESP_GATTS_ADD_CHAR_DESCR_EVT: The descriptor is added. Now start the service.
 // ESP_GATTS_START_EVT: The service is started. Now start advertising.
-static void bitmans_gatts_event_handler(esp_gatts_cb_event_t event, esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *pParam)
+static void bat_gatts_event_handler(esp_gatts_cb_event_t event, esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *pParam)
 {
-    bitmans_gatts_callbacks_t *pCallbacks = NULL;
+    bat_gatts_callbacks_t *pCallbacks = NULL;
 
     if (event == ESP_GATTS_REG_EVT)
     {
         ESP_LOGI(TAG, "ESP_GATTS_REG_EVT, Service registered");
-        pCallbacks = bitmans_gatts_callbacks_create_mapping(gatts_if, pParam->reg.app_id);
+        pCallbacks = bat_gatts_callbacks_create_mapping(gatts_if, pParam->reg.app_id);
         if (pCallbacks != NULL)
             pCallbacks->on_reg(pCallbacks, pParam);
         return;
     }
 
-    pCallbacks = bitmans_gatts_callbacks_lookup(gatts_if);
+    pCallbacks = bat_gatts_callbacks_lookup(gatts_if);
 
     switch (event)
     {
@@ -499,7 +499,7 @@ static void bitmans_gatts_event_handler(esp_gatts_cb_event_t event, esp_gatt_if_
         ESP_LOGI(TAG, "ESP_GATTS_UNREG_EVT, unregistering app");
         if (pCallbacks != NULL)
             pCallbacks->on_unreg(pCallbacks, pParam);
-        bitmans_hash_table_remove(&gatts_cb_table, gatts_if);
+        bat_hash_table_remove(&gatts_cb_table, gatts_if);
         break;
 
     default:
@@ -507,7 +507,7 @@ static void bitmans_gatts_event_handler(esp_gatts_cb_event_t event, esp_gatt_if_
     }
 }
 
-esp_err_t bitmans_ble_server_init()
+esp_err_t bat_ble_server_init()
 {
     ESP_LOGI(TAG, "Initializing BLE GATT server");
 
@@ -528,23 +528,23 @@ esp_err_t bitmans_ble_server_init()
     if (ret)
         return ret;
 
-    ret = esp_ble_gatts_register_callback(bitmans_gatts_event_handler);
+    ret = esp_ble_gatts_register_callback(bat_gatts_event_handler);
     if (ret)
         return ret;
 
-    ret = esp_ble_gap_register_callback(bitmans_gap_event_handler);
+    ret = esp_ble_gap_register_callback(bat_gap_event_handler);
     if (ret)
         return ret;
 
     // Initialize hash tables for GATT callbacks
-    ret = bitmans_hash_table_init(&gatts_cb_table, 16, NULL, NULL);
+    ret = bat_hash_table_init(&gatts_cb_table, 16, NULL, NULL);
     if (ret)
         return ret;
 
-    return bitmans_hash_table_init(&app_cb_table, 4, NULL, NULL);
+    return bat_hash_table_init(&app_cb_table, 4, NULL, NULL);
 }
 
-esp_err_t bitmans_gatts_stop_advertising()
+esp_err_t bat_gatts_stop_advertising()
 {
     esp_err_t ret = esp_ble_gap_stop_advertising();
     if (ret == ESP_OK)
@@ -558,27 +558,27 @@ esp_err_t bitmans_gatts_stop_advertising()
     return ret;
 }
 
-esp_err_t bitmans_ble_server_deinit()
+esp_err_t bat_ble_server_deinit()
 {
     ESP_LOGI(TAG, "Terminating BLE GATT server");
 
-    bitmans_gatts_stop_advertising();
+    bat_gatts_stop_advertising();
     esp_bluedroid_disable();
     esp_bluedroid_deinit();
     esp_bt_controller_disable();
     esp_bt_controller_deinit();
 
-    bitmans_hash_table_cleanup(&app_cb_table);
-    bitmans_hash_table_cleanup(&gatts_cb_table);
+    bat_hash_table_cleanup(&app_cb_table);
+    bat_hash_table_cleanup(&gatts_cb_table);
 
     return ESP_OK;
 }
 
-void bitman_gatts_no_op(bitmans_gatts_callbacks_t *pCb, esp_ble_gatts_cb_param_t *pParam)
+void bitman_gatts_no_op(bat_gatts_callbacks_t *pCb, esp_ble_gatts_cb_param_t *pParam)
 {
 }
 
-void bitmans_ble_gatts_callbacks_init(bitmans_gatts_callbacks_t *pCallbacks, void *pContext)
+void bat_ble_gatts_callbacks_init(bat_gatts_callbacks_t *pCallbacks, void *pContext)
 {
     pCallbacks->service_handle = 0;
     pCallbacks->pContext = pContext;
@@ -608,7 +608,7 @@ void bitmans_ble_gatts_callbacks_init(bitmans_gatts_callbacks_t *pCallbacks, voi
         pCallbacks->on_add_char_descr = bitman_gatts_no_op;
 }
 
-esp_err_t bitmans_gatts_register(bitmans_gatts_app_id app_id, bitmans_gatts_callbacks_t *pCallbacks, void *pContext)
+esp_err_t bat_gatts_register(bat_gatts_app_id app_id, bat_gatts_callbacks_t *pCallbacks, void *pContext)
 {
     ESP_LOGI(TAG, "Registering GATT server: %d", app_id);
 
@@ -616,7 +616,7 @@ esp_err_t bitmans_gatts_register(bitmans_gatts_app_id app_id, bitmans_gatts_call
         return ESP_ERR_INVALID_ARG;
 
     pCallbacks->pContext = pContext;
-    esp_err_t ret = bitmans_hash_table_set(&app_cb_table, app_id, pCallbacks);
+    esp_err_t ret = bat_hash_table_set(&app_cb_table, app_id, pCallbacks);
     if (ret != ESP_OK)
         return ret;
 
@@ -630,12 +630,12 @@ esp_err_t bitmans_gatts_register(bitmans_gatts_app_id app_id, bitmans_gatts_call
     return ESP_OK;
 }
 
-esp_err_t bitmans_gatts_unregister(bitmans_gatts_app_id app_id)
+esp_err_t bat_gatts_unregister(bat_gatts_app_id app_id)
 {
     ESP_LOGI(TAG, "Unregistering GATT server: %d", app_id);
 
-    bitmans_gatts_callbacks_t *pCallbacks = pCallbacks =
-        (bitmans_gatts_callbacks_t *)bitmans_hash_table_try_get(&app_cb_table, app_id);
+    bat_gatts_callbacks_t *pCallbacks = pCallbacks =
+        (bat_gatts_callbacks_t *)bat_hash_table_try_get(&app_cb_table, app_id);
 
     if (pCallbacks == NULL)
     {
@@ -650,23 +650,23 @@ esp_err_t bitmans_gatts_unregister(bitmans_gatts_app_id app_id)
         return ret;
     }
 
-    return bitmans_hash_table_remove(&app_cb_table, app_id);
+    return bat_hash_table_remove(&app_cb_table, app_id);
 }
 
-void bitmans_gaps_no_op(struct bitmans_gaps_callbacks_t *pCb, esp_ble_gap_cb_param_t *pParam)
+void bat_gaps_no_op(struct bat_gaps_callbacks_t *pCb, esp_ble_gap_cb_param_t *pParam)
 {
 }
 
-void bitmans_ble_gaps_callbacks_init(bitmans_gaps_callbacks_t *pCb, void *pContext)
+void bat_ble_gaps_callbacks_init(bat_gaps_callbacks_t *pCb, void *pContext)
 {
     assert(pCb != NULL);
 
     g_pGapCallbacks = pCb;
     g_pGapCallbacks->pContext = pContext;
     if (g_pGapCallbacks->on_advert_stop == NULL)
-        g_pGapCallbacks->on_advert_stop = bitmans_gaps_no_op;
+        g_pGapCallbacks->on_advert_stop = bat_gaps_no_op;
     if (g_pGapCallbacks->on_advert_start == NULL)
-        g_pGapCallbacks->on_advert_start = bitmans_gaps_no_op;
+        g_pGapCallbacks->on_advert_start = bat_gaps_no_op;
     if (g_pGapCallbacks->on_advert_data_set == NULL)
-        g_pGapCallbacks->on_advert_data_set = bitmans_gaps_no_op;
+        g_pGapCallbacks->on_advert_data_set = bat_gaps_no_op;
 }

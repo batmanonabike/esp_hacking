@@ -1,5 +1,5 @@
 idf_component_register(
     SRCS "main.c"
     INCLUDE_DIRS "."
-    REQUIRES "bitmans_lib" "bitmans_config"
+    REQUIRES "bat_lib" "bat_config"
 )

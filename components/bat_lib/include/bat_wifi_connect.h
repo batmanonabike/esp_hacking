@@ -17,17 +17,17 @@ typedef struct {
     uint32_t heartbeat_ms;     // Heartbeat interval in milliseconds (default 2000)
     uint8_t max_missed_beats;  // Maximum number of missed heartbeats before marking connection as failed (default 10)
     wifi_auth_mode_t auth_mode; // WiFi authentication mode (default WPA2_PSK)
-} bitmans_wifi_config_t;
+} bat_wifi_config_t;
 
 /**
  * @brief WiFi connection status
  */
 typedef enum {
-    BITMANS_WIFI_DISCONNECTED,    // Not connected to WiFi
-    BITMANS_WIFI_CONNECTING,      // Connection attempt in progress
-    BITMANS_WIFI_CONNECTED,       // Connected to WiFi with valid IP
-    BITMANS_WIFI_ERROR            // Error state
-} bitmans_wifi_status_t;
+    BAT_WIFI_DISCONNECTED,    // Not connected to WiFi
+    BAT_WIFI_CONNECTING,      // Connection attempt in progress
+    BAT_WIFI_CONNECTED,       // Connected to WiFi with valid IP
+    BAT_WIFI_ERROR            // Error state
+} bat_wifi_status_t;
 
 /**
  * @brief Initialize the WiFi connection functionality
@@ -35,14 +35,14 @@ typedef enum {
  * @param config Pointer to WiFi configuration structure. If NULL, will use default settings.
  * @return esp_err_t ESP_OK on success, or an error code
  */
-esp_err_t bitmans_wifi_init(const bitmans_wifi_config_t *config);
+esp_err_t bat_wifi_init(const bat_wifi_config_t *config);
 
 /**
  * @brief Get the current WiFi connection status
  * 
- * @return bitmans_wifi_status_t Current WiFi status
+ * @return bat_wifi_status_t Current WiFi status
  */
-bitmans_wifi_status_t bitmans_wifi_get_status(void);
+bat_wifi_status_t bat_wifi_get_status(void);
 
 /**
  * @brief Get the current IP address as a string
@@ -51,21 +51,21 @@ bitmans_wifi_status_t bitmans_wifi_get_status(void);
  * @param len Length of the buffer
  * @return esp_err_t ESP_OK on success, or an error code
  */
-esp_err_t bitmans_wifi_get_ip(char *ip_str, size_t len);
+esp_err_t bat_wifi_get_ip(char *ip_str, size_t len);
 
 /**
  * @brief Disconnect from the current WiFi network
  * 
  * @return esp_err_t ESP_OK on success, or an error code
  */
-esp_err_t bitmans_wifi_disconnect(void);
+esp_err_t bat_wifi_disconnect(void);
 
 /**
  * @brief Connect to the configured WiFi network
  * 
  * @return esp_err_t ESP_OK on success, or an error code
  */
-esp_err_t bitmans_wifi_connect(void);
+esp_err_t bat_wifi_connect(void);
 
 /**
  * @brief Update WiFi configuration
@@ -73,7 +73,7 @@ esp_err_t bitmans_wifi_connect(void);
  * @param config New WiFi configuration
  * @return esp_err_t ESP_OK on success, or an error code
  */
-esp_err_t bitmans_wifi_update_config(const bitmans_wifi_config_t *config);
+esp_err_t bat_wifi_update_config(const bat_wifi_config_t *config);
 
 /**
  * @brief Register a callback function for WiFi status changes
@@ -81,14 +81,14 @@ esp_err_t bitmans_wifi_update_config(const bitmans_wifi_config_t *config);
  * @param callback Function pointer to callback
  * @return esp_err_t ESP_OK on success, or an error code
  */
-esp_err_t bitmans_wifi_register_callback(void (*callback)(bitmans_wifi_status_t status));
+esp_err_t bat_wifi_register_callback(void (*callback)(bat_wifi_status_t status));
 
 /**
  * @brief Terminate the WiFi connection functionality and free resources
  * 
  * @return esp_err_t ESP_OK on success, or an error code
  */
-esp_err_t bitmans_wifi_deinit(void);
+esp_err_t bat_wifi_deinit(void);
 
 #ifdef __cplusplus
 }

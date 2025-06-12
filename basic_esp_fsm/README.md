@@ -149,7 +149,7 @@ This basic FSM can be extended for real-world applications:
 
 This project follows the established ESP32 BLE development workspace coding standards:
 - Allman-style brackets
-- `bitmans_` function prefixes (where applicable)
+- `bat_` function prefixes (where applicable)
 - Structured error handling with ESP-IDF patterns
 - Event-driven architecture with FreeRTOS primitives
 - Proper resource management (RAII pattern)

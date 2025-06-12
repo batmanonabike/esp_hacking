@@ -6,9 +6,9 @@
 #include "driver/gpio.h"
 #include "driver/ledc.h"
 
-#include "bitmans_blink.h"
+#include "bat_blink.h"
 
-static const char *TAG = "bitmans_lib:blink";
+static const char *TAG = "bat_lib:blink";
 
 // Blink related variables
 static int led_gpio = GPIO_NUM_2; // Default LED pin
@@ -52,7 +52,8 @@ static void blink_task(void *pvParameters)
     gpio_reset_pin(led_gpio);
     gpio_set_direction(led_gpio, GPIO_MODE_OUTPUT);
     
-    while (1) {
+    while (1) 
+    {
         // Check if there's a new mode
         if (xQueueReceive(blink_mode_queue, &mode_update, 0) == pdTRUE) 
         {
@@ -145,7 +146,7 @@ static void blink_task(void *pvParameters)
     }
 }
 
-esp_err_t bitmans_blink_init(int gpio_pin)
+esp_err_t bat_blink_init(int gpio_pin)
 {
     // Set GPIO pin (use default if -1 is passed)
     if (gpio_pin >= 0) 
@@ -182,7 +183,7 @@ esp_err_t bitmans_blink_init(int gpio_pin)
     return ESP_OK;
 }
 
-esp_err_t bitmans_set_blink_mode(blink_mode_t mode)
+esp_err_t bat_set_blink_mode(blink_mode_t mode)
 {
     if (blink_mode_queue == NULL) 
     {
@@ -200,7 +201,7 @@ esp_err_t bitmans_set_blink_mode(blink_mode_t mode)
     return ESP_OK;
 }
 
-blink_mode_t bitmans_get_blink_mode(void)
+blink_mode_t bat_get_blink_mode(void)
 {
     return current_blink_mode;
 }
@@ -210,7 +211,7 @@ blink_mode_t bitmans_get_blink_mode(void)
  * 
  * @return esp_err_t ESP_OK on success, or an error code
  */
-esp_err_t bitmans_blink_deinit(void)
+esp_err_t bat_blink_deinit(void)
 {
     if (blink_task_handle == NULL) 
     {

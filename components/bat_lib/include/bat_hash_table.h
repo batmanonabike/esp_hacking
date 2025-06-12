@@ -1,13 +1,13 @@
 /**
- * @file bitmans_hash_table.h
+ * @file bat_hash_table.h
  * @brief Simple hash‐table API for mapping uint16_t keys to void* values.
  *
  * Provides functions to:
  *   - initialize a fixed‐size table with optional value cleanup callback
- *   - insert or update entries (bitmans_hash_table_set)
- *   - retrieve entries (bitmans_hash_table_get / try_get)
- *   - remove entries (bitmans_hash_table_remove)
- *   - clean up all entries (bitmans_hash_table_cleanup)
+ *   - insert or update entries (bat_hash_table_set)
+ *   - retrieve entries (bat_hash_table_get / try_get)
+ *   - remove entries (bat_hash_table_remove)
+ *   - clean up all entries (bat_hash_table_cleanup)
  *
  * Uses separate chaining for collision resolution and a bitmap to track
  * which buckets are in use. Not thread‐safe—external synchronization required.
@@ -19,15 +19,15 @@
 #include <stddef.h>
 
 /**
- * @file bitmans_hash_table.h
+ * @file bat_hash_table.h
  * @brief Simple hash‐table API for mapping uint16_t keys to void* values.
  *
  * Provides functions to:
  *   - initialize a fixed‐size table with optional value cleanup callback
- *   - insert or update entries (bitmans_hash_table_set)
- *   - retrieve entries (bitmans_hash_table_get / try_get)
- *   - remove entries (bitmans_hash_table_remove)
- *   - clean up all entries (bitmans_hash_table_cleanup)
+ *   - insert or update entries (bat_hash_table_set)
+ *   - retrieve entries (bat_hash_table_get / try_get)
+ *   - remove entries (bat_hash_table_remove)
+ *   - clean up all entries (bat_hash_table_cleanup)
  *
  * Uses separate chaining for collision resolution and a bitmap to track
  * which buckets are in use. Not thread‐safe—external synchronization required.
@@ -42,11 +42,11 @@ extern "C" {
  * Each entry contains a key, a value pointer, and a pointer to the next entry
  * for handling collisions via chaining.
  */
-typedef struct bitmans_hash_entry_t {
+typedef struct bat_hash_entry_t {
     uint16_t key;                        ///< The key associated with the entry.
     void *pValue;                        ///< Pointer to the value stored in the entry.
-    struct bitmans_hash_entry_t *pNext;  ///< Pointer to the next entry in the chain (for collisions).
-} bitmans_hash_entry_t;
+    struct bat_hash_entry_t *pNext;  ///< Pointer to the next entry in the chain (for collisions).
+} bat_hash_entry_t;
 
 /**
  * @brief Callback function type for cleaning up values.
@@ -56,7 +56,7 @@ typedef struct bitmans_hash_entry_t {
  * @param pValue Pointer to the value being cleaned up.
  * @param pContext User-defined context passed during hash table initialization.
  */
-typedef void (*bitmans_hash_value_cleanup_cb_t)(void *pValue, void *pContext);
+typedef void (*bat_hash_value_cleanup_cb_t)(void *pValue, void *pContext);
 
 /**
  * @brief Represents the hash table structure.
@@ -69,9 +69,9 @@ typedef struct {
     size_t size;                         ///< Number of buckets in the hash table.
     void *pContext;                      ///< User-defined context for cleanup callbacks.
     uint8_t *pUsedEntries;               ///< Bitmap to track used buckets.
-    bitmans_hash_entry_t *pEntries;      ///< Array of pre-allocated entries (one per bucket).
-    bitmans_hash_value_cleanup_cb_t value_cleanup_cb; ///< Callback for cleaning up values.
-} bitmans_hash_table_t;
+    bat_hash_entry_t *pEntries;      ///< Array of pre-allocated entries (one per bucket).
+    bat_hash_value_cleanup_cb_t value_cleanup_cb; ///< Callback for cleaning up values.
+} bat_hash_table_t;
 
 /**
  * @brief Computes a hash value for a given key.
@@ -82,7 +82,7 @@ typedef struct {
  * @param size The size of the hash table (number of buckets).
  * @return The computed hash value (bucket index).
  */
-uint16_t bitmans_rs_hash_uint16(uint16_t key, size_t size);
+uint16_t bat_rs_hash_uint16(uint16_t key, size_t size);
 
 /**
  * @brief Initializes the hash table.
@@ -95,8 +95,8 @@ uint16_t bitmans_rs_hash_uint16(uint16_t key, size_t size);
  * @param pContext User-defined context for the cleanup callback.
  * @return `ESP_OK` on success, or an error code on failure.
  */
-esp_err_t bitmans_hash_table_init(bitmans_hash_table_t *pTable, size_t size, 
-    bitmans_hash_value_cleanup_cb_t value_cleanup_cb, void *pContext);
+esp_err_t bat_hash_table_init(bat_hash_table_t *pTable, size_t size, 
+    bat_hash_value_cleanup_cb_t value_cleanup_cb, void *pContext);
 
 /**
  * @brief Cleans up the hash table.
@@ -106,7 +106,7 @@ esp_err_t bitmans_hash_table_init(bitmans_hash_table_t *pTable, size_t size,
  * 
  * @param pTable Pointer to the hash table structure to clean up.
  */
-void bitmans_hash_table_cleanup(bitmans_hash_table_t *pTable);
+void bat_hash_table_cleanup(bat_hash_table_t *pTable);
 
 /**
  * @brief Removes an entry from the hash table.
@@ -117,7 +117,7 @@ void bitmans_hash_table_cleanup(bitmans_hash_table_t *pTable);
  * @param key The key of the entry to remove.
  * @return `ESP_OK` on success, or an error code if the key is not found.
  */
-esp_err_t bitmans_hash_table_remove(bitmans_hash_table_t *pTable, uint16_t key);
+esp_err_t bat_hash_table_remove(bat_hash_table_t *pTable, uint16_t key);
 
 /**
  * @brief Adds or updates an entry in the hash table.
@@ -129,7 +129,7 @@ esp_err_t bitmans_hash_table_remove(bitmans_hash_table_t *pTable, uint16_t key);
  * @param pValue Pointer to the value to store.
  * @return `ESP_OK` on success, or an error code on failure (e.g., memory allocation failure).
  */
-esp_err_t bitmans_hash_table_set(bitmans_hash_table_t *pTable, uint16_t key, void *pValue);
+esp_err_t bat_hash_table_set(bat_hash_table_t *pTable, uint16_t key, void *pValue);
 
 /**
  * @brief Retrieves an entry from the hash table.
@@ -141,18 +141,18 @@ esp_err_t bitmans_hash_table_set(bitmans_hash_table_t *pTable, uint16_t key, voi
  * @param ppValue Pointer to store the retrieved value.
  * @return `ESP_OK` on success, or an error code if the key is not found.
  */
-esp_err_t bitmans_hash_table_get(bitmans_hash_table_t *pTable, uint16_t key, void **ppValue);
+esp_err_t bat_hash_table_get(bat_hash_table_t *pTable, uint16_t key, void **ppValue);
 
 /**
  * @brief Attempts to retrieve an entry from the hash table.
  * 
- * Similar to `bitmans_hash_table_get`, but returns the value directly or `NULL` if not found.
+ * Similar to `bat_hash_table_get`, but returns the value directly or `NULL` if not found.
  * 
  * @param pTable Pointer to the hash table structure.
  * @param key The key to search for.
  * @return Pointer to the value if found, or `NULL` if not found.
  */
-void *bitmans_hash_table_try_get(bitmans_hash_table_t *pTable, uint16_t key);
+void *bat_hash_table_try_get(bat_hash_table_t *pTable, uint16_t key);
 
 #ifdef __cplusplus
 }
