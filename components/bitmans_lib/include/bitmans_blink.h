@@ -49,7 +49,7 @@ blink_mode_t bitmans_get_blink_mode(void);
  * 
  * @return esp_err_t ESP_OK on success, or an error code
  */
-esp_err_t bitmans_blink_term(void);
+esp_err_t bitmans_blink_deinit(void);
 
 #ifdef __cplusplus
 }

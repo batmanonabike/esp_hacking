@@ -30,10 +30,10 @@ extern "C"
         void (*on_write)(struct bitmans_gatts_callbacks_t *, esp_ble_gatts_cb_param_t *);
         void (*on_unreg)(struct bitmans_gatts_callbacks_t *, esp_ble_gatts_cb_param_t *);
 
-    } bitmans_gatts_callbacks_t;
-
-    esp_err_t bitmans_ble_server_init();
-    esp_err_t bitmans_ble_server_term();
+    } bitmans_gatts_callbacks_t;    
+	
+	esp_err_t bitmans_ble_server_init();
+    esp_err_t bitmans_ble_server_deinit();
 
     void bitman_gatts_no_op(bitmans_gatts_callbacks_t *, esp_ble_gatts_cb_param_t *);
     void bitmans_ble_gatts_callbacks_init(bitmans_gatts_callbacks_t *, void *pContext);

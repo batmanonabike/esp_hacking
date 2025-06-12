@@ -558,7 +558,7 @@ esp_err_t bitmans_gatts_stop_advertising()
     return ret;
 }
 
-esp_err_t bitmans_ble_server_term()
+esp_err_t bitmans_ble_server_deinit()
 {
     ESP_LOGI(TAG, "Terminating BLE GATT server");
 

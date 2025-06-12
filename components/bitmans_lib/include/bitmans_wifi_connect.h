@@ -88,7 +88,7 @@ esp_err_t bitmans_wifi_register_callback(void (*callback)(bitmans_wifi_status_t 
  * 
  * @return esp_err_t ESP_OK on success, or an error code
  */
-esp_err_t bitmans_wifi_term(void);
+esp_err_t bitmans_wifi_deinit(void);
 
 #ifdef __cplusplus
 }

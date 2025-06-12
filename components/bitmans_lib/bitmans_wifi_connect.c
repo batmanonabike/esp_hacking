@@ -302,7 +302,7 @@ esp_err_t bitmans_wifi_register_callback(void (*callback)(bitmans_wifi_status_t 
 /**
  * @brief Terminate WiFi connection module
  */
-esp_err_t bitmans_wifi_term(void) 
+esp_err_t bitmans_wifi_deinit(void) 
 {
     ESP_LOGI(TAG, "Terminating WiFi connection module");
     

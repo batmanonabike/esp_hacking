@@ -96,8 +96,8 @@ void app_main(void)
     vTaskDelay(1000 / portTICK_PERIOD_MS);  // Ensure logs are flushed before deep sleep
     esp_sleep_enable_timer_wakeup(5000000); // 5 seconds in microseconds
     esp_deep_sleep_disable_rom_logging();   // Disable ROM logging lowers power consumption
-    esp_deep_sleep_start();
-
-    // Code never reaches here due to deep sleep reset
-    /* bitmans_blink_term(); */
+    esp_deep_sleep_start();    
+	
+	// Code never reaches here due to deep sleep reset
+    /* bitmans_blink_deinit(); */
 }

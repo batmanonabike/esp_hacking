@@ -72,8 +72,7 @@ void app_main(void)
         
         vTaskDelay(5000 / portTICK_PERIOD_MS);
     }
-    
     // Cleanup (this part won't be reached in this example)
-    bitmans_wifi_term();
-    bitmans_blink_term();
+    bitmans_wifi_deinit();
+    bitmans_blink_deinit();
 }

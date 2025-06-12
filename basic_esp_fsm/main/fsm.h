@@ -72,7 +72,7 @@ typedef struct fsm_context_t
 
 // Function declarations
 esp_err_t fsm_init(fsm_context_t *pContext, const char *szTag);
-esp_err_t fsm_term(fsm_context_t *pContext);
+esp_err_t fsm_deinit(fsm_context_t *pContext);
 esp_err_t fsm_set_callbacks(fsm_context_t *pContext, const fsm_callbacks_t *pCallbacks);
 esp_err_t fsm_process_event(fsm_context_t *pContext, fsm_event_t event);
 esp_err_t fsm_get_current_state(fsm_context_t *pContext, fsm_state_t *pState);

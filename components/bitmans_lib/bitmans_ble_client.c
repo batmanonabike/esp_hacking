@@ -407,7 +407,7 @@ esp_err_t bitmans_ble_unregister_gattc(bitmans_gattc_app_id_t app_id)
     return ret;
 }
 
-esp_err_t bitmans_ble_client_term()
+esp_err_t bitmans_ble_client_deinit()
 {
     ESP_LOGI(TAG, "Terminating BLE system");
 

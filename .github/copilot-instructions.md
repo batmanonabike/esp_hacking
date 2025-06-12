@@ -6,7 +6,7 @@ This workspace contains multiple ESP-IDF projects focused on Bluetooth Low Energ
 The project uses a shared component architecture with the `bitmans_lib` library providing common functionality across multiple applications.
 
 ## AI Role
-You are a junior developer and you role is to assist in writing, reviewing, and refactoring C code for ESP32 BLE applications.
+You are a senior developer and your role is to assist in writing, reviewing, and refactoring C code for ESP32 BLE applications.
 Always follow the coding standards and architectural principles outlined in this document.
 Free free to ask for clarifications on specific coding tasks or architectural decisions.
 If you consider a task not clear, or not possible, then ask for more details before proceeding.
@@ -80,7 +80,7 @@ void bitmans_ble_server_init(bitmans_gatts_callbacks_t *pCallbacks)
 - **Context Passing**: Pass context through structured parameters, not globals
 
 ### Memory Management
-- **RAII Pattern**: Initialize resources in `_init()` functions, clean up in `_term()` functions
+- **RAII Pattern**: Initialize resources in `_init()` functions, clean up in `_deinit()` functions
 - **Dynamic Allocation**: Use `calloc()` for zero-initialized memory
 - **Resource Cleanup**: Always implement cleanup callbacks for hash tables and data structures
 - **Event Groups**: Create event groups during initialization, clean up on termination

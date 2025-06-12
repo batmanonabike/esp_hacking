@@ -209,7 +209,7 @@ static esp_err_t app_init(void)
     if (ret != ESP_OK) 
     {
         ESP_LOGE(TAG, "Failed to set FSM callbacks: %s", esp_err_to_name(ret));
-        fsm_term(&g_appContext.fsm);
+        fsm_deinit(&g_appContext.fsm);
         return ret;
     }
     
@@ -242,9 +242,8 @@ static void app_cleanup(void)
             vTaskDelay(pdMS_TO_TICKS(100));
         }
     }
-    
-    // Terminate FSM
-    fsm_term(&g_appContext.fsm);
+      // Terminate FSM
+    fsm_deinit(&g_appContext.fsm);
     
     ESP_LOGI(TAG, "FSM Demo Application cleanup completed");
 }

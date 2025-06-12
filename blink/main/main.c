@@ -42,8 +42,8 @@ void app_main(void)
 
         bitmans_lib_log_message("BLINK_MODE_NONE");
         bitmans_set_blink_mode(BLINK_MODE_NONE);
-        vTaskDelay(5000 / portTICK_PERIOD_MS);
-    }
+        vTaskDelay(5000 / portTICK_PERIOD_MS);    
+	}
 
-    bitmans_blink_term();
+    bitmans_blink_deinit();
 }

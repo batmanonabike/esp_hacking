@@ -175,9 +175,9 @@ void app_main(void)
 
     bitmans_set_blink_mode(BLINK_MODE_VERY_FAST);
     ESP_LOGI(TAG, "Exiting application");
-    vTaskDelay(5000 / portTICK_PERIOD_MS);
-
-    bitmans_blink_term();
+    vTaskDelay(5000 / portTICK_PERIOD_MS);    
+	
+	bitmans_blink_deinit();
     bitmans_ble_unregister_gattc(GATTC_APP0);
-    bitmans_ble_client_term();
+    bitmans_ble_client_deinit();
 }

@@ -97,7 +97,7 @@ esp_err_t fsm_init(fsm_context_t *pContext, const char *szTag)
 }
 
 // Terminate the FSM
-esp_err_t fsm_term(fsm_context_t *pContext)
+esp_err_t fsm_deinit(fsm_context_t *pContext)
 {
     if (pContext == NULL) 
     {
