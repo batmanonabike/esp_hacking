@@ -17,6 +17,7 @@ void app_main(void)
     ESP_ERROR_CHECK(bat_ble_lib_init());
 
     ESP_LOGI(TAG, "App started");
+    bat_gatts_fsm();
     ESP_ERROR_CHECK(bat_ble_lib_deinit());
     ESP_ERROR_CHECK(bat_lib_deinit());
 
