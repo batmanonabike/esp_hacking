@@ -1,0 +1,5 @@
+version: "1.0.0"
+description: "Bitmans bluetooth low energy library for ESP-IDF"
+dependencies:
+  idf:
+    version: ">=5.0.0"

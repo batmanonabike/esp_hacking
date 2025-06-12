@@ -14,7 +14,7 @@ static const char *VERSION = "1.0.2";
 
 esp_err_t bat_lib_init(void)
 {
-    ESP_LOGI(TAG, "Initializing bat_lib version %s", VERSION);
+    ESP_LOGI(TAG, "Initializing %s version %s", TAG, VERSION);
 
     // Initialize Non-Volatile Storage (NVS)
     esp_err_t ret = nvs_flash_init();
@@ -36,6 +36,12 @@ esp_err_t bat_lib_init(void)
 void bat_lib_log_message(const char *message)
 {
     ESP_LOGI(TAG, "User message: %s", message);
+}
+
+esp_err_t bat_lib_deinit(void)
+{
+    ESP_LOGI(TAG, "Deinitializing %s", TAG);
+    return ESP_OK;
 }
 
 const char *bat_lib_get_version(void)

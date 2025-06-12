@@ -507,8 +507,7 @@ void bat_wifi_event_handler(void *arg, esp_event_base_t event_base,
         bat_log_sta_disconnected((wifi_event_sta_disconnected_t *)event_data);
         break;
     case WIFI_EVENT_STA_AUTHMODE_CHANGE:
-        bat_log_sta_authmode_change(
-            (wifi_event_sta_authmode_change_t *)event_data);
+        bat_log_sta_authmode_change((wifi_event_sta_authmode_change_t *)event_data);
         break;
     case WIFI_EVENT_STA_WPS_ER_SUCCESS:
         bat_log_sta_wps_er_success(
@@ -536,8 +535,7 @@ void bat_wifi_event_handler(void *arg, esp_event_base_t event_base,
         bat_log_ap_staconnected((wifi_event_ap_staconnected_t *)event_data);
         break;
     case WIFI_EVENT_AP_STADISCONNECTED:
-        bat_log_ap_stadisconnected(
-            (wifi_event_ap_stadisconnected_t *)event_data);
+        bat_log_ap_stadisconnected((wifi_event_ap_stadisconnected_t *)event_data);
         break;
     case WIFI_EVENT_AP_PROBEREQRECVED:
         bat_log_ap_probereqrecved((wifi_event_ap_probe_req_rx_t *)event_data);

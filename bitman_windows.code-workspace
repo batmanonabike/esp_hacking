@@ -19,6 +19,9 @@
             "path": "./ble_server"
         },
         {
+            "path": "./ble_server2"
+        },
+        {
             "path": "./ble_battery_server"
         },
         {

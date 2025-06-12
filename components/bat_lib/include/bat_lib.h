@@ -16,6 +16,7 @@ extern "C" {
 
 // BitmansLib core functions
 esp_err_t bat_lib_init(void);
+esp_err_t bat_lib_deinit(void);
 const char * bat_lib_get_version(void);
 void bat_lib_log_message(const char *message);
 esp_err_t bat_waitbits_forever(EventGroupHandle_t, int register_bit,  EventBits_t *);

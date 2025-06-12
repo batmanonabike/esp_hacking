@@ -12,6 +12,7 @@
                 "${env:IDF_TOOLS_PATH}/tools/**",
                 "${workspaceFolder}/components/**/include",
                 "${workspaceFolder}/components/bat_lib/include",
+                "${workspaceFolder}/components/bat_ble_lib/include",
                 "${workspaceFolder}/components/bat_config/include"
             ],
             "browse": {
