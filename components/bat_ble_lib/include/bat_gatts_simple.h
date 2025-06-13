@@ -10,60 +10,58 @@
 extern "C" {
 #endif
 
-// Event -> State
-// 1).  Registration:
-// ESP_GATTS_REG_EVT -> BAT_SERVICE_REGISTERED
-//   Call esp_ble_gatts_create_service()
-//
-// 2).  Service creation:
-// ESP_GATTS_CREATE_EVT -> BAT_SERVICE_CREATING
-//   Call esp_ble_gatts_add_char() for each characteristic
-//
-// 3).  Characteristic addition:
-// ESP_GATTS_ADD_CHAR_EVT -> BAT_SERVICE_CREATING
-//   Call esp_ble_gatts_add_char_descr() for each descriptor
-//
-// 4).  Descriptor addition:
-// ESP_GATTS_ADD_CHAR_DESCR_EVT -> BAT_SERVICE_CREATING
-//   Call esp_ble_gatts_start_service() to start the service
-//
-// 5).  Service start:
-// ESP_GATTS_START_EVT -> BAT_SERVICE_STARTED
-//   Call esp_ble_gap_start_advertising() to start advertising
-//
-// 6).  Advertising:
-// ESP_GATTS_START_ADV_EVT -> BAT_SERVICE_ADVERTISING
-//
-// 7).  Client connection:
-//  ESP_GATTS_CONNECT_EVT -> BAT_SERVICE_CONNECTED
-//    Call esp_ble_gap_stop_advertising() to stop advertising
-//
-// 8).  Client disconnection:
-//  ESP_GATTS_DISCONNECT_EVT -> BAT_SERVICE_DISCONNECTED
-//
-// 9).  Service stop:
-// ESP_GATTS_STOP_EVT -> BAT_SERVICE_STOPPED
-//
-// 10). Unregistration: 
-// ESP_GATTS_UNREG_EVT -> BAT_SERVICE_UNREGISTERED
-//
-// 11). Error handling:
-// ESP_GATTS_ERROR_EVT -> BAT_SERVICE_ERROR
-//
-// 12). Timeout handling:
-// ESP_GATTS_TIMEOUT_EVT -> BAT_SERVICE_TIMEOUT 
-//
-// 13). Reset handling:
-// ESP_GATTS_RESET_EVT -> BAT_SERVICE_IDLE
-//
-// 14). Transition complete:
-// ESP_GATTS_TRANSITION_COMPLETE_EVT -> BAT_SERVICE_TRANSITION_COMPLETE
-//
-// 15). Event processed:
-// ESP_GATTS_EVENT_PROCESSED_EVT -> BAT_SERVICE_EVENT_PROCESSED
-//
-// 16). Ready to advertise:
-// ESP_GATTS_READY_TO_ADVERTISE_EVT -> BAT_SERVICE_READY_TO_ADVERTIS
+// 1. Create a Server Context Structure
+// First, create a context structure to maintain server state and configuration:
+#define BAT_MAX_CHARACTERISTICS 10
+typedef void (*bat_ble_server_cb_t)(void *pContext, esp_ble_gatts_cb_param_t *pParam);
+
+typedef struct {
+    void *pContext;
+    bat_ble_server_cb_t onRead;
+    bat_ble_server_cb_t onWrite;
+    bat_ble_server_cb_t onConnect;
+    bat_ble_server_cb_t onDisconnect;   
+} bat_ble_server_callbacks_t;
+
+typedef struct
+{
+    // Server identification
+    uint16_t appId;
+    char deviceName[32];
+
+    // Service information
+    uint16_t serviceHandle;
+    uint16_t charHandles[BAT_MAX_CHARACTERISTICS];
+    uint8_t numChars;
+
+    // Connection state
+    bool isConnected;
+    uint16_t connId;
+    esp_gatt_if_t gattsIf;
+
+    // Event handling
+    EventGroupHandle_t eventGroup;
+
+    // Callbacks
+    bat_ble_server_callbacks_t callbacks;
+
+} bat_ble_server_t;
+
+typedef struct {
+    uint16_t uuid;
+    esp_gatt_perm_t permissions;
+    esp_gatt_char_prop_t properties;
+    uint16_t maxLen;
+    uint8_t *pInitialValue;
+    uint16_t initValueLen;
+} bat_ble_char_config_t;
+
+esp_err_t bat_ble_server_init2(bat_ble_server_t *pServer, const char* deviceName, uint16_t appId, uint16_t serviceUuid);
+esp_err_t bat_ble_server_start(bat_ble_server_t *pServer);
+esp_err_t bat_ble_server_stop(bat_ble_server_t *pServer);
+esp_err_t bat_ble_server_notify(bat_ble_server_t *pServer, uint16_t charIndex, uint8_t *pData, uint16_t dataLen);
+esp_err_t bat_ble_server_set_callbacks(bat_ble_server_t *pServer, void *pContext, bat_ble_server_callbacks_t *pCallbacks);
+esp_err_t bat_ble_server_create_service(bat_ble_server_t *pServer, uint16_t serviceUuid, bat_ble_char_config_t *pCharConfigs, uint8_t numChars);
 
 #ifdef __cplusplus
 }

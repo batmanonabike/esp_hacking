@@ -22,41 +22,6 @@ static const char *TAG = "bat_gatts_simple";
 // To make BLE ESP as simple as possible for client code by implementing a higher-level abstraction
 // layer that handles the complex BLE workflow while providing a simplified API. 
 
-// 1. Create a Server Context Structure
-// First, create a context structure to maintain server state and configuration:
-#define BAT_MAX_CHARACTERISTICS 10
-typedef void (*bat_ble_server_cb_t)(void *pContext, esp_ble_gatts_cb_param_t *pParam);
-
-typedef struct
-{
-  // Server identification
-  uint16_t appId;
-  char deviceName[32];
-
-  // Service information
-  uint16_t serviceHandle;
-  uint16_t charHandles[BAT_MAX_CHARACTERISTICS];
-  uint8_t numChars;
-
-  // Connection state
-  bool isConnected;
-  uint16_t connId;
-  esp_gatt_if_t gattsIf;
-
-  // Event handling
-  EventGroupHandle_t eventGroup;
-
-  // Callback functions
-  struct
-  {
-    void *pContext;
-    void (*onConnect)(void *pContext, esp_ble_gatts_cb_param_t *param);
-    void (*onDisconnect)(void *pContext, esp_ble_gatts_cb_param_t *param);
-    void (*onWrite)(void *pContext, esp_ble_gatts_cb_param_t *param);
-    void (*onRead)(void *pContext, esp_ble_gatts_cb_param_t *param);
-  } callbacks;
-} bat_ble_server_t;
-
 // 2. Create an Easy Initialization Function
 // Create a simple initialization function that handles all the BLE setup:
 
@@ -189,15 +154,6 @@ esp_err_t bat_ble_server_init2(bat_ble_server_t *pServer, const char* deviceName
 
 // 3. Simplified Service and Characteristic Creation
 // Create a simple function to add a characteristic to a service:
-typedef struct {
-    uint16_t uuid;
-    esp_gatt_perm_t permissions;
-    esp_gatt_char_prop_t properties;
-    uint16_t maxLen;
-    uint8_t *pInitialValue;
-    uint16_t initValueLen;
-} bat_ble_char_config_t;
-
 esp_err_t bat_ble_server_create_service(bat_ble_server_t *pServer, uint16_t serviceUuid, 
                                        bat_ble_char_config_t *pCharConfigs, uint8_t numChars)
 {
@@ -365,21 +321,26 @@ esp_err_t bat_ble_server_notify(bat_ble_server_t *pServer, uint16_t charIndex, u
     return ESP_OK;
 }
 
-esp_err_t bat_ble_server_set_callback(bat_ble_server_t *pServer, void *pContext,
-                                     void (*onConnect)(void*, esp_ble_gatts_cb_param_t*),
-                                     void (*onDisconnect)(void*, esp_ble_gatts_cb_param_t*),
-                                     void (*onWrite)(void*, esp_ble_gatts_cb_param_t*),
-                                     void (*onRead)(void*, esp_ble_gatts_cb_param_t*))
+static void bat_ble_server_no_op(void *pContext, esp_ble_gatts_cb_param_t *pParam)
 {
-    if (pServer == NULL) {
+}
+
+esp_err_t bat_ble_server_set_callbacks(bat_ble_server_t *pServer, void *pContext, bat_ble_server_callbacks_t *pCbs)
+{
+    if (pServer == NULL) 
         return ESP_ERR_INVALID_ARG;
-    }
-    
+
     pServer->callbacks.pContext = pContext;
-    pServer->callbacks.onConnect = onConnect;
-    pServer->callbacks.onDisconnect = onDisconnect;
-    pServer->callbacks.onWrite = onWrite;
-    pServer->callbacks.onRead = onRead;
+    pServer->callbacks.onRead = pCbs->onRead ? pCbs->onRead : bat_ble_server_no_op;
+    pServer->callbacks.onWrite = pCbs->onWrite ? pCbs->onWrite : bat_ble_server_no_op;
+    pServer->callbacks.onConnect = pCbs->onConnect ? pCbs->onConnect : bat_ble_server_no_op;
+    pServer->callbacks.onDisconnect = pCbs->onDisconnect ? pCbs->onDisconnect : bat_ble_server_no_op;
+
+    // pServer->callbacks.pContext = pContext;
+    // pServer->callbacks.onConnect = onConnect;
+    // pServer->callbacks.onDisconnect = onDisconnect;
+    // pServer->callbacks.onWrite = onWrite;
+    // pServer->callbacks.onRead = onRead;
     
     return ESP_OK;
 }
