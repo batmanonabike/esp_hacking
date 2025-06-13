@@ -137,8 +137,7 @@ void app_main(void)
 {
     ESP_LOGI(TAG, "Starting application");
 
-    bat_lib_t bat_lib;
-    ESP_ERROR_CHECK(bat_lib_init(&bat_lib));
+    ESP_ERROR_CHECK(bat_lib_init());
     ESP_ERROR_CHECK(bat_ble_client_init());
     ESP_ERROR_CHECK(bat_ble_register_gattc(GATTC_APP0));
 

@@ -12,7 +12,7 @@
 static const char *TAG = "bat_lib";
 static const char *VERSION = "1.0.2";
 
-esp_err_t bat_lib_init(bat_lib_t *pLib)
+esp_err_t bat_lib_init()
 {
     ESP_LOGI(TAG, "Initializing %s version %s", TAG, VERSION);
 
@@ -38,7 +38,7 @@ void bat_lib_log_message(const char *message)
     ESP_LOGI(TAG, "User message: %s", message);
 }
 
-esp_err_t bat_lib_deinit(bat_lib_t lib)
+esp_err_t bat_lib_deinit()
 {
     ESP_LOGI(TAG, "Deinitializing %s", TAG);
     return ESP_OK;

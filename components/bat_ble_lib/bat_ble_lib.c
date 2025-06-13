@@ -15,7 +15,7 @@
 static const char *TAG = "bat_ble_lib";
 static const char *VERSION = "1.0.0";
 
-esp_err_t bat_ble_lib_init(bat_lib_t batLib, bat_ble_lib_t *pBleLib)
+esp_err_t bat_ble_lib_init()
 {
     ESP_LOGI(TAG, "Initializing %s version %s", TAG, VERSION);
 
@@ -39,7 +39,7 @@ esp_err_t bat_ble_lib_init(bat_lib_t batLib, bat_ble_lib_t *pBleLib)
     return ESP_OK;
 }
 
-esp_err_t bat_ble_lib_deinit(bat_ble_lib_t ble_lib)
+esp_err_t bat_ble_lib_deinit()
 {
     ESP_LOGI(TAG, "DeInitializing BLE");
 

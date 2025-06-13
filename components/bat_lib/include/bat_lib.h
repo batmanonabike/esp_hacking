@@ -22,13 +22,8 @@
 extern "C" {
 #endif
 
-typedef struct 
-{
-    char ch;
-} bat_lib_t;
-
-esp_err_t bat_lib_init(bat_lib_t *pLib);
-esp_err_t bat_lib_deinit(bat_lib_t lib);
+esp_err_t bat_lib_init();
+esp_err_t bat_lib_deinit();
 
 const char * bat_lib_get_version(void);
 void bat_lib_log_message(const char *message);

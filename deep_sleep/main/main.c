@@ -78,8 +78,7 @@ void app_main(void)
     int64_t now = esp_timer_get_time(); // microseconds since initialization of the ESP Timer.
     esp_sleep_wakeup_cause_t wakeup_reason = esp_sleep_get_wakeup_cause();
 
-    bat_lib_t bat_lib;
-    ESP_ERROR_CHECK(bat_lib_init(&bat_lib));
+    ESP_ERROR_CHECK(bat_lib_init());
     ESP_ERROR_CHECK(bat_blink_init(-1));
 
     // Log startup time (since power-on or last reset)

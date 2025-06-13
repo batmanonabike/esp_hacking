@@ -11,8 +11,7 @@ void app_main(void)
 {
     ESP_LOGI(TAG, "Starting %s application", TAG);
 
-    bat_lib_t bat_lib;
-    ESP_ERROR_CHECK(bat_lib_init(&bat_lib));
+    ESP_ERROR_CHECK(bat_lib_init());
     ESP_ERROR_CHECK(bat_blink_init(-1));
 
     while (1) 

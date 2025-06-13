@@ -24,10 +24,8 @@ void app_main(void)
 {
     ESP_LOGI(TAG, "App starting");
 
-    bat_lib_t bat_lib;
-    bat_ble_lib_t bat_ble_lib;
-    ESP_ERROR_CHECK(bat_lib_init(&bat_lib));
-    ESP_ERROR_CHECK(bat_ble_lib_init(bat_lib, &bat_ble_lib));
+    ESP_ERROR_CHECK(bat_lib_init());
+    ESP_ERROR_CHECK(bat_ble_lib_init());
 
     // Define our service characteristics
     uint8_t initialValue[] = "Hello BLE";
@@ -58,8 +56,8 @@ void app_main(void)
         vTaskDelay(pdMS_TO_TICKS(1000));
     }
 
-    ESP_ERROR_CHECK(bat_ble_lib_deinit(bat_ble_lib));
-    ESP_ERROR_CHECK(bat_lib_deinit(bat_lib));
+    ESP_ERROR_CHECK(bat_ble_lib_deinit());
+    ESP_ERROR_CHECK(bat_lib_deinit());
 
     ESP_LOGI(TAG, "App exiting");
 }
