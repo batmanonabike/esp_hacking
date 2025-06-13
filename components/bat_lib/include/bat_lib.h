@@ -1,6 +1,14 @@
 #pragma once
 
 #include "esp_err.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
+
+// For IDE intellisense only - this doesn't affect the build
+#include "sdkconfig.h" // CONFIG_LOG_MAXIMUM_LEVEL warning
+#ifndef CONFIG_LOG_MAXIMUM_LEVEL
+    #define CONFIG_LOG_MAXIMUM_LEVEL 5  // Default to including all log levels for IDE
+#endif
 
 #include "bat_ble.h"
 #include "bat_blink.h"
