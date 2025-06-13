@@ -39,6 +39,18 @@ esp_err_t bat_gatts_event_handler(esp_gatts_cb_event_t event, esp_gatt_if_t gatt
         return ESP_ERR_INVALID_ARG;
     }
 
+    // GATTS (GATT Server) events notify about BLE server events.
+    // These include:
+    // - ESP_GATTS_REG_EVT: GATT server profile registered, usually where you create your service.
+    // - ESP_GATTS_CREATE_EVT: Service created, add characteristics here.
+    // - ESP_GATTS_ADD_CHAR_EVT: Characteristic added, add descriptors (like CCCD) here.
+    // - ESP_GATTS_ADD_CHAR_DESCR_EVT: Descriptor (such as CCCD) added, store descriptor handle if needed.
+    // - ESP_GATTS_START_EVT: Service started, begin advertising.
+    // - ESP_GATTS_CONNECT_EVT: A client has connected.
+    // - ESP_GATTS_DISCONNECT_EVT: A client has disconnected, often restart advertising.
+    // - ESP_GATTS_READ_EVT: A client is reading a characteristic or descriptor value.
+    // - ESP_GATTS_WRITE_EVT: A client is writing to a characteristic or descriptor value.
+    // https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/bluetooth/esp_gatts.html#_CPPv426esp_gatts_cb_event_t
     switch (event) 
     {
         // Registration events (typically first)
