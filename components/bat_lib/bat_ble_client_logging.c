@@ -15,6 +15,8 @@
 #include "esp_bt_defs.h"
 #include "esp_gatt_defs.h" // Added for ESP_UUID_LEN_XX and potentially esp_bt_uuid_t resolution
 
+#include "bat_lib.h"
+#include "bat_ble_client.h"
 #include "bat_ble_client_logging.h"
 
 static const char *TAG = "bat_lib:ble_client_logging";
@@ -128,7 +130,7 @@ void bat_log_ble_scan(bat_scan_result_t *pScanResult, bool ignoreNoAdvertisedNam
     {
         ESP_LOGI(TAG, "  Scan Response Data (len %d):", pScanResult->scan_rsp_len);
         // The scan response data starts immediately after the advertising data in the ble_adv buffer
-        // esp_log_buffer_hex(TAG, pScanResult->ble_adv + pScanResult->adv_data_len, pScanResult->scan_rsp_len); // Temporarily commented out
+        // ESP_LOG_BUFFER_HEX(TAG, pScanResult->ble_adv + pScanResult->adv_data_len, pScanResult->scan_rsp_len);
     }
 }
 
@@ -158,7 +160,7 @@ void bat_log_verbose_ble_scan(bat_scan_result_t *pScanResult, bool ignoreNoAdver
     if (pScanResult->adv_data_len > 0)
     {
         ESP_LOGI(TAG, "Raw Advertising Data:");
-        esp_log_buffer_hex(TAG, pScanResult->ble_adv, pScanResult->adv_data_len);
+        ESP_LOG_BUFFER_HEX(TAG, pScanResult->ble_adv, pScanResult->adv_data_len);
     }
 
     // Log advertised name
@@ -217,13 +219,13 @@ void bat_log_verbose_ble_scan(bat_scan_result_t *pScanResult, bool ignoreNoAdver
     data_ptr = esp_ble_resolve_adv_data(pScanResult->ble_adv, ESP_BLE_AD_MANUFACTURER_SPECIFIC_TYPE, &data_len);
     if (data_ptr != NULL && data_len >= 2)
     {
-        uint16_t company_id = (data_ptr[1] << 8) | data_ptr[0]; // Little endian
+        uint16_t company_id = (data_ptr[1] << 8) | data_ptr[0]; // Little endian        
         ESP_LOGI(TAG, "Manufacturer Data (len %d):", data_len);
         ESP_LOGI(TAG, "  Company ID: 0x%04x", company_id);
         if (data_len > 2)
         {
             ESP_LOGI(TAG, "  Data:");
-            esp_log_buffer_hex(TAG, data_ptr + 2, data_len - 2);
+            ESP_LOG_BUFFER_HEX(TAG, data_ptr + 2, data_len - 2);
         }
     }
     else
@@ -236,13 +238,13 @@ void bat_log_verbose_ble_scan(bat_scan_result_t *pScanResult, bool ignoreNoAdver
     data_ptr = esp_ble_resolve_adv_data(pScanResult->ble_adv, ESP_BLE_AD_TYPE_SERVICE_DATA, &data_len);
     if (data_ptr != NULL && data_len >= 2)
     {
-        uint16_t service_uuid = (data_ptr[1] << 8) | data_ptr[0]; // Little endian
+        uint16_t service_uuid = (data_ptr[1] << 8) | data_ptr[0]; // Little endian        
         ESP_LOGI(TAG, "16-bit Service Data (len %d):", data_len);
         ESP_LOGI(TAG, "  Service UUID: 0x%04x", service_uuid);
         if (data_len > 2)
         {
             ESP_LOGI(TAG, "  Data:");
-            esp_log_buffer_hex(TAG, data_ptr + 2, data_len - 2);
+            ESP_LOG_BUFFER_HEX(TAG, data_ptr + 2, data_len - 2);
         }
     }
     else
@@ -255,13 +257,13 @@ void bat_log_verbose_ble_scan(bat_scan_result_t *pScanResult, bool ignoreNoAdver
     if (data_ptr != NULL && data_len >= 4)
     {
         uint32_t service_uuid = ((uint32_t)data_ptr[3] << 24) | ((uint32_t)data_ptr[2] << 16) |
-                                ((uint32_t)data_ptr[1] << 8) | (uint32_t)data_ptr[0]; // Little endian
+                                ((uint32_t)data_ptr[1] << 8) | (uint32_t)data_ptr[0]; // Little endian        
         ESP_LOGI(TAG, "32-bit Service Data (len %d):", data_len);
         ESP_LOGI(TAG, "  Service UUID: 0x%08lx", (unsigned long)service_uuid);
         if (data_len > 4)
         {
             ESP_LOGI(TAG, "  Data:");
-            esp_log_buffer_hex(TAG, data_ptr + 4, data_len - 4);
+            ESP_LOG_BUFFER_HEX(TAG, data_ptr + 4, data_len - 4);
         }
     }
     else
@@ -272,7 +274,7 @@ void bat_log_verbose_ble_scan(bat_scan_result_t *pScanResult, bool ignoreNoAdver
     // 128-bit Service Data
     data_ptr = esp_ble_resolve_adv_data(pScanResult->ble_adv, ESP_BLE_AD_TYPE_128SERVICE_DATA, &data_len);
     if (data_ptr != NULL && data_len >= 16)
-    {
+    {        
         ESP_LOGI(TAG, "128-bit Service Data (len %d):", data_len);
         ESP_LOGI(TAG, "  Service UUID: %02x%02x%02x%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x%02x%02x%02x%02x",
                  data_ptr[15], data_ptr[14], data_ptr[13], data_ptr[12],
@@ -282,7 +284,7 @@ void bat_log_verbose_ble_scan(bat_scan_result_t *pScanResult, bool ignoreNoAdver
         if (data_len > 16)
         {
             ESP_LOGI(TAG, "  Data:");
-            esp_log_buffer_hex(TAG, data_ptr + 16, data_len - 16);
+            ESP_LOG_BUFFER_HEX(TAG, data_ptr + 16, data_len - 16);
         }
     }
     else
@@ -417,7 +419,7 @@ void bat_log_verbose_ble_scan(bat_scan_result_t *pScanResult, bool ignoreNoAdver
     {
         ESP_LOGI(TAG, "=== SCAN RESPONSE DATA ===");
         ESP_LOGI(TAG, "Scan Response Data (len %d):", pScanResult->scan_rsp_len);
-        esp_log_buffer_hex(TAG, pScanResult->ble_adv + pScanResult->adv_data_len, pScanResult->scan_rsp_len);
+        ESP_LOG_BUFFER_HEX(TAG, pScanResult->ble_adv + pScanResult->adv_data_len, pScanResult->scan_rsp_len);
     }
 
     ESP_LOGI(TAG, "============================================");
@@ -441,7 +443,7 @@ void bat_debug_esp_ble_resolve_adv_data(bat_scan_result_t *pScanResult)
     }
 
     ESP_LOGI(TAG, "Raw advertising data:");
-    esp_log_buffer_hex(TAG, pScanResult->ble_adv, pScanResult->adv_data_len);    // Test all common advertising data types
+    ESP_LOG_BUFFER_HEX(TAG, pScanResult->ble_adv, pScanResult->adv_data_len);    // Test all common advertising data types
     const uint8_t test_types[] = {
         ESP_BLE_AD_TYPE_FLAG,
         ESP_BLE_AD_TYPE_16SRV_PART,
@@ -493,7 +495,7 @@ void bat_debug_esp_ble_resolve_adv_data(bat_scan_result_t *pScanResult)
         if (data_ptr != NULL && data_len > 0)
         {
             ESP_LOGI(TAG, "  Data: ");
-            esp_log_buffer_hex(TAG, data_ptr, data_len);
+            ESP_LOG_BUFFER_HEX(TAG, data_ptr, data_len);
         }
         else if (data_ptr != NULL && data_len == 0)
         {

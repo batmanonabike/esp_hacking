@@ -15,7 +15,7 @@
 #include "esp_bt_defs.h"
 #include "esp_gatt_defs.h" // Added for ESP_UUID_LEN_XX and potentially esp_bt_uuid_t resolution
 
-#include "bat_ble.h"
+#include "bat_lib.h"
 #include "bat_hash_table.h"
 #include "bat_ble_client.h"
 #include "bat_ble_client_logging.h"
@@ -201,6 +201,7 @@ static void bat_gattc_event_handler(esp_gattc_cb_event_t event, esp_gatt_if_t ga
     case ESP_GATTC_SEARCH_RES_EVT:
     {
         ESP_LOGI(TAG, "ESP_GATTC_SEARCH_RES_EVT: conn_id = %x, is_primary = %d", param->search_res.conn_id, param->search_res.is_primary);
+
         esp_bt_uuid_t *srvc_uuid = &param->search_res.srvc_id.uuid;
         if (srvc_uuid->len == ESP_UUID_LEN_16)
         {
@@ -254,7 +255,7 @@ static void bat_gattc_event_handler(esp_gattc_cb_event_t event, esp_gatt_if_t ga
         //     // If this is the characteristic for IP/port, you can read it or register for notifications
         //     // esp_ble_gattc_read_char(...);
         //     // esp_ble_gattc_register_for_notify(...);
-        //     break;
+        //     break;    
 
     case ESP_GATTC_READ_CHAR_EVT:
         if (param->read.status != ESP_GATT_OK)
@@ -263,7 +264,7 @@ static void bat_gattc_event_handler(esp_gattc_cb_event_t event, esp_gatt_if_t ga
             break;
         }
         ESP_LOGI(TAG, "ESP_GATTC_READ_CHAR_EVT: handle %d, value len %d", param->read.handle, param->read.value_len);
-        esp_log_buffer_hex(TAG, param->read.value, param->read.value_len);
+        ESP_LOG_BUFFER_HEX(TAG, param->read.value, param->read.value_len);
         // Process the received IP address and port here
         break;
 
