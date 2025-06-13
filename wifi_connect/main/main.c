@@ -41,7 +41,8 @@ void app_main(void)
         .auth_mode = WIFI_AUTH_WPA2_PSK
     };
     
-    ESP_ERROR_CHECK(bat_lib_init());
+    bat_lib_t bat_lib;
+    ESP_ERROR_CHECK(bat_lib_init(&bat_lib));
     ESP_ERROR_CHECK(bat_blink_init(-1));
     
     bat_set_blink_mode(BLINK_MODE_NONE);

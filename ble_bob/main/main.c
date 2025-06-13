@@ -89,7 +89,8 @@ void app_main(void)
 {
     ESP_LOGI(TAG, "App starting");
 
-    ESP_ERROR_CHECK(bat_lib_init());
+    bat_lib_t bat_lib;
+    ESP_ERROR_CHECK(bat_lib_init(&bat_lib));
     ESP_ERROR_CHECK(bat_blink_init(-1));
     ESP_ERROR_CHECK(bat_ble_server_init());
 

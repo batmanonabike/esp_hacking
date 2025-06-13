@@ -15,21 +15,9 @@
 static const char *TAG = "bat_ble_lib";
 static const char *VERSION = "1.0.0";
 
-esp_err_t bat_ble_lib_init()
+esp_err_t bat_ble_lib_init(bat_lib_t batLib, bat_ble_lib_t *pBleLib)
 {
     ESP_LOGI(TAG, "Initializing %s version %s", TAG, VERSION);
-    return ESP_OK;
-}
-
-esp_err_t bat_ble_lib_deinit()
-{
-    ESP_LOGI(TAG, "Deinitializing %s", TAG);
-    return ESP_OK;
-}
-
-esp_err_t bat_ble_init(bat_ble_lib_t *pLib)
-{
-    ESP_LOGI(TAG, "Initializing BLE");
 
     esp_bt_controller_config_t bt_cfg = BT_CONTROLLER_INIT_CONFIG_DEFAULT();
     esp_err_t ret = esp_bt_controller_init(&bt_cfg);
@@ -51,7 +39,7 @@ esp_err_t bat_ble_init(bat_ble_lib_t *pLib)
     return ESP_OK;
 }
 
-esp_err_t bat_ble_deinit(bat_ble_lib_t lib)
+esp_err_t bat_ble_lib_deinit(bat_ble_lib_t ble_lib)
 {
     ESP_LOGI(TAG, "DeInitializing BLE");
 

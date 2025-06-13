@@ -211,7 +211,8 @@ void app_main(void)
         .on_advert_data_set = on_gaps_advert_data_set,
     };
 
-    ESP_ERROR_CHECK(bat_lib_init());
+    bat_lib_t bat_lib;
+    ESP_ERROR_CHECK(bat_lib_init(&bat_lib));
     ESP_ERROR_CHECK(bat_blink_init(-1));
     ESP_ERROR_CHECK(bat_ble_server_init());
 

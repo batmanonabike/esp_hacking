@@ -3,6 +3,7 @@
 #include "esp_err.h"
 #include "esp_gap_ble_api.h"
 
+#include "bat_lib.h"
 #include "bat_gatts_fsm.h"
 #include "bat_ble_server.h"
 
@@ -12,13 +13,11 @@ extern "C" {
 
 typedef struct 
 {
+    char ch;
 } bat_ble_lib_t;
 
-esp_err_t bat_ble_lib_init();
-esp_err_t bat_ble_lib_deinit();
-
-esp_err_t bat_ble_init(bat_ble_lib_t *pLib);
-esp_err_t bat_ble_deinit(bat_ble_lib_t lib);
+esp_err_t bat_ble_lib_init(bat_lib_t, bat_ble_lib_t *pBleLib);
+esp_err_t bat_ble_lib_deinit(bat_ble_lib_t ble_lib);
 
 #ifdef __cplusplus
 }
