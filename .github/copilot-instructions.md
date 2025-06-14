@@ -65,14 +65,6 @@ EventBits_t bits = xEventGroupWaitBits(event_group, TARGET_BIT | ERROR_BIT,
 - **Variables**: Use descriptive names with context
   - Pointers: Use `p` prefix (e.g., `pContext`, `pCallbacks`)
   - Arrays/strings: Use descriptive names (e.g., `szAdvName`)
-- **Brackets**: For C, C++ and C# use Allman style for function definitions and control structures
-  - Example:
-```c
-void bat_ble_server_init(bat_gatts_callbacks_t *pCallbacks) 
-{
-    // Function implementation
-}
-```
 
 ### Function Design
 - **Single Responsibility**: Each function should have one clear purpose
