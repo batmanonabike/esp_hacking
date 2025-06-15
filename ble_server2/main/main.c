@@ -9,7 +9,7 @@
 
 static const char *TAG = "ble_server2_app";
 
-static bat_ble_server_t bleServer;
+static bat_ble_server_t bleServer = {0};
 
 // Callback for write events
 static void on_write(void *pContext, esp_ble_gatts_cb_param_t *param)

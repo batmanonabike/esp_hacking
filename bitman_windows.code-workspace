@@ -35,7 +35,7 @@
         }
     ],
     "settings": {
-        "C_Cpp.clang_format_style": "{ BasedOnStyle: LLVM, IndentWidth: 4, TabWidth: 4, UseTab: Never, BreakBeforeBraces: Allman }",
+        "C_Cpp.clang_format_style_OLD": "{ BasedOnStyle: LLVM, IndentWidth: 4, TabWidth: 4, UseTab: Never, BreakBeforeBraces: Allman }",
         "C_Cpp.intelliSenseEngine": "default",
         "idf.espIdfPathWin": "${env:IDF_PATH}",
         "idf.pythonBinPathWin": "${env:IDF_PYTHON_ENV_PATH}\\python.exe",
