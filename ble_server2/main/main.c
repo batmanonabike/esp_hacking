@@ -44,11 +44,13 @@ void app_main(void)
     bat_ble_server_callbacks_t callbacks = {
         .onWrite = on_write,
     };
-    
-    ESP_ERROR_CHECK(bat_ble_server_init2(&bleServer, "ESP32-BLE", 0x55, 0xFF00));
-    ESP_ERROR_CHECK(bat_ble_server_create_service(&bleServer, 0xFF00, charConfigs, 1));
-    ESP_ERROR_CHECK(bat_ble_server_set_callbacks(&bleServer, NULL, &callbacks));
-    ESP_ERROR_CHECK(bat_ble_server_start(&bleServer));    
+
+    const int timeoutMs = 5000; 
+    const char * pServiceUuid = "f0debc9a-7856-3412-1234-56785612561A"; 
+    ESP_ERROR_CHECK(bat_ble_server_init2(&bleServer, NULL, "Ginge", 0x55, pServiceUuid, 0x0944, timeoutMs));
+    ESP_ERROR_CHECK(bat_ble_server_create_service(&bleServer, charConfigs, 1));
+    ESP_ERROR_CHECK(bat_ble_server_set_callbacks(&bleServer, &callbacks));
+    ESP_ERROR_CHECK(bat_ble_server_start(&bleServer, timeoutMs));    
     ESP_LOGI(TAG, "App started");
 
     while (1)
@@ -56,6 +58,7 @@ void app_main(void)
         vTaskDelay(pdMS_TO_TICKS(1000));
     }
 
+    ESP_ERROR_CHECK(bat_ble_server_deinit(&bleServer));
     ESP_ERROR_CHECK(bat_ble_lib_deinit());
     ESP_ERROR_CHECK(bat_lib_deinit());
 
