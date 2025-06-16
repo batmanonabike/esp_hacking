@@ -33,20 +33,20 @@ void app_main(void)
         ESP_LOGI(TAG, "Service starting...");
         bat_set_blink_mode(BLINK_MODE_FAST);
         ESP_ERROR_CHECK(bat_ble_server_start(&bleServer, NULL, timeoutMs));  
-        vTaskDelay(pdMS_TO_TICKS(10000));
+        //vTaskDelay(pdMS_TO_TICKS(10000));
 
         ESP_LOGI(TAG, "Service started, advertising...");
         bat_set_blink_mode(BLINK_MODE_BREATHING);
-        vTaskDelay(pdMS_TO_TICKS(10000));
+        vTaskDelay(pdMS_TO_TICKS(3000));
 
         ESP_LOGI(TAG, "Service stopping soon...");
         bat_set_blink_mode(BLINK_MODE_VERY_FAST);
         bat_ble_server_stop(&bleServer, timeoutMs);
-        vTaskDelay(pdMS_TO_TICKS(10000));
+        //vTaskDelay(pdMS_TO_TICKS(10000));
 
         ESP_LOGI(TAG, "Service stopped, restarting soon...");
         bat_set_blink_mode(BLINK_MODE_NONE);
-        vTaskDelay(pdMS_TO_TICKS(10000));
+        //vTaskDelay(pdMS_TO_TICKS(10000));
     }
 
     bat_ble_server_stop(&bleServer, timeoutMs);

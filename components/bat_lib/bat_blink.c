@@ -166,7 +166,7 @@ esp_err_t bat_blink_init(int gpio_pin)
     BaseType_t task_created = xTaskCreate(
         blink_task,
         "blink_task",
-        2048,
+        4096,
         NULL,
         5,
         &blink_task_handle
