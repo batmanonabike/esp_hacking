@@ -6,6 +6,7 @@
 #include "bat_lib.h"
 #include "bat_config.h"
 #include "bat_ble_lib.h"
+#include "bat_gatts_simple.h"
 
 static const char *TAG = "ble_server2_app";
 
@@ -17,7 +18,7 @@ static void on_write(bat_ble_server_t *pServer, esp_ble_gatts_cb_param_t *pParam
     ESP_LOGI(TAG, "Received write: %.*s", pParam->write.len, pParam->write.value);
     
     // Echo back the received data as a notification
-    bat_ble_server_notify(pServer, 0, pParam->write.value, pParam->write.len);
+    bat_ble_gatts_notify(pServer, 0, pParam->write.value, pParam->write.len);
 }
 
 static void on_disconnect(bat_ble_server_t *pServer, esp_ble_gatts_cb_param_t *pParam)
@@ -54,10 +55,10 @@ void app_main(void)
 
     const int timeoutMs = 5000; 
     const char * pServiceUuid = "f0debc9a-7856-3412-1234-56785612561A"; 
-    ESP_ERROR_CHECK(bat_ble_server_init2(&bleServer, NULL, "Martyn", 0x55, pServiceUuid, 0x0944, timeoutMs));
-    //ESP_ERROR_CHECK(bat_ble_server_init2(&bleServer, NULL, NULL, 0x55, pServiceUuid, 0x0180, timeoutMs));
-    ESP_ERROR_CHECK(bat_ble_server_create_service(&bleServer, charConfigs, 1, timeoutMs));
-    ESP_ERROR_CHECK(bat_ble_server_start(&bleServer, &callbacks, timeoutMs));   
+    ESP_ERROR_CHECK(bat_ble_gatts_init(&bleServer, NULL, "Martyn", 0x55, pServiceUuid, 0x0944, timeoutMs));
+    //ESP_ERROR_CHECK(bat_ble_gatts_init(&bleServer, NULL, NULL, 0x55, pServiceUuid, 0x0180, timeoutMs));
+    ESP_ERROR_CHECK(bat_ble_gatts_create_service2(&bleServer, charConfigs, 1, timeoutMs));
+    ESP_ERROR_CHECK(bat_ble_gatts_start(&bleServer, &callbacks, timeoutMs));   
 
     ESP_LOGI(TAG, "App running");
     while (1)
@@ -65,7 +66,7 @@ void app_main(void)
         vTaskDelay(pdMS_TO_TICKS(1000));
     }
 
-    ESP_ERROR_CHECK(bat_ble_server_deinit(&bleServer));
+    ESP_ERROR_CHECK(bat_ble_gatts_deinit(&bleServer));
     ESP_ERROR_CHECK(bat_ble_lib_deinit());
     ESP_ERROR_CHECK(bat_lib_deinit());
 

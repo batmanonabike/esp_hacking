@@ -211,13 +211,13 @@ static void bat_ble_gap_event_handler(esp_gap_ble_cb_event_t event, esp_ble_gap_
     }
 }
 
-void bat_ble_server_reset_flags(bat_ble_server_t *pServer)
+void bat_ble_gatts_reset_flags(bat_ble_server_t *pServer)
 {
-    xEventGroupClearBits(pServer->eventGroup, 0xFFFFFF);
+    xEventGroupClearBits(pServer->eventGroup, 0x00FFFFFF);
 }
 
 // A simple initialization function that handles all the BLE setup.
-esp_err_t bat_ble_server_init2(
+esp_err_t bat_ble_gatts_init(
     bat_ble_server_t *pServer, void *pContext, const char *pDeviceName, uint16_t appId,
     const char *pServiceUuid, int appearance, int timeoutMs)
 {
@@ -277,11 +277,11 @@ esp_err_t bat_ble_server_init2(
         }
     }
 
-    bat_ble_server_deinit(pServer);
+    bat_ble_gatts_deinit(pServer);
     return ret;
 }
 
-esp_err_t bat_ble_server_deinit(bat_ble_server_t *pServer)
+esp_err_t bat_ble_gatts_deinit(bat_ble_server_t *pServer)
 {
     if (pServer->eventGroup != NULL)
         vEventGroupDelete(pServer->eventGroup);
@@ -291,8 +291,9 @@ esp_err_t bat_ble_server_deinit(bat_ble_server_t *pServer)
 }
 
 // Create the device and function to add a characteristics.
-esp_err_t bat_ble_server_create_service(bat_ble_server_t *pServer,
-                                        bat_ble_char_config_t *pCharConfigs, uint8_t numChars, int timeoutMs)
+esp_err_t bat_ble_gatts_create_service2(
+    bat_ble_server_t *pServer,
+    bat_ble_char_config_t *pCharConfigs, uint8_t numChars, int timeoutMs)
 {
     if (pServer == NULL || numChars > BAT_MAX_CHARACTERISTICS)
         return ESP_ERR_INVALID_ARG;
@@ -305,7 +306,6 @@ esp_err_t bat_ble_server_create_service(bat_ble_server_t *pServer,
 
     esp_gatt_srvc_id_t service_id = {
         .id = {
-            .inst_id = 0,
             .uuid = pServer->serviceId},
         .is_primary = true};
 
@@ -440,7 +440,7 @@ static void bat_ble_server_no_op(bat_ble_server_t *pServer, esp_ble_gatts_cb_par
 // Advertisement packet.
 // For example we might just include the service UUID which means that *passive* scan can find
 // if they are interested in the service quicker and without handshaking.
-esp_err_t bat_ble_server_start(bat_ble_server_t *pServer, bat_ble_server_callbacks_t *pCbs, int timeoutMs)
+esp_err_t bat_ble_gatts_start(bat_ble_server_t *pServer, bat_ble_server_callbacks_t *pCbs, int timeoutMs)
 {
     pServer->callbacks.onRead = (pCbs && pCbs->onRead) ? pCbs->onRead : bat_ble_server_no_op;
     pServer->callbacks.onWrite = (pCbs && pCbs->onWrite) ? pCbs->onWrite : bat_ble_server_no_op;
@@ -553,7 +553,7 @@ esp_err_t bat_ble_server_start(bat_ble_server_t *pServer, bat_ble_server_callbac
     return ESP_OK;
 }
 
-esp_err_t bat_ble_server_stop(bat_ble_server_t *pServer, int timeoutMs)
+esp_err_t bat_ble_gatts_stop(bat_ble_server_t *pServer, int timeoutMs)
 {
     ESP_LOGI(TAG, "Stopping BLE server");
 
@@ -612,7 +612,7 @@ esp_err_t bat_ble_server_stop(bat_ble_server_t *pServer, int timeoutMs)
 }
 
 // Functions for sending notifications and responding to read/write requests:
-esp_err_t bat_ble_server_notify(bat_ble_server_t *pServer, uint16_t charIndex, uint8_t *pData, uint16_t dataLen)
+esp_err_t bat_ble_gatts_notify(bat_ble_server_t *pServer, uint16_t charIndex, uint8_t *pData, uint16_t dataLen)
 {
     if (pServer == NULL || charIndex >= pServer->numChars || pData == NULL || dataLen == 0)
         return ESP_ERR_INVALID_ARG;
