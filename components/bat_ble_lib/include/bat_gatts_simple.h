@@ -11,6 +11,7 @@ extern "C" {
 #endif
 
 #define BAT_MAX_CHARACTERISTICS 10
+#define BLE_OPERATION_TIMEOUT_MS 5000
 
 typedef struct bat_ble_server_s bat_ble_server_t; 
 typedef void (*bat_ble_server_cb_t)(bat_ble_server_t *pServer, esp_ble_gatts_cb_param_t *pParam);
@@ -66,9 +67,10 @@ typedef struct
 esp_err_t bat_ble_server_init2(bat_ble_server_t *, void *, const char*, uint16_t appId, const char*, int, int);
 esp_err_t bat_ble_server_create_service(bat_ble_server_t *, bat_ble_char_config_t *pCharConfigs, uint8_t numChars, int);
 esp_err_t bat_ble_server_start(bat_ble_server_t *, bat_ble_server_callbacks_t *pCbs, int timeoutMs);
-esp_err_t bat_ble_server_stop(bat_ble_server_t *);
+esp_err_t bat_ble_server_stop(bat_ble_server_t *, int);
 esp_err_t bat_ble_server_deinit(bat_ble_server_t *);
 
+void bat_ble_server_reset_flags(bat_ble_server_t *);
 esp_err_t bat_ble_server_notify(bat_ble_server_t *, uint16_t charIndex, uint8_t *pData, uint16_t dataLen);
 
 #ifdef __cplusplus

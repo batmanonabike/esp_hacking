@@ -19,10 +19,6 @@
 
 static const char *TAG = "bat_gatts_simple";
 
-// Implementing a higher-level abstraction layer that handles the complex BLE workflow while providing a
-// simplified API.
-
-// Define common event bits
 #define BLE_SERVER_REGISTERED_BIT (1 << 0)
 #define BLE_ADV_CONFIG_DONE_BIT (1 << 1)
 #define BLE_SCAN_RESPONSE_DONE_BIT (1 << 2)
@@ -31,10 +27,11 @@ static const char *TAG = "bat_gatts_simple";
 #define BLE_ADVERTISING_STARTED_BIT (1 << 5)
 #define BLE_CONNECTED_BIT (1 << 6)
 #define BLE_DISCONNECTED_BIT (1 << 7)
-#define BLE_ERROR_BIT (1 << 8)
+#define BLE_SERVICE_STOP_COMPLETE_BIT (1 << 8)
+#define BLE_ADV_STOP_COMPLETE_BIT (1 << 9)
+#define BLE_ERROR_BIT (1 << 10)
 
 static bat_ble_server_t *gpCurrentServer = NULL;
-static EventGroupHandle_t gGattsEventGroup = NULL;
 static esp_ble_adv_params_t g_adv_params = {
     .adv_int_min = 0x20,
     .adv_int_max = 0x40,
@@ -46,11 +43,7 @@ static esp_ble_adv_params_t g_adv_params = {
 // Implement the BLE event handlers to manage callbacks:
 static void bat_ble_gatts_event_handler(esp_gatts_cb_event_t event, esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *pParam)
 {
-    if (gpCurrentServer == NULL)
-    {
-        ESP_LOGE(TAG, "GATT server not initialized");
-        return;
-    }
+    assert(gpCurrentServer != NULL);
 
     switch (event)
     {
@@ -58,12 +51,12 @@ static void bat_ble_gatts_event_handler(esp_gatts_cb_event_t event, esp_gatt_if_
         if (pParam->reg.status == ESP_GATT_OK)
         {
             gpCurrentServer->gattsIf = gatts_if;
-            xEventGroupSetBits(gGattsEventGroup, BLE_SERVER_REGISTERED_BIT);
+            xEventGroupSetBits(gpCurrentServer->eventGroup, BLE_SERVER_REGISTERED_BIT);
             ESP_LOGI(TAG, "GATTS app registered with ID %d", pParam->reg.app_id);
         }
         else
         {
-            xEventGroupSetBits(gGattsEventGroup, BLE_ERROR_BIT);
+            xEventGroupSetBits(gpCurrentServer->eventGroup, BLE_ERROR_BIT);
             ESP_LOGE(TAG, "GATTS app registration failed with status %d", pParam->reg.status);
         }
         break;
@@ -145,6 +138,19 @@ static void bat_ble_gatts_event_handler(esp_gatts_cb_event_t event, esp_gatt_if_
         gpCurrentServer->callbacks.onRead(gpCurrentServer, pParam);
         break;
 
+    case ESP_GATTS_STOP_EVT:
+        if (pParam->stop.status == ESP_GATT_OK)
+        {
+            ESP_LOGI(TAG, "GATTS service stopped successfully");
+            xEventGroupSetBits(gpCurrentServer->eventGroup, BLE_SERVICE_STOP_COMPLETE_BIT);
+        }
+        else
+        {
+            ESP_LOGE(TAG, "Failed to stop GATTS service, status: %d", pParam->stop.status);
+            xEventGroupSetBits(gpCurrentServer->eventGroup, BLE_ERROR_BIT);
+        }
+        break;
+
     default:
         break;
     }
@@ -152,22 +158,24 @@ static void bat_ble_gatts_event_handler(esp_gatts_cb_event_t event, esp_gatt_if_
 
 static void bat_ble_gap_event_handler(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *pParam)
 {
+    assert(gpCurrentServer != NULL);
+
     switch (event)
     {
     case ESP_GAP_BLE_ADV_DATA_SET_COMPLETE_EVT:
-        xEventGroupSetBits(gGattsEventGroup, BLE_ADV_CONFIG_DONE_BIT);
+        xEventGroupSetBits(gpCurrentServer->eventGroup, BLE_ADV_CONFIG_DONE_BIT);
         ESP_LOGI(TAG, "Advertising data set complete");
         break;
 
     case ESP_GAP_BLE_ADV_START_COMPLETE_EVT:
         if (pParam->adv_start_cmpl.status == ESP_BT_STATUS_SUCCESS)
         {
-            xEventGroupSetBits(gGattsEventGroup, BLE_ADVERTISING_STARTED_BIT);
+            xEventGroupSetBits(gpCurrentServer->eventGroup, BLE_ADVERTISING_STARTED_BIT);
             ESP_LOGI(TAG, "Advertising started");
         }
         else
         {
-            xEventGroupSetBits(gGattsEventGroup, BLE_ERROR_BIT);
+            xEventGroupSetBits(gpCurrentServer->eventGroup, BLE_ERROR_BIT);
             ESP_LOGE(TAG, "Advertising start failed: %d", pParam->adv_start_cmpl.status);
         }
         break;
@@ -175,12 +183,12 @@ static void bat_ble_gap_event_handler(esp_gap_ble_cb_event_t event, esp_ble_gap_
     case ESP_GAP_BLE_SCAN_RSP_DATA_SET_COMPLETE_EVT:
         if (pParam->scan_rsp_data_cmpl.status == ESP_BT_STATUS_SUCCESS)
         {
-            xEventGroupSetBits(gGattsEventGroup, BLE_SCAN_RESPONSE_DONE_BIT);
+            xEventGroupSetBits(gpCurrentServer->eventGroup, BLE_SCAN_RESPONSE_DONE_BIT);
             ESP_LOGI(TAG, "Scan response data set complete");
         }
         else
         {
-            xEventGroupSetBits(gGattsEventGroup, BLE_ERROR_BIT);
+            xEventGroupSetBits(gpCurrentServer->eventGroup, BLE_ERROR_BIT);
             ESP_LOGE(TAG, "Scan response data set failed: %d", pParam->scan_rsp_data_cmpl.status);
         }
         break;
@@ -188,17 +196,24 @@ static void bat_ble_gap_event_handler(esp_gap_ble_cb_event_t event, esp_ble_gap_
     case ESP_GAP_BLE_ADV_STOP_COMPLETE_EVT:
         if (pParam->adv_stop_cmpl.status == ESP_BT_STATUS_SUCCESS)
         {
-            ESP_LOGI(TAG, "Advertising stopped");
+            ESP_LOGI(TAG, "Advertising stopped successfully");
+            xEventGroupSetBits(gpCurrentServer->eventGroup, BLE_ADV_STOP_COMPLETE_BIT);
         }
         else
         {
-            ESP_LOGE(TAG, "Advertising stop failed: %d", pParam->adv_stop_cmpl.status);
+            ESP_LOGE(TAG, "Failed to stop advertising, status: %d", pParam->adv_stop_cmpl.status);
+            xEventGroupSetBits(gpCurrentServer->eventGroup, BLE_ERROR_BIT);
         }
         break;
 
     default:
         break;
     }
+}
+
+void bat_ble_server_reset_flags(bat_ble_server_t *pServer)
+{
+    xEventGroupClearBits(pServer->eventGroup, 0xFFFFFF);
 }
 
 // A simple initialization function that handles all the BLE setup.
@@ -220,16 +235,13 @@ esp_err_t bat_ble_server_init2(
     else
         strncpy(pServer->deviceName, pDeviceName, sizeof(pServer->deviceName) - 1);
 
-    if (gGattsEventGroup == NULL)
-        gGattsEventGroup = xEventGroupCreate();
-
     pServer->appId = appId;
     pServer->pContext = pContext;
     pServer->appearance = appearance;
     pServer->pAdvParams = &g_adv_params;
     pServer->eventGroup = xEventGroupCreate();
 
-    if (pServer->eventGroup == NULL || gGattsEventGroup == NULL)
+    if (pServer->eventGroup == NULL)
         ESP_LOGE(TAG, "Failed to create event groups");
     else
     {
@@ -249,25 +261,17 @@ esp_err_t bat_ble_server_init2(
                 if (ret == ESP_OK)
                 {
                     // Wait for registration
-                    EventBits_t bits = xEventGroupWaitBits(gGattsEventGroup,
+                    EventBits_t bits = xEventGroupWaitBits(gpCurrentServer->eventGroup,
                                                            BLE_SERVER_REGISTERED_BIT | BLE_ERROR_BIT,
                                                            pdTRUE, pdFALSE, pdMS_TO_TICKS(timeoutMs));
 
-                    if (bits & BLE_ERROR_BIT)
+                    if ((bits & BLE_ERROR_BIT) || !(bits & BLE_SERVER_REGISTERED_BIT))
                     {
-                        ESP_LOGE(TAG, "Error during BLE server registration");
-                        ret = ESP_FAIL;
+                        ESP_LOGE(TAG, "Error during BLE server registration: %s",
+                                 (bits & BLE_ERROR_BIT) ? "Error reported" : "Timeout");
+                        return ESP_FAIL;
                     }
-                    else if (!(bits & BLE_SERVER_REGISTERED_BIT))
-                    {
-                        ESP_LOGE(TAG, "BLE server registration timeout");
-                        ret = ESP_ERR_TIMEOUT;
-                    }
-                    else
-                    {
-                        ESP_LOGI(TAG, "BLE server initialized successfully with appId: %d", appId);
-                        return ESP_OK;
-                    }
+                    return ESP_OK;
                 }
             }
         }
@@ -282,12 +286,7 @@ esp_err_t bat_ble_server_deinit(bat_ble_server_t *pServer)
     if (pServer->eventGroup != NULL)
         vEventGroupDelete(pServer->eventGroup);
 
-    if (gGattsEventGroup != NULL)
-        vEventGroupDelete(gGattsEventGroup);
-
-    gGattsEventGroup = NULL;
     pServer->eventGroup = NULL;
-
     return ESP_OK;
 }
 
@@ -324,16 +323,11 @@ esp_err_t bat_ble_server_create_service(bat_ble_server_t *pServer,
                                            BLE_SERVICE_CREATED_BIT | BLE_ERROR_BIT,
                                            pdTRUE, pdFALSE, pdMS_TO_TICKS(timeoutMs));
 
-    if (bits & BLE_ERROR_BIT)
+    if ((bits & BLE_ERROR_BIT) || !(bits & BLE_SERVICE_CREATED_BIT))
     {
-        ESP_LOGE(TAG, "Error during service creation");
+        ESP_LOGE(TAG, "Error during server creation: %s",
+                 (bits & BLE_ERROR_BIT) ? "Error reported" : "Timeout");
         return ESP_FAIL;
-    }
-
-    if (!(bits & BLE_SERVICE_CREATED_BIT))
-    {
-        ESP_LOGE(TAG, "Service creation timeout");
-        return ESP_ERR_TIMEOUT;
     }
 
     // Add characteristics to service
@@ -366,7 +360,7 @@ esp_err_t bat_ble_server_create_service(bat_ble_server_t *pServer,
     return ESP_OK;
 }
 
-static esp_err_t bat_update_advert_service_uuid(bat_ble_server_t *pServer, esp_ble_adv_data_t *pAdvData)
+static esp_err_t bat_copy_advert_service_uuid(bat_ble_server_t *pServer, esp_ble_adv_data_t *pAdvData)
 {
     if (pServer != NULL)
     {
@@ -469,8 +463,7 @@ esp_err_t bat_ble_server_start(bat_ble_server_t *pServer, bat_ble_server_callbac
         .flag = (ESP_BLE_ADV_FLAG_GEN_DISC | ESP_BLE_ADV_FLAG_BREDR_NOT_SPT),
     };
 
-    // Set device name
-    esp_err_t ret = bat_update_advert_service_uuid(pServer, &adv_data);
+    esp_err_t ret = bat_copy_advert_service_uuid(pServer, &adv_data);
     if (ret != ESP_OK)
         return ret;
 
@@ -479,20 +472,15 @@ esp_err_t bat_ble_server_start(bat_ble_server_t *pServer, bat_ble_server_callbac
     if (ret != ESP_OK)
         return ret;
 
-    EventBits_t bits = xEventGroupWaitBits(gGattsEventGroup,
+    EventBits_t bits = xEventGroupWaitBits(gpCurrentServer->eventGroup,
                                            BLE_ADV_CONFIG_DONE_BIT | BLE_ERROR_BIT,
                                            pdTRUE, pdFALSE, pdMS_TO_TICKS(timeoutMs));
 
-    if (bits & BLE_ERROR_BIT)
+    if ((bits & BLE_ERROR_BIT) || !(bits & BLE_ADV_CONFIG_DONE_BIT))
     {
-        ESP_LOGE(TAG, "Error during advertising configuration");
+        ESP_LOGE(TAG, "Error during advertising configuration: %s",
+                 (bits & BLE_ERROR_BIT) ? "Error reported" : "Timeout");
         return ESP_FAIL;
-    }
-
-    if (!(bits & BLE_ADV_CONFIG_DONE_BIT))
-    {
-        ESP_LOGE(TAG, "Advertising configuration timeout");
-        return ESP_ERR_TIMEOUT;
     }
 
     if (pServer->deviceName[0] != '\0')
@@ -518,24 +506,19 @@ esp_err_t bat_ble_server_start(bat_ble_server_t *pServer, bat_ble_server_callbac
         if (ret != ESP_OK)
             return ret;
 
-        bits = xEventGroupWaitBits(gGattsEventGroup,
+        bits = xEventGroupWaitBits(gpCurrentServer->eventGroup,
                                    BLE_SCAN_RESPONSE_DONE_BIT | BLE_ERROR_BIT,
                                    pdTRUE, pdFALSE, pdMS_TO_TICKS(timeoutMs));
 
-        if (bits & BLE_ERROR_BIT)
+        if ((bits & BLE_ERROR_BIT) || !(bits & BLE_SCAN_RESPONSE_DONE_BIT))
         {
-            ESP_LOGE(TAG, "Error during scan response");
+            ESP_LOGE(TAG, "Error during scan response: %s",
+                     (bits & BLE_ERROR_BIT) ? "Error reported" : "Timeout");
             return ESP_FAIL;
-        }
-
-        if (!(bits & BLE_SCAN_RESPONSE_DONE_BIT))
-        {
-            ESP_LOGE(TAG, "Scan response configuration timeout");
-            return ESP_ERR_TIMEOUT;
         }
     }
 
-    // Start service and wait for it to start.
+    // Start service and wait for it.
     ret = bat_ble_gatts_start_service(pServer->serviceHandle);
     if (ret != ESP_OK)
         return ret;
@@ -544,35 +527,88 @@ esp_err_t bat_ble_server_start(bat_ble_server_t *pServer, bat_ble_server_callbac
                                BLE_SERVICE_STARTED_BIT | BLE_ERROR_BIT,
                                pdTRUE, pdFALSE, pdMS_TO_TICKS(timeoutMs));
 
-    if (bits & BLE_ERROR_BIT)
+    if ((bits & BLE_ERROR_BIT) || !(bits & BLE_SERVICE_STARTED_BIT))
     {
-        ESP_LOGE(TAG, "Error during service start");
+        ESP_LOGE(TAG, "Error during service start: %s",
+                 (bits & BLE_ERROR_BIT) ? "Error reported" : "Timeout");
         return ESP_FAIL;
     }
 
-    if (!(bits & BLE_SERVICE_STARTED_BIT))
+    // Start advertising and wait for it.
+    ret = bat_ble_gap_start_advertising(pServer->pAdvParams);
+    if (ret != ESP_OK)
+        return ret;
+
+    bits = xEventGroupWaitBits(pServer->eventGroup,
+                               BLE_ADVERTISING_STARTED_BIT | BLE_ERROR_BIT,
+                               pdTRUE, pdFALSE, pdMS_TO_TICKS(timeoutMs));
+
+    if ((bits & BLE_ERROR_BIT) || !(bits & BLE_ADVERTISING_STARTED_BIT))
     {
-        ESP_LOGE(TAG, "Service start timeout");
-        return ESP_ERR_TIMEOUT;
+        ESP_LOGE(TAG, "Error during start advertising: %s",
+                 (bits & BLE_ERROR_BIT) ? "Error reported" : "Timeout");
+        return ESP_FAIL;
     }
 
-    return bat_ble_gap_start_advertising(pServer->pAdvParams);
+    return ESP_OK;
 }
 
-esp_err_t bat_ble_server_stop(bat_ble_server_t *pServer)
+esp_err_t bat_ble_server_stop(bat_ble_server_t *pServer, int timeoutMs)
 {
+    ESP_LOGI(TAG, "Stopping BLE server");
+
     if (pServer == NULL)
     {
+        ESP_LOGE(TAG, "Invalid server context (NULL)");
         return ESP_ERR_INVALID_ARG;
     }
 
-    esp_err_t ret = bat_ble_gap_stop_advertising();
+    // Wait for advertising to stop.
+    esp_err_t ret = esp_ble_gap_stop_advertising();
     if (ret != ESP_OK)
     {
+        ESP_LOGE(TAG, "Failed to stop advertising: %s", esp_err_to_name(ret));
         return ret;
     }
 
-    return bat_ble_gatts_stop_service(pServer->serviceHandle);
+    EventBits_t bits = xEventGroupWaitBits(
+        pServer->eventGroup,
+        BLE_ADV_STOP_COMPLETE_BIT | BLE_ERROR_BIT,
+        pdTRUE,
+        pdFALSE,
+        pdMS_TO_TICKS(timeoutMs));
+
+    if ((bits & BLE_ERROR_BIT) || !(bits & BLE_ADV_STOP_COMPLETE_BIT))
+    {
+        ESP_LOGE(TAG, "Failed to stop advertising: %s",
+                 (bits & BLE_ERROR_BIT) ? "Error reported" : "Timeout");
+        return ESP_FAIL;
+    }
+
+    // Wait for service to stop with provided timeout
+    ret = esp_ble_gatts_stop_service(pServer->serviceHandle);
+    if (ret != ESP_OK)
+    {
+        ESP_LOGE(TAG, "Failed to stop GATT service: %s", esp_err_to_name(ret));
+        return ret;
+    }
+
+    bits = xEventGroupWaitBits(
+        pServer->eventGroup,
+        BLE_SERVICE_STOP_COMPLETE_BIT | BLE_ERROR_BIT,
+        pdTRUE,
+        pdFALSE,
+        pdMS_TO_TICKS(timeoutMs));
+
+    if ((bits & BLE_ERROR_BIT) || !(bits & BLE_SERVICE_STOP_COMPLETE_BIT))
+    {
+        ESP_LOGE(TAG, "Failed to stop GATT service: %s",
+                 (bits & BLE_ERROR_BIT) ? "Error reported" : "Timeout");
+        return ESP_FAIL;
+    }
+
+    ESP_LOGI(TAG, "GATT service stopped successfully");
+    return ESP_OK;
 }
 
 // Functions for sending notifications and responding to read/write requests:

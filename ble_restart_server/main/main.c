@@ -24,18 +24,35 @@ void app_main(void)
 
     ESP_ERROR_CHECK(bat_ble_server_init2(&bleServer, NULL, "Martyn", 0x55, pServiceUuid, 0x0944, timeoutMs));
     ESP_ERROR_CHECK(bat_ble_server_create_service(&bleServer, NULL, 0, timeoutMs));
-    ESP_ERROR_CHECK(bat_ble_server_start(&bleServer, NULL, timeoutMs));    
-
+    
     ESP_LOGI(TAG, "App running");
-    bat_set_blink_mode(BLINK_MODE_BREATHING);
     while (1)
     {
-        vTaskDelay(pdMS_TO_TICKS(1000));
+        bat_ble_server_reset_flags(&bleServer);
+
+        ESP_LOGI(TAG, "Service starting...");
+        bat_set_blink_mode(BLINK_MODE_FAST);
+        ESP_ERROR_CHECK(bat_ble_server_start(&bleServer, NULL, timeoutMs));  
+        vTaskDelay(pdMS_TO_TICKS(10000));
+
+        ESP_LOGI(TAG, "Service started, advertising...");
+        bat_set_blink_mode(BLINK_MODE_BREATHING);
+        vTaskDelay(pdMS_TO_TICKS(10000));
+
+        ESP_LOGI(TAG, "Service stopping soon...");
+        bat_set_blink_mode(BLINK_MODE_VERY_FAST);
+        bat_ble_server_stop(&bleServer, timeoutMs);
+        vTaskDelay(pdMS_TO_TICKS(10000));
+
+        ESP_LOGI(TAG, "Service stopped, restarting soon...");
+        bat_set_blink_mode(BLINK_MODE_NONE);
+        vTaskDelay(pdMS_TO_TICKS(10000));
     }
 
-    ESP_ERROR_CHECK(bat_ble_server_deinit(&bleServer));
-    ESP_ERROR_CHECK(bat_ble_lib_deinit());
-    ESP_ERROR_CHECK(bat_lib_deinit());
+    bat_ble_server_stop(&bleServer, timeoutMs);
+    bat_ble_server_deinit(&bleServer);
+    bat_ble_lib_deinit();
+    bat_lib_deinit();
 
     ESP_LOGI(TAG, "App restarting");
     esp_restart();
