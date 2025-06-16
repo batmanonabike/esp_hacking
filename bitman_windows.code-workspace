@@ -32,6 +32,9 @@
         },
         {
             "path": "./basic_esp_fsm"
+        },
+        {
+            "path": "./ble_restart_server"
         }
     ],
     "settings": {

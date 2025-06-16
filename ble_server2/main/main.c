@@ -12,12 +12,18 @@ static const char *TAG = "ble_server2_app";
 static bat_ble_server_t bleServer = {0};
 
 // Callback for write events
-static void on_write(void *pContext, esp_ble_gatts_cb_param_t *param)
+static void on_write(bat_ble_server_t *pServer, esp_ble_gatts_cb_param_t *pParam)
 {
-    ESP_LOGI(TAG, "Received write: %.*s", param->write.len, param->write.value);
+    ESP_LOGI(TAG, "Received write: %.*s", pParam->write.len, pParam->write.value);
     
     // Echo back the received data as a notification
-    bat_ble_server_notify(&bleServer, 0, param->write.value, param->write.len);
+    bat_ble_server_notify(pServer, 0, pParam->write.value, pParam->write.len);
+}
+
+static void on_disconnect(bat_ble_server_t *pServer, esp_ble_gatts_cb_param_t *pParam)
+{
+    // Auto restart advertising on disconnect
+    bat_ble_gap_start_advertising(pServer->pAdvParams);
 }
 
 void app_main(void)
@@ -43,17 +49,17 @@ void app_main(void)
     
     bat_ble_server_callbacks_t callbacks = {
         .onWrite = on_write,
+        .onDisconnect = on_disconnect,
     };
 
     const int timeoutMs = 5000; 
     const char * pServiceUuid = "f0debc9a-7856-3412-1234-56785612561A"; 
     ESP_ERROR_CHECK(bat_ble_server_init2(&bleServer, NULL, "Martyn", 0x55, pServiceUuid, 0x0944, timeoutMs));
     //ESP_ERROR_CHECK(bat_ble_server_init2(&bleServer, NULL, NULL, 0x55, pServiceUuid, 0x0180, timeoutMs));
-    ESP_ERROR_CHECK(bat_ble_server_create_service(&bleServer, charConfigs, 1));
-    ESP_ERROR_CHECK(bat_ble_server_set_callbacks(&bleServer, &callbacks));
-    ESP_ERROR_CHECK(bat_ble_server_start(&bleServer, timeoutMs));    
-    ESP_LOGI(TAG, "App started");
+    ESP_ERROR_CHECK(bat_ble_server_create_service(&bleServer, charConfigs, 1, timeoutMs));
+    ESP_ERROR_CHECK(bat_ble_server_start(&bleServer, &callbacks, timeoutMs));   
 
+    ESP_LOGI(TAG, "App running");
     while (1)
     {
         vTaskDelay(pdMS_TO_TICKS(1000));

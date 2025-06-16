@@ -111,7 +111,7 @@ static void bat_ble_gatts_event_handler(esp_gatts_cb_event_t event, esp_gatt_if_
     case ESP_GATTS_CONNECT_EVT:
         gpCurrentServer->isConnected = true;
         gpCurrentServer->connId = pParam->connect.conn_id;
-        gpCurrentServer->callbacks.onConnect(gpCurrentServer->pContext, pParam);
+        gpCurrentServer->callbacks.onConnect(gpCurrentServer, pParam);
 
         xEventGroupSetBits(gpCurrentServer->eventGroup, BLE_CONNECTED_BIT);
         ESP_LOGI(TAG, "GATT client connected");
@@ -119,17 +119,13 @@ static void bat_ble_gatts_event_handler(esp_gatts_cb_event_t event, esp_gatt_if_
 
     case ESP_GATTS_DISCONNECT_EVT:
         gpCurrentServer->isConnected = false;
-        gpCurrentServer->callbacks.onDisconnect(gpCurrentServer->pContext, pParam);
-
+        gpCurrentServer->callbacks.onDisconnect(gpCurrentServer, pParam);
         xEventGroupSetBits(gpCurrentServer->eventGroup, BLE_DISCONNECTED_BIT);
-        ESP_LOGI(TAG, "GATT client disconnected, starting advertising again");
-
-        // Auto restart advertising on disconnect
-        bat_ble_gap_start_advertising(&g_adv_params);
+        ESP_LOGI(TAG, "GATT client disconnected");
         break;
 
     case ESP_GATTS_WRITE_EVT:
-        gpCurrentServer->callbacks.onWrite(gpCurrentServer->pContext, pParam);
+        gpCurrentServer->callbacks.onWrite(gpCurrentServer, pParam);
 
         // Auto-respond to write if needed
         // if (param->write.need_rsp)
@@ -146,7 +142,7 @@ static void bat_ble_gatts_event_handler(esp_gatts_cb_event_t event, esp_gatt_if_
         break;
 
     case ESP_GATTS_READ_EVT:
-        gpCurrentServer->callbacks.onRead(gpCurrentServer->pContext, pParam);
+        gpCurrentServer->callbacks.onRead(gpCurrentServer, pParam);
         break;
 
     default:
@@ -230,6 +226,7 @@ esp_err_t bat_ble_server_init2(
     pServer->appId = appId;
     pServer->pContext = pContext;
     pServer->appearance = appearance;
+    pServer->pAdvParams = &g_adv_params;
     pServer->eventGroup = xEventGroupCreate();
 
     if (pServer->eventGroup == NULL || gGattsEventGroup == NULL)
@@ -295,10 +292,17 @@ esp_err_t bat_ble_server_deinit(bat_ble_server_t *pServer)
 }
 
 // Create the device and function to add a characteristics.
-esp_err_t bat_ble_server_create_service(bat_ble_server_t *pServer, bat_ble_char_config_t *pCharConfigs, uint8_t numChars)
+esp_err_t bat_ble_server_create_service(bat_ble_server_t *pServer,
+                                        bat_ble_char_config_t *pCharConfigs, uint8_t numChars, int timeoutMs)
 {
-    if (pServer == NULL || pCharConfigs == NULL || numChars == 0 || numChars > BAT_MAX_CHARACTERISTICS)
+    if (pServer == NULL || numChars > BAT_MAX_CHARACTERISTICS)
         return ESP_ERR_INVALID_ARG;
+
+    if (pCharConfigs == NULL && numChars > 0)
+    {
+        ESP_LOGE(TAG, "Invalid characteristics provided");
+        return ESP_ERR_INVALID_ARG;
+    }
 
     esp_gatt_srvc_id_t service_id = {
         .id = {
@@ -318,7 +322,7 @@ esp_err_t bat_ble_server_create_service(bat_ble_server_t *pServer, bat_ble_char_
     // Wait for service creation
     EventBits_t bits = xEventGroupWaitBits(pServer->eventGroup,
                                            BLE_SERVICE_CREATED_BIT | BLE_ERROR_BIT,
-                                           pdTRUE, pdFALSE, pdMS_TO_TICKS(5000));
+                                           pdTRUE, pdFALSE, pdMS_TO_TICKS(timeoutMs));
 
     if (bits & BLE_ERROR_BIT)
     {
@@ -394,6 +398,10 @@ static esp_err_t bat_update_advert_service_uuid(bat_ble_server_t *pServer, esp_b
     return ESP_ERR_INVALID_ARG;
 }
 
+static void bat_ble_server_no_op(bat_ble_server_t *pServer, esp_ble_gatts_cb_param_t *pParam)
+{
+}
+
 // Simple Start function.
 //
 // `esp_ble_adv_data_t` describes the advertising data that will be sent while advertising.
@@ -438,8 +446,13 @@ static esp_err_t bat_update_advert_service_uuid(bat_ble_server_t *pServer, esp_b
 // Advertisement packet.
 // For example we might just include the service UUID which means that *passive* scan can find
 // if they are interested in the service quicker and without handshaking.
-esp_err_t bat_ble_server_start(bat_ble_server_t *pServer, int timeoutMs)
+esp_err_t bat_ble_server_start(bat_ble_server_t *pServer, bat_ble_server_callbacks_t *pCbs, int timeoutMs)
 {
+    pServer->callbacks.onRead = (pCbs && pCbs->onRead) ? pCbs->onRead : bat_ble_server_no_op;
+    pServer->callbacks.onWrite = (pCbs && pCbs->onWrite) ? pCbs->onWrite : bat_ble_server_no_op;
+    pServer->callbacks.onConnect = (pCbs && pCbs->onConnect) ? pCbs->onConnect : bat_ble_server_no_op;
+    pServer->callbacks.onDisconnect = (pCbs && pCbs->onDisconnect) ? pCbs->onDisconnect : bat_ble_server_no_op;
+
     esp_ble_adv_data_t adv_data = {
         .manufacturer_len = 0,
         .service_data_len = 0,
@@ -543,7 +556,7 @@ esp_err_t bat_ble_server_start(bat_ble_server_t *pServer, int timeoutMs)
         return ESP_ERR_TIMEOUT;
     }
 
-    return bat_ble_gap_start_advertising(&g_adv_params);
+    return bat_ble_gap_start_advertising(pServer->pAdvParams);
 }
 
 esp_err_t bat_ble_server_stop(bat_ble_server_t *pServer)
@@ -578,21 +591,4 @@ esp_err_t bat_ble_server_notify(bat_ble_server_t *pServer, uint16_t charIndex, u
         ESP_LOGE(TAG, "Failed to send notification: %s", esp_err_to_name(ret));
 
     return ret;
-}
-
-static void bat_ble_server_no_op(void *pContext, esp_ble_gatts_cb_param_t *pParam)
-{
-}
-
-esp_err_t bat_ble_server_set_callbacks(bat_ble_server_t *pServer, bat_ble_server_callbacks_t *pCbs)
-{
-    if (pServer == NULL)
-        return ESP_ERR_INVALID_ARG;
-
-    pServer->callbacks.onRead = pCbs->onRead ? pCbs->onRead : bat_ble_server_no_op;
-    pServer->callbacks.onWrite = pCbs->onWrite ? pCbs->onWrite : bat_ble_server_no_op;
-    pServer->callbacks.onConnect = pCbs->onConnect ? pCbs->onConnect : bat_ble_server_no_op;
-    pServer->callbacks.onDisconnect = pCbs->onDisconnect ? pCbs->onDisconnect : bat_ble_server_no_op;
-
-    return ESP_OK;
 }
