@@ -13,18 +13,18 @@ extern "C" {
 #define BAT_MAX_CHARACTERISTICS 10
 #define BLE_OPERATION_TIMEOUT_MS 5000
 
-typedef struct bat_ble_server_s bat_ble_server_t; 
-typedef void (*bat_ble_server_cb_t)(bat_ble_server_t *pServer, esp_ble_gatts_cb_param_t *pParam);
+typedef struct bat_gatts_server_s bat_gatts_server_t; 
+typedef void (*bat_gatts_callback_t)(bat_gatts_server_t *pServer, esp_ble_gatts_cb_param_t *pParam);
 
 typedef struct 
 {
-    bat_ble_server_cb_t onRead;
-    bat_ble_server_cb_t onWrite;
-    bat_ble_server_cb_t onConnect;
-    bat_ble_server_cb_t onDisconnect;   
-} bat_ble_server_callbacks_t;
+    bat_gatts_callback_t onRead;
+    bat_gatts_callback_t onWrite;
+    bat_gatts_callback_t onConnect;
+    bat_gatts_callback_t onDisconnect;   
+} bat_gatts_callbacks2_t;
 
-typedef struct bat_ble_server_s
+typedef struct bat_gatts_server_s
 {
     void *pContext;
 
@@ -50,28 +50,28 @@ typedef struct bat_ble_server_s
     EventGroupHandle_t eventGroup;
 
     // Callbacks
-    bat_ble_server_callbacks_t callbacks;
+    bat_gatts_callbacks2_t callbacks;
 
-} bat_ble_server_t;
+} bat_gatts_server_t;
 
 typedef struct 
 {
     uint16_t uuid;
+    uint16_t maxLen;
+    uint16_t initValueLen;
+    uint8_t *pInitialValue;
     esp_gatt_perm_t permissions;
     esp_gatt_char_prop_t properties;
-    uint16_t maxLen;
-    uint8_t *pInitialValue;
-    uint16_t initValueLen;
-} bat_ble_char_config_t;
+} bat_gatts_char_config_t;
 
-esp_err_t bat_ble_gatts_init(bat_ble_server_t *, void *, const char*, uint16_t appId, const char*, int, int);
-esp_err_t bat_ble_gatts_create_service2(bat_ble_server_t *, bat_ble_char_config_t *pCharConfigs, uint8_t numChars, int);
-esp_err_t bat_ble_gatts_start(bat_ble_server_t *, bat_ble_server_callbacks_t *pCbs, int timeoutMs);
-esp_err_t bat_ble_gatts_stop(bat_ble_server_t *, int);
-esp_err_t bat_ble_gatts_deinit(bat_ble_server_t *);
+esp_err_t bat_gatts_init(bat_gatts_server_t *, void *, const char*, uint16_t appId, const char*, int, int);
+esp_err_t bat_gatts_create_service(bat_gatts_server_t *, bat_gatts_char_config_t *pCharConfigs, uint8_t numChars, int);
+esp_err_t bat_gatts_start(bat_gatts_server_t *, bat_gatts_callbacks2_t *pCbs, int timeoutMs);
+esp_err_t bat_gatts_stop(bat_gatts_server_t *, int);
+esp_err_t bat_gatts_deinit(bat_gatts_server_t *);
 
-void bat_ble_gatts_reset_flags(bat_ble_server_t *);
-esp_err_t bat_ble_gatts_notify(bat_ble_server_t *, uint16_t charIndex, uint8_t *pData, uint16_t dataLen);
+void bat_gatts_reset_flags(bat_gatts_server_t *);
+esp_err_t bat_gatts_notify(bat_gatts_server_t *, uint16_t charIndex, uint8_t *pData, uint16_t dataLen);
 
 #ifdef __cplusplus
 }

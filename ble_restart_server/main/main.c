@@ -9,7 +9,7 @@
 #include "bat_gatts_simple.h"
 
 static const char *TAG = "ble_restart_server_app";
-static bat_ble_server_t bleServer = {0};
+static bat_gatts_server_t bleServer = {0};
 
 void app_main(void)
 {    
@@ -23,17 +23,17 @@ void app_main(void)
     const int timeoutMs = 5000; 
     const char * pServiceUuid = "f0debc9a-7856-3412-1234-56785612561B"; 
 
-    ESP_ERROR_CHECK(bat_ble_gatts_init(&bleServer, NULL, "Martyn", 0x55, pServiceUuid, 0x0944, timeoutMs));
-    ESP_ERROR_CHECK(bat_ble_gatts_create_service2(&bleServer, NULL, 0, timeoutMs));
+    ESP_ERROR_CHECK(bat_gatts_init(&bleServer, NULL, "Martyn", 0x55, pServiceUuid, 0x0944, timeoutMs));
+    ESP_ERROR_CHECK(bat_gatts_create_service(&bleServer, NULL, 0, timeoutMs));
     
     ESP_LOGI(TAG, "App running");
     while (1)
     {
-        bat_ble_gatts_reset_flags(&bleServer);
+        bat_gatts_reset_flags(&bleServer);
 
         ESP_LOGI(TAG, "Service starting...");
         bat_set_blink_mode(BLINK_MODE_FAST);
-        ESP_ERROR_CHECK(bat_ble_gatts_start(&bleServer, NULL, timeoutMs));  
+        ESP_ERROR_CHECK(bat_gatts_start(&bleServer, NULL, timeoutMs));  
         //vTaskDelay(pdMS_TO_TICKS(10000));
 
         ESP_LOGI(TAG, "Service started, advertising...");
@@ -42,7 +42,7 @@ void app_main(void)
 
         ESP_LOGI(TAG, "Service stopping soon...");
         bat_set_blink_mode(BLINK_MODE_VERY_FAST);
-        bat_ble_gatts_stop(&bleServer, timeoutMs);
+        bat_gatts_stop(&bleServer, timeoutMs);
         //vTaskDelay(pdMS_TO_TICKS(10000));
 
         ESP_LOGI(TAG, "Service stopped, restarting soon...");
@@ -50,8 +50,8 @@ void app_main(void)
         //vTaskDelay(pdMS_TO_TICKS(10000));
     }
 
-    bat_ble_gatts_stop(&bleServer, timeoutMs);
-    bat_ble_gatts_deinit(&bleServer);
+    bat_gatts_stop(&bleServer, timeoutMs);
+    bat_gatts_deinit(&bleServer);
     bat_ble_lib_deinit();
     bat_lib_deinit();
 

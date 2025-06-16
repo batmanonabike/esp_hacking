@@ -103,7 +103,7 @@ esp_err_t bat_ble_gatts_add_char_descr(uint16_t serviceHandle, esp_bt_uuid_t *pD
     return ESP_OK;
 }
 
-esp_err_t bat_ble_gatts_start_service(uint16_t serviceHandle)
+esp_err_t bat_gatts_start_service(uint16_t serviceHandle)
 {
     esp_err_t ret = esp_ble_gatts_start_service(serviceHandle);
     if (ret != ESP_OK)
@@ -157,7 +157,7 @@ esp_err_t bat_ble_gap_stop_advertising(void)
     return ESP_OK;
 }
 
-esp_err_t bat_ble_gatts_stop_service(uint16_t serviceHandle)
+esp_err_t bat_gatts_stop_service(uint16_t serviceHandle)
 {
     esp_err_t ret = esp_ble_gatts_stop_service(serviceHandle);
     if (ret != ESP_OK)
