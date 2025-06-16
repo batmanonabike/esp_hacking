@@ -47,7 +47,8 @@ void app_main(void)
 
     const int timeoutMs = 5000; 
     const char * pServiceUuid = "f0debc9a-7856-3412-1234-56785612561A"; 
-    ESP_ERROR_CHECK(bat_ble_server_init2(&bleServer, NULL, "Ginge", 0x55, pServiceUuid, 0x0944, timeoutMs));
+    ESP_ERROR_CHECK(bat_ble_server_init2(&bleServer, NULL, "Martyn", 0x55, pServiceUuid, 0x0944, timeoutMs));
+    //ESP_ERROR_CHECK(bat_ble_server_init2(&bleServer, NULL, NULL, 0x55, pServiceUuid, 0x0180, timeoutMs));
     ESP_ERROR_CHECK(bat_ble_server_create_service(&bleServer, charConfigs, 1));
     ESP_ERROR_CHECK(bat_ble_server_set_callbacks(&bleServer, &callbacks));
     ESP_ERROR_CHECK(bat_ble_server_start(&bleServer, timeoutMs));    

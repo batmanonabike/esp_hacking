@@ -47,7 +47,10 @@ static esp_ble_adv_params_t g_adv_params = {
 static void bat_ble_gatts_event_handler(esp_gatts_cb_event_t event, esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *pParam)
 {
     if (gpCurrentServer == NULL)
+    {
+        ESP_LOGE(TAG, "GATT server not initialized");
         return;
+    }
 
     switch (event)
     {
@@ -207,7 +210,7 @@ esp_err_t bat_ble_server_init2(
     bat_ble_server_t *pServer, void *pContext, const char *pDeviceName, uint16_t appId,
     const char *pServiceUuid, int appearance, int timeoutMs)
 {
-    if (pServer == NULL || pDeviceName == NULL || pServiceUuid == NULL)
+    if (pServer == NULL || pServiceUuid == NULL)
         return ESP_ERR_INVALID_ARG;
 
     memset(pServer, 0, sizeof(bat_ble_server_t));
@@ -233,6 +236,8 @@ esp_err_t bat_ble_server_init2(
         ESP_LOGE(TAG, "Failed to create event groups");
     else
     {
+        gpCurrentServer = pServer;
+
         ret = esp_ble_gatts_register_callback(bat_ble_gatts_event_handler);
         if (ret != ESP_OK)
             ESP_LOGE(TAG, "Failed to register GATTS callback: %s", esp_err_to_name(ret));
@@ -263,7 +268,6 @@ esp_err_t bat_ble_server_init2(
                     }
                     else
                     {
-                        gpCurrentServer = pServer;
                         ESP_LOGI(TAG, "BLE server initialized successfully with appId: %d", appId);
                         return ESP_OK;
                     }
