@@ -25,6 +25,7 @@ typedef struct {
     TimerHandle_t updateTimers[3];
 } app_context_t;
 
+static app_context_t g_appContext = {0};
 static bat_gatts_server_t g_server = {0};
 
 // Forward declarations
@@ -221,8 +222,10 @@ static void stop_notification_timers(bat_gatts_server_t *pServer)
     ESP_LOGI(TAG, "Stopping notification timers");
     app_context_t *pAppContext = (app_context_t *)pServer->pContext;
     
-    for (int i = 0; i < 3; i++) {
-        if (pAppContext->updateTimers[i] != NULL) {
+    for (int i = 0; i < 3; i++) 
+    {
+        if (pAppContext->updateTimers[i] != NULL) 
+        {
             xTimerStop(pAppContext->updateTimers[i], 0);
         }
     }
@@ -237,9 +240,8 @@ void app_main(void)
     ESP_ERROR_CHECK(bat_ble_lib_init());
     
     // Initialize counters
-    app_context_t *pAppContext = (app_context_t *)g_server.pContext;
     for (int i = 0; i < 3; i++) 
-        pAppContext->counterValues[i] = 10 * (i + 1); // Start with 10, 20, 30
+        g_appContext.counterValues[i] = 10 * (i + 1); // Start with 10, 20, 30
     
     // Define our service characteristics
     bat_gatts_char_config_t charConfigs[3] = 
@@ -251,7 +253,7 @@ void app_main(void)
                           ESP_GATT_CHAR_PROP_BIT_WRITE | 
                           ESP_GATT_CHAR_PROP_BIT_NOTIFY,
             .maxLen = 1,
-            .pInitialValue = &pAppContext->counterValues[0],
+            .pInitialValue = &g_appContext.counterValues[0],
             .initValueLen = 1,
             .hasNotifications = true,
             .hasIndications = false,
@@ -262,7 +264,7 @@ void app_main(void)
             .properties = ESP_GATT_CHAR_PROP_BIT_READ | 
                           ESP_GATT_CHAR_PROP_BIT_INDICATE,
             .maxLen = 1,
-            .pInitialValue = &pAppContext->counterValues[1],
+            .pInitialValue = &g_appContext.counterValues[1],
             .initValueLen = 1,
             .hasNotifications = false,
             .hasIndications = true,
@@ -275,7 +277,7 @@ void app_main(void)
                           ESP_GATT_CHAR_PROP_BIT_NOTIFY | 
                           ESP_GATT_CHAR_PROP_BIT_INDICATE,
             .maxLen = 1,
-            .pInitialValue = &pAppContext->counterValues[2],
+            .pInitialValue = &g_appContext.counterValues[2],
             .initValueLen = 1,
             .hasNotifications = true,
             .hasIndications = true,
@@ -293,7 +295,7 @@ void app_main(void)
 
     // Initialize the BLE server
     const int timeoutMs = 5000;
-    ESP_ERROR_CHECK(bat_gatts_init(&g_server, NULL, "CCCD Demo", 0x55, 
+    ESP_ERROR_CHECK(bat_gatts_init(&g_server, &g_appContext, "CCCD Demo", 0x55, 
                                 APP_SERVICE_UUID, 0x0940, timeoutMs));
     
     // Create the service with characteristics and CCCDs
@@ -319,8 +321,8 @@ void app_main(void)
 
     for (int i = 0; i < 3; i++) 
     {
-        if (pAppContext->updateTimers[i] != NULL) 
-            xTimerDelete(pAppContext->updateTimers[i], 0);
+        if (g_appContext.updateTimers[i] != NULL) 
+            xTimerDelete(g_appContext.updateTimers[i], 0);
     }
 
     ESP_ERROR_CHECK(bat_gatts_stop(&g_server, timeoutMs));

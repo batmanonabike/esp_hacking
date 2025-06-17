@@ -49,14 +49,25 @@ esp_err_t bat_uuid_from_32bit(uint32_t uuid_32, esp_bt_uuid_t *uuid);
 bool bat_uuid_equal(const esp_bt_uuid_t *uuid1, const esp_bt_uuid_t *uuid2);
 
 /**
- * @brief Converts UUID to string representation
+ * @brief Converts a UUID to string representation
  * 
- * @param uuid     Source UUID
- * @param str      Destination string buffer (must be at least 37 bytes)
- * @param len      Length of the destination buffer
+ * @param uuid     Pointer to esp_bt_uuid_t to convert
+ * @param str      Buffer to store string representation
+ * @param len      Length of the buffer (should be at least 37 bytes for 128-bit UUID)
  * 
  * @return ESP_OK if successful, otherwise appropriate error
  */
 esp_err_t bat_uuid_to_string(const esp_bt_uuid_t *uuid, char *str, size_t len);
+
+/**
+ * @brief Formats UUID for logging, with appropriate prefix based on UUID length
+ * 
+ * @param uuid     Pointer to esp_bt_uuid_t to format
+ * @param buffer   Buffer to store formatted string (should be at least 45 bytes)
+ * @param buf_size Size of the buffer
+ * 
+ * @return Pointer to the formatted string (same as buffer)
+ */
+const char *bat_uuid_to_log_string(const esp_bt_uuid_t *uuid, char *buffer, size_t buf_size);
 
 #endif /* BAT_UUID_H */

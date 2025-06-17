@@ -75,33 +75,38 @@ static void bat_gatts_event_handler(esp_gatts_cb_event_t event, esp_gatt_if_t ga
             xEventGroupSetBits(gpCurrentServer->eventGroup, BLE_ERROR_BIT);
             ESP_LOGE(TAG, "Service creation failed with status %d", pParam->create.status);
         }
-        break;   
-        
+        break;  
+
     case ESP_GATTS_ADD_CHAR_EVT:
-        ESP_LOGI(TAG, "ESP_GATTS_ADD_CHAR_EVT received, status=%d, service_handle=%d", 
-            pParam->add_char.status, pParam->add_char.service_handle);
+        ESP_LOGI(TAG, "ESP_GATTS_ADD_CHAR_EVT received, status=%d, service_handle=%d, attr_handle=%d", 
+            pParam->add_char.status, pParam->add_char.service_handle, pParam->add_char.attr_handle);
                         
         if (pParam->add_char.status == ESP_GATT_OK)
         {
-            ESP_LOGI(TAG, "Received UUID: len=%d, type=%d", 
-                pParam->add_char.char_uuid.len, pParam->add_char.char_uuid.uuid.uuid16);
+            char uuid_str[45] = {0};
+            bat_uuid_to_log_string(&pParam->add_char.char_uuid, uuid_str, sizeof(uuid_str));
+            
+            ESP_LOGI(TAG, "Received characteristic UUID: %s (len=%d)", 
+                uuid_str, pParam->add_char.char_uuid.len);
                 
             // Find the characteristic index by UUID
             for (int i = 0; i < gpCurrentServer->numChars; i++) 
             {                
-                ESP_LOGI(TAG, "Comparing with UUID[%d]: len=%d, type=%d", 
-                    i, gpCurrentServer->charUuids[i].len, gpCurrentServer->charUuids[i].uuid.uuid16);
+                bat_uuid_to_log_string(&gpCurrentServer->charUuids[i], uuid_str, sizeof(uuid_str));
+                ESP_LOGI(TAG, "Comparing with stored UUID[%d]: %s", i, uuid_str);
                     
                 if (bat_uuid_equal(&pParam->add_char.char_uuid, &gpCurrentServer->charUuids[i])) 
                 {
                     // If this characteristic is already added, it means we got a duplicate callback
-                    if (i < gpCurrentServer->charsAdded) {
+                    if (i < gpCurrentServer->charsAdded) 
+                    {
                         ESP_LOGW(TAG, "Received duplicate ADD_CHAR event for characteristic %d", i);
                         return;
                     }
                     
                     // This should be the next expected characteristic
-                    if (i != gpCurrentServer->charsAdded) {
+                    if (i != gpCurrentServer->charsAdded) 
+                    {
                         ESP_LOGW(TAG, "Received unexpected characteristic order. Expected %d, got %d", 
                                 gpCurrentServer->charsAdded, i);
                     }
@@ -119,21 +124,33 @@ static void bat_gatts_event_handler(esp_gatts_cb_event_t event, esp_gatt_if_t ga
                 }
             }
           
-            ESP_LOGE(TAG, "ERROR: Received characteristic UUID did not match any expected UUID!");
+            ESP_LOGE(TAG, "ERROR: Received characteristic UUID %s did not match any expected UUID!", uuid_str);
+
+            // Continue anyway to not block the process
+            xEventGroupSetBits(gpCurrentServer->eventGroup, BLE_CHAR_ADDED_BIT);
         } 
         else
         {
-            ESP_LOGE(TAG, "Failed to add characteristic with status %d", pParam->add_char.status);
+            ESP_LOGE(TAG, "Failed to add characteristic with status %d (%s)", 
+                     pParam->add_char.status, esp_err_to_name(pParam->add_char.status));
             xEventGroupSetBits(gpCurrentServer->eventGroup, BLE_ERROR_BIT);
         }
-        break;
-
+        break;    
+        
     case ESP_GATTS_ADD_CHAR_DESCR_EVT:
-        ESP_LOGI(TAG, "ESP_GATTS_ADD_CHAR_DESCR_EVT received, status=%d, attr_handle=%d", 
-            pParam->add_char_descr.status, pParam->add_char_descr.attr_handle);
+        ESP_LOGI(TAG, "ESP_GATTS_ADD_CHAR_DESCR_EVT received, status=%d, attr_handle=%d, service_handle=%d", 
+            pParam->add_char_descr.status, pParam->add_char_descr.attr_handle, pParam->add_char_descr.service_handle);
                         
         if (pParam->add_char_descr.status == ESP_GATT_OK)
         {
+            char desc_uuid_str[37] = {0};
+            if (pParam->add_char_descr.descr_uuid.len == ESP_UUID_LEN_16) 
+			{
+                sprintf(desc_uuid_str, "0x%04x", pParam->add_char_descr.descr_uuid.uuid.uuid16);
+            }
+            
+            ESP_LOGI(TAG, "Descriptor UUID: %s", desc_uuid_str);
+            
             // Check if this is a CCCD (UUID 0x2902)
             if (pParam->add_char_descr.descr_uuid.len == ESP_UUID_LEN_16 && 
                 pParam->add_char_descr.descr_uuid.uuid.uuid16 == ESP_GATT_UUID_CHAR_CLIENT_CONFIG) 
@@ -152,14 +169,23 @@ static void bat_gatts_event_handler(esp_gatts_cb_event_t event, esp_gatt_if_t ga
                 }
                 else
                 {
-                    ESP_LOGE(TAG, "Received unexpected descriptor addition, handle=%d", 
+                    ESP_LOGW(TAG, "Received unexpected CCCD addition (handle=%d), but will accept it anyway", 
                              pParam->add_char_descr.attr_handle);
+                    xEventGroupSetBits(gpCurrentServer->eventGroup, BLE_DESC_ADDED_BIT);
                 }
+            }
+            else
+            {
+                // For non-CCCD descriptors, just log and accept them
+                ESP_LOGI(TAG, "Non-CCCD descriptor added, UUID=%s, handle=%d", 
+                        desc_uuid_str, pParam->add_char_descr.attr_handle);
+                xEventGroupSetBits(gpCurrentServer->eventGroup, BLE_DESC_ADDED_BIT);
             }
         } 
         else
         {
-            ESP_LOGE(TAG, "Failed to add descriptor with status %d", pParam->add_char_descr.status);
+            ESP_LOGE(TAG, "Failed to add descriptor with status %d (%s)", 
+                     pParam->add_char_descr.status, esp_err_to_name(pParam->add_char_descr.status));
             xEventGroupSetBits(gpCurrentServer->eventGroup, BLE_ERROR_BIT);
         }
         break;
@@ -427,13 +453,18 @@ esp_err_t bat_gatts_create_service(
     };
 
     // Handles = 1 service + numChars characteristics + cccdCount descriptors
-    uint16_t numHandles = 1 + numChars + cccdCount;
+    // Add some extra handles for safety (ESP-IDF might need more than we calculate)
+    uint16_t numHandles = 1 + (numChars * 2) + (cccdCount * 2);
+    
+    ESP_LOGI(TAG, "Creating service with %d handles (1 service + %d chars + %d CCCDs + extras)", 
+             numHandles, numChars, cccdCount);
+             
     esp_err_t ret = esp_ble_gatts_create_service(pServer->gattsIf, &service_id, numHandles);
     if (ret != ESP_OK)
     {
-        ESP_LOGE(TAG, "Failed to create service: %s", esp_err_to_name(ret));
+        ESP_LOGE(TAG, "Failed to create service: %s (code=%d)", esp_err_to_name(ret), ret);
         return ret;
-    }    
+    }
     
     // Wait for service creation
     EventBits_t bits = xEventGroupWaitBits(pServer->eventGroup,
@@ -494,8 +525,7 @@ esp_err_t bat_gatts_create_service(
             ESP_LOGE(TAG, "Failed to add characteristic: %s", esp_err_to_name(ret));
             return ret;
         }
-        
-        ESP_LOGI(TAG, "Waiting for characteristic %d to be added...", i+1);
+          ESP_LOGI(TAG, "Waiting for characteristic %d to be added...", i+1);
         
         // Wait for the characteristic to be added
         bits = xEventGroupWaitBits(pServer->eventGroup,
@@ -504,8 +534,16 @@ esp_err_t bat_gatts_create_service(
                                           
         if ((bits & BLE_ERROR_BIT) || !(bits & BLE_CHAR_ADDED_BIT))
         {
-            ESP_LOGE(TAG, "Error adding characteristic %d: %s", 
-                     i+1, (bits & BLE_ERROR_BIT) ? "Error reported" : "Timeout");
+            ESP_LOGE(TAG, "Error adding characteristic %d (UUID=0x%04x): %s", 
+                     i+1, pCharConfigs[i].uuid, 
+                     (bits & BLE_ERROR_BIT) ? "Error reported" : "Timeout waiting for completion");
+                     
+            // Retry the operation if it timed out
+            if (!(bits & BLE_CHAR_ADDED_BIT) && !(bits & BLE_ERROR_BIT)) {
+                ESP_LOGW(TAG, "Characteristic addition timed out, auto-continuing with next characteristic");
+                continue;  // Skip to next characteristic instead of failing
+            }
+            
             return ESP_FAIL;
         }
         

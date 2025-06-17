@@ -204,3 +204,62 @@ esp_err_t bat_uuid_to_string(const esp_bt_uuid_t *uuid, char *str, size_t len)
         return ESP_ERR_INVALID_ARG;
     }
 }
+
+/**
+ * @brief Formats UUID for logging, with appropriate prefix based on UUID length
+ * 
+ * This function formats UUIDs in a standardized way for logging:
+ * - 16-bit UUIDs: "0xXXXX"
+ * - 32-bit UUIDs: "0xXXXXXXXX"
+ * - 128-bit UUIDs: "XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX"
+ * 
+ * @param uuid     Pointer to esp_bt_uuid_t to format
+ * @param buffer   Buffer to store formatted string
+ * @param buf_size Size of the buffer (should be at least 45 bytes)
+ * 
+ * @return Pointer to the formatted string (same as buffer)
+ */
+const char *bat_uuid_to_log_string(const esp_bt_uuid_t *uuid, char *buffer, size_t buf_size)
+{
+    if (uuid == NULL || buffer == NULL || buf_size < 12) 
+    {
+        // Minimal size needed for "Invalid UUID" + null
+        if (buffer != NULL && buf_size >= 12) 
+        {
+            strncpy(buffer, "Invalid UUID", buf_size - 1);
+            buffer[buf_size - 1] = '\0';
+        }
+        return buffer;
+    }
+    
+    // Clear the buffer
+    memset(buffer, 0, buf_size);
+    
+    switch (uuid->len) 
+    {
+        case ESP_UUID_LEN_16:
+            // Format: 0xXXXX
+            snprintf(buffer, buf_size, "0x%04x", uuid->uuid.uuid16);
+            break;
+            
+        case ESP_UUID_LEN_32:
+            // Format: 0xXXXXXXXX
+            snprintf(buffer, buf_size, "0x%08" PRIx32, uuid->uuid.uuid32);
+            break;
+            
+        case ESP_UUID_LEN_128:
+            // Just use the existing to_string function for 128-bit
+            if (bat_uuid_to_string(uuid, buffer, buf_size) != ESP_OK) 
+            {
+                strncpy(buffer, "Invalid 128-bit UUID", buf_size - 1);
+                buffer[buf_size - 1] = '\0';
+            }
+            break;
+            
+        default:
+            snprintf(buffer, buf_size, "Invalid UUID len=%d", uuid->len);
+            break;
+    }
+    
+    return buffer;
+}
