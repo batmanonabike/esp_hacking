@@ -221,27 +221,24 @@ static void bat_gatts_event_handler(esp_gatts_cb_event_t event, esp_gatt_if_t ga
 
     case ESP_GATTS_WRITE_EVT:
         // Check if this is a CCCD write (handle matches a descriptor handle)
-        if (pParam->write.handle >= 0) 
+        for (int i = 0; i < gpCurrentServer->descrsAdded; i++) 
         {
-            for (int i = 0; i < gpCurrentServer->descrsAdded; i++) 
+            if (pParam->write.handle == gpCurrentServer->descrHandles[i]) 
             {
-                if (pParam->write.handle == gpCurrentServer->descrHandles[i]) 
+                ESP_LOGI(TAG, "CCCD write detected for characteristic %d: value=0x%02x%02x", 
+                            i, pParam->write.value[1], pParam->write.value[0]);
+                
+                // Call the descriptor write callback
+                if (gpCurrentServer->callbacks.onDescWrite != NULL) 
+                    gpCurrentServer->callbacks.onDescWrite(gpCurrentServer, pParam);
+                
+                // Auto-respond to CCCD writes
+                if (pParam->write.need_rsp) 
                 {
-                    ESP_LOGI(TAG, "CCCD write detected for characteristic %d: value=0x%02x%02x", 
-                             i, pParam->write.value[1], pParam->write.value[0]);
-                    
-                    // Call the descriptor write callback
-                    if (gpCurrentServer->callbacks.onDescWrite != NULL) 
-                        gpCurrentServer->callbacks.onDescWrite(gpCurrentServer, pParam);
-                    
-                    // Auto-respond to CCCD writes
-                    if (pParam->write.need_rsp) 
-                    {
-                        esp_ble_gatts_send_response(gatts_if, pParam->write.conn_id, 
-                                                  pParam->write.trans_id, ESP_GATT_OK, NULL);
-                    }
-                    return;
+                    esp_ble_gatts_send_response(gatts_if, pParam->write.conn_id, 
+                                                pParam->write.trans_id, ESP_GATT_OK, NULL);
                 }
+                return;
             }
         }
         

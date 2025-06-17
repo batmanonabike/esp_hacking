@@ -237,8 +237,11 @@ void app_main(void)
     
     // Initialize the libraries
     ESP_ERROR_CHECK(bat_lib_init());
+    ESP_ERROR_CHECK(bat_blink_init(-1));
     ESP_ERROR_CHECK(bat_ble_lib_init());
-    
+
+    bat_set_blink_mode(BLINK_MODE_FAST);
+
     // Initialize counters
     for (int i = 0; i < 3; i++) 
         g_appContext.counterValues[i] = 10 * (i + 1); // Start with 10, 20, 30
@@ -310,11 +313,13 @@ void app_main(void)
     ESP_LOGI(TAG, "  - Char 3 (0xFF03): Read, Write, Notify, Indicate");
     
     // Main loop
+    bat_set_blink_mode(BLINK_MODE_BREATHING);
     while (1)
     {
         // Nothing to do here - everything is handled by callbacks and timers
         vTaskDelay(pdMS_TO_TICKS(1000));
     }
+    bat_set_blink_mode(BLINK_MODE_BASIC);
 
     // Clean up
     stop_notification_timers(&g_server);
@@ -328,6 +333,7 @@ void app_main(void)
     ESP_ERROR_CHECK(bat_gatts_stop(&g_server, timeoutMs));
     ESP_ERROR_CHECK(bat_gatts_deinit(&g_server));
     ESP_ERROR_CHECK(bat_ble_lib_deinit());
+    ESP_ERROR_CHECK(bat_blink_deinit());
     ESP_ERROR_CHECK(bat_lib_deinit());
 
     ESP_LOGI(TAG, "BLE APP server example finished");
