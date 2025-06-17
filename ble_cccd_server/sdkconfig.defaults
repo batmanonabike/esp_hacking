@@ -1,0 +1,25 @@
+# Enable Bluetooth
+CONFIG_BT_ENABLED=y
+CONFIG_BT_BLE_ENABLED=y
+CONFIG_BT_GATTS_ENABLE=y
+
+# Set the maximum number of characteristics and descriptors
+CONFIG_BT_GATT_MAX_SR_PROFILES=8
+CONFIG_BT_GATT_MAX_SR_ATTRIBUTES=100
+
+# Enable automatic service change notifications
+CONFIG_BT_GATTS_SEND_SERVICE_CHANGE_AUTO=y
+
+# Enable the GATT client for testing
+CONFIG_BT_GATTC_ENABLE=y
+CONFIG_BT_GATTC_MAX_CACHE_CHAR=40
+
+# Enable SMP for security
+CONFIG_BT_BLE_SMP_ENABLE=y
+
+# Set BLE host stack to full mode (both controller and host)
+CONFIG_BT_CTRL_MODE_BR_EDR_ONLY=n
+CONFIG_BT_CTRL_MODE_BLE_ONLY=y
+
+# Use NIMBLE stack (more efficient)
+CONFIG_BT_NIMBLE_ENABLED=y

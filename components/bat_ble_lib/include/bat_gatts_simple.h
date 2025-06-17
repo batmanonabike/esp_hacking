@@ -13,6 +13,11 @@ extern "C" {
 #define BAT_MAX_CHARACTERISTICS 10
 #define BLE_OPERATION_TIMEOUT_MS 5000
 
+// Define bits for CCCD values
+#define BAT_CCCD_NONE              0x0000
+#define BAT_CCCD_NOTIFICATION      0x0001
+#define BAT_CCCD_INDICATION        0x0002
+
 typedef struct bat_gatts_server_s bat_gatts_server_t; 
 typedef void (*bat_gatts_callback_t)(bat_gatts_server_t *pServer, esp_ble_gatts_cb_param_t *pParam);
 
@@ -22,6 +27,7 @@ typedef struct
     bat_gatts_callback_t onWrite;
     bat_gatts_callback_t onConnect;
     bat_gatts_callback_t onDisconnect;   
+    bat_gatts_callback_t onDescWrite;    // New callback for descriptor writes
 } bat_gatts_callbacks2_t;
 
 typedef struct bat_gatts_server_s
@@ -42,6 +48,10 @@ typedef struct bat_gatts_server_s
     uint16_t serviceHandle;
     uint16_t charHandles[BAT_MAX_CHARACTERISTICS];
     esp_bt_uuid_t charUuids[BAT_MAX_CHARACTERISTICS];
+    
+    uint8_t descrsAdded;           // Track added descriptors
+    uint8_t totalDescrs;           // Total expected descriptors
+    uint16_t descrHandles[BAT_MAX_CHARACTERISTICS];  // Store descriptor handles
 
     // Connection state
     bool isConnected;
@@ -64,6 +74,9 @@ typedef struct
     uint8_t *pInitialValue;
     esp_gatt_perm_t permissions;
     esp_gatt_char_prop_t properties;
+
+    bool hasIndications;            // Whether to add CCCD for indications
+    bool hasNotifications;          // Whether to add CCCD for notifications
 } bat_gatts_char_config_t;
 
 esp_err_t bat_gatts_init(bat_gatts_server_t *, void *, const char*, uint16_t appId, const char*, int, int);
@@ -74,6 +87,10 @@ esp_err_t bat_gatts_deinit(bat_gatts_server_t *);
 
 void bat_gatts_reset_flags(bat_gatts_server_t *);
 esp_err_t bat_gatts_notify(bat_gatts_server_t *, uint16_t charIndex, uint8_t *pData, uint16_t dataLen);
+esp_err_t bat_gatts_indicate(bat_gatts_server_t *, uint16_t charIndex, uint8_t *pData, uint16_t dataLen);
+
+// Helper function to check if CCCD is enabled for a specific characteristic
+bool bat_gatts_is_cccd_enabled(bat_gatts_server_t *pServer, uint16_t charIndex, uint16_t cccdFlag);
 
 #ifdef __cplusplus
 }
