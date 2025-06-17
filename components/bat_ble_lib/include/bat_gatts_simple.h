@@ -38,8 +38,10 @@ typedef struct bat_gatts_server_s
 
     // Service information
     uint8_t numChars;
+    uint8_t charsAdded;
     uint16_t serviceHandle;
     uint16_t charHandles[BAT_MAX_CHARACTERISTICS];
+    esp_bt_uuid_t charUuids[BAT_MAX_CHARACTERISTICS];
 
     // Connection state
     bool isConnected;

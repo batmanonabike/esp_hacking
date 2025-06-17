@@ -29,7 +29,8 @@ static const char *TAG = "bat_gatts_simple";
 #define BLE_DISCONNECTED_BIT (1 << 7)
 #define BLE_SERVICE_STOP_COMPLETE_BIT (1 << 8)
 #define BLE_ADV_STOP_COMPLETE_BIT (1 << 9)
-#define BLE_ERROR_BIT (1 << 10)
+#define BLE_CHAR_ADDED_BIT (1 << 10)
+#define BLE_ERROR_BIT (1 << 11)
 
 static bat_gatts_server_t *gpCurrentServer = NULL;
 static esp_ble_adv_params_t g_adv_params = {
@@ -73,18 +74,47 @@ static void bat_gatts_event_handler(esp_gatts_cb_event_t event, esp_gatt_if_t ga
             xEventGroupSetBits(gpCurrentServer->eventGroup, BLE_ERROR_BIT);
             ESP_LOGE(TAG, "Service creation failed with status %d", pParam->create.status);
         }
-        break;
-
+        break;   
+        
+        
     case ESP_GATTS_ADD_CHAR_EVT:
+        ESP_LOGI(TAG, "ESP_GATTS_ADD_CHAR_EVT received, status=%d, service_handle=%d", 
+            pParam->add_char.status, pParam->add_char.service_handle);
+                        
         if (pParam->add_char.status == ESP_GATT_OK)
         {
-            uint8_t charIdx = gpCurrentServer->numChars - 1;
-            gpCurrentServer->charHandles[charIdx] = pParam->add_char.attr_handle;
-            ESP_LOGI(TAG, "Characteristic added, handle=%d", pParam->add_char.attr_handle);
-        }
+            ESP_LOGI(TAG, "Received UUID: len=%d, type=%d", 
+                pParam->add_char.char_uuid.len, pParam->add_char.char_uuid.uuid.uuid16);
+                
+            // Find the characteristic index by UUID
+            for (int i = 0; i < gpCurrentServer->numChars; i++) 
+            {                
+                ESP_LOGI(TAG, "Comparing with UUID[%d]: len=%d, type=%d", 
+                    i, gpCurrentServer->charUuids[i].len, gpCurrentServer->charUuids[i].uuid.uuid16);
+                    
+                if (bat_uuid_equal(&pParam->add_char.char_uuid, &gpCurrentServer->charUuids[i])) 
+                {
+                    gpCurrentServer->charHandles[i] = pParam->add_char.attr_handle;
+                    gpCurrentServer->charsAdded++;
+                    ESP_LOGI(TAG, "Characteristic %d added, handle=%d, added %d of %d", 
+                        i, pParam->add_char.attr_handle, gpCurrentServer->charsAdded, gpCurrentServer->numChars);
+                    
+                    // If all chars are added, set the event bit
+                    if (gpCurrentServer->charsAdded == gpCurrentServer->numChars) 
+                    {
+                        xEventGroupSetBits(gpCurrentServer->eventGroup, BLE_CHAR_ADDED_BIT);
+                        ESP_LOGI(TAG, "All characteristics added successfully");
+                    }
+                    return;
+                }
+            }
+          
+            ESP_LOGE(TAG, "ERROR: Received characteristic UUID did not match any expected UUID!");
+        } 
         else
         {
             ESP_LOGE(TAG, "Failed to add characteristic with status %d", pParam->add_char.status);
+            xEventGroupSetBits(gpCurrentServer->eventGroup, BLE_ERROR_BIT);
         }
         break;
 
@@ -216,63 +246,78 @@ void bat_gatts_reset_flags(bat_gatts_server_t *pServer)
     xEventGroupClearBits(pServer->eventGroup, 0x00FFFFFF);
 }
 
+static esp_err_t bat_gatts_server_init(bat_gatts_server_t *pServer, void *pContext, 
+    const char *pDeviceName, uint16_t appId, const char *pServiceUuid, int appearance)
+{
+    if (pServer == NULL || pServiceUuid == NULL)
+    {        
+        ESP_LOGE(TAG, "Invalid arguments: pServer or pServiceUuid is NULL");
+        return ESP_ERR_INVALID_ARG;    
+    }
+        
+    memset(pServer, 0, sizeof(bat_gatts_server_t));
+    esp_err_t ret = bat_uuid_from_string(pServiceUuid, &pServer->serviceId);
+    if (ret == ESP_OK)
+    {
+        if (pDeviceName == NULL)
+            pServer->deviceName[0] = '\0';
+        else
+            strncpy(pServer->deviceName, pDeviceName, sizeof(pServer->deviceName) - 1);
+    
+        pServer->numChars = 0;
+        pServer->appId = appId;
+        pServer->charsAdded = 0;
+        pServer->pContext = pContext;
+        pServer->appearance = appearance;
+        pServer->pAdvParams = &g_adv_params;
+        pServer->eventGroup = xEventGroupCreate();
+
+        if (pServer->eventGroup == NULL)
+        {
+            ESP_LOGE(TAG, "Failed to create event groups");
+            ret = ESP_ERR_NO_MEM;
+        }
+    }
+
+    return ret;
+} 
+
 // A simple initialization function that handles all the BLE setup.
 esp_err_t bat_gatts_init(
     bat_gatts_server_t *pServer, void *pContext, const char *pDeviceName, uint16_t appId,
     const char *pServiceUuid, int appearance, int timeoutMs)
 {
-    if (pServer == NULL || pServiceUuid == NULL)
-        return ESP_ERR_INVALID_ARG;
-
-    memset(pServer, 0, sizeof(bat_gatts_server_t));
-
-    esp_err_t ret = bat_uuid_from_string(pServiceUuid, &pServer->serviceId);
+    esp_err_t ret = bat_gatts_server_init(pServer, pContext, pDeviceName, appId, pServiceUuid, appearance);
     if (ret != ESP_OK)
         return ret;
 
-    if (pDeviceName == NULL)
-        pServer->deviceName[0] = '\0';
-    else
-        strncpy(pServer->deviceName, pDeviceName, sizeof(pServer->deviceName) - 1);
+    gpCurrentServer = pServer;
 
-    pServer->appId = appId;
-    pServer->pContext = pContext;
-    pServer->appearance = appearance;
-    pServer->pAdvParams = &g_adv_params;
-    pServer->eventGroup = xEventGroupCreate();
-
-    if (pServer->eventGroup == NULL)
-        ESP_LOGE(TAG, "Failed to create event groups");
+    ret = esp_ble_gatts_register_callback(bat_gatts_event_handler);
+    if (ret != ESP_OK)
+        ESP_LOGE(TAG, "Failed to register GATTS callback: %s", esp_err_to_name(ret));
     else
     {
-        gpCurrentServer = pServer;
-
-        ret = esp_ble_gatts_register_callback(bat_gatts_event_handler);
+        ret = esp_ble_gap_register_callback(bat_gatts_gap_event_handler);
         if (ret != ESP_OK)
-            ESP_LOGE(TAG, "Failed to register GATTS callback: %s", esp_err_to_name(ret));
+            ESP_LOGE(TAG, "Failed to register GAP callback: %s", esp_err_to_name(ret));
         else
         {
-            ret = esp_ble_gap_register_callback(bat_gatts_gap_event_handler);
-            if (ret != ESP_OK)
-                ESP_LOGE(TAG, "Failed to register GAP callback: %s", esp_err_to_name(ret));
-            else
-            {
-                ret = bat_ble_gatts_app_register(appId);
-                if (ret == ESP_OK)
-                {
-                    // Wait for registration
-                    EventBits_t bits = xEventGroupWaitBits(gpCurrentServer->eventGroup,
-                                                           BLE_SERVER_REGISTERED_BIT | BLE_ERROR_BIT,
-                                                           pdTRUE, pdFALSE, pdMS_TO_TICKS(timeoutMs));
+            ret = bat_ble_gatts_app_register(appId);
+            if (ret == ESP_OK)
+            {                    
+                // Wait for registration
+                EventBits_t bits = xEventGroupWaitBits(gpCurrentServer->eventGroup,
+                                                        BLE_SERVER_REGISTERED_BIT | BLE_ERROR_BIT,
+                                                        pdTRUE, pdFALSE, pdMS_TO_TICKS(timeoutMs));
 
-                    if ((bits & BLE_ERROR_BIT) || !(bits & BLE_SERVER_REGISTERED_BIT))
-                    {
-                        ESP_LOGE(TAG, "Error during BLE server registration: %s",
-                                 (bits & BLE_ERROR_BIT) ? "Error reported" : "Timeout");
-                        return ESP_FAIL;
-                    }
-                    return ESP_OK;
+                if ((bits & BLE_ERROR_BIT) || !(bits & BLE_SERVER_REGISTERED_BIT))
+                {
+                    ESP_LOGE(TAG, "Error during BLE server registration: %s",
+                                (bits & BLE_ERROR_BIT) ? "Error reported" : "Timeout");
+                    return ESP_FAIL;
                 }
+                return ESP_OK;
             }
         }
     }
@@ -305,9 +350,9 @@ esp_err_t bat_gatts_create_service(
     }
 
     esp_gatt_srvc_id_t service_id = {
-        .id = {
-            .uuid = pServer->serviceId},
-        .is_primary = true};
+        .id = { .uuid = pServer->serviceId },
+        .is_primary = true
+    };
 
     // Handles = 1 service + 2 per characteristic (char + descriptor)
     uint16_t numHandles = 1 + (numChars * 2);
@@ -316,8 +361,8 @@ esp_err_t bat_gatts_create_service(
     {
         ESP_LOGE(TAG, "Failed to create service: %s", esp_err_to_name(ret));
         return ret;
-    }
-
+    }    
+    
     // Wait for service creation
     EventBits_t bits = xEventGroupWaitBits(pServer->eventGroup,
                                            BLE_SERVICE_CREATED_BIT | BLE_ERROR_BIT,
@@ -328,10 +373,15 @@ esp_err_t bat_gatts_create_service(
         ESP_LOGE(TAG, "Error during server creation: %s",
                  (bits & BLE_ERROR_BIT) ? "Error reported" : "Timeout");
         return ESP_FAIL;
-    }
-
+    }    
+    
     // Add characteristics to service
+    pServer->charsAdded = 0;
     pServer->numChars = numChars;
+    
+    // Clear event bit before adding characteristics
+    xEventGroupClearBits(pServer->eventGroup, BLE_CHAR_ADDED_BIT);
+    
     for (int i = 0; i < numChars; i++)
     {
         esp_bt_uuid_t char_uuid;
@@ -341,12 +391,23 @@ esp_err_t bat_gatts_create_service(
             ESP_LOGE(TAG, "Failed to create characteristic UUID: %s", esp_err_to_name(ret));
             return ret;
         }
+        
+        // Store the UUID for later matching in the event handler
+        memcpy(&pServer->charUuids[i], &char_uuid, sizeof(esp_bt_uuid_t));
 
         esp_attr_value_t char_val = {
             .attr_max_len = pCharConfigs[i].maxLen,
             .attr_len = pCharConfigs[i].initValueLen,
-            .attr_value = pCharConfigs[i].pInitialValue};
+            .attr_value = pCharConfigs[i].pInitialValue
+        };
 
+        ESP_LOGI(TAG, "Adding characteristic %d, UUID len=%d, type=%d, permissions=0x%x, properties=0x%x", 
+                i, char_uuid.len, char_uuid.uuid.uuid16, 
+                pCharConfigs[i].permissions, pCharConfigs[i].properties);
+        
+        // Ensure the global server pointer is set for callback processing
+        gpCurrentServer = pServer;
+        
         ret = bat_ble_gatts_add_char(pServer->serviceHandle, &char_uuid,
                                      pCharConfigs[i].permissions, pCharConfigs[i].properties,
                                      &char_val, NULL);
@@ -355,8 +416,29 @@ esp_err_t bat_gatts_create_service(
             ESP_LOGE(TAG, "Failed to add characteristic: %s", esp_err_to_name(ret));
             return ret;
         }
+        
+        ESP_LOGI(TAG, "Characteristic %d add request sent successfully", i);
     }
 
+    // Wait for all characteristics to be added
+    ESP_LOGI(TAG, "Waiting for %d characteristics to be added...", numChars);
+    
+    // Ensure the global server pointer is set correctly during the wait
+    gpCurrentServer = pServer;
+    
+    bits = xEventGroupWaitBits(pServer->eventGroup,
+                               BLE_CHAR_ADDED_BIT | BLE_ERROR_BIT,
+                               pdTRUE, pdFALSE, pdMS_TO_TICKS(timeoutMs));
+                                          
+    if ((bits & BLE_ERROR_BIT) || !(bits & BLE_CHAR_ADDED_BIT))
+    {
+        ESP_LOGE(TAG, "Error during characteristic addition: %s (currentCharsAdded=%d, numChars=%d)",
+                 (bits & BLE_ERROR_BIT) ? "Error reported" : "Timeout",
+                 pServer->charsAdded, pServer->numChars);
+        return ESP_FAIL;
+    }
+    
+    ESP_LOGI(TAG, "All %d characteristics added successfully", numChars);
     return ESP_OK;
 }
 
