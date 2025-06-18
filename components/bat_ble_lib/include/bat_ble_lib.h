@@ -5,6 +5,7 @@
 
 #include "bat_lib.h"
 #include "bat_ble_server.h"
+#include "bat_ble_client.h"
 #include "bat_gatts_simple.h"
 
 #ifdef __cplusplus

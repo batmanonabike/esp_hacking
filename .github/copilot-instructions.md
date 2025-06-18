@@ -19,39 +19,17 @@ If you consider a task not clear, or not possible, then ask for more details bef
 - **Project Structure**: Each project is self-contained but references shared components via `EXTRA_COMPONENT_DIRS`
 - **Separation of Concerns**: Distinct modules for BLE client, BLE server, WiFi, LED control, and logging
 
-### Callback Pattern
-- Use structured callback patterns for asynchronous event handling
-- Always provide context pointers in callback structures
-- Initialize callbacks with no-op functions for optional handlers
-- Example pattern:
-```c
-typedef struct {
-    void *pContext;
-    void (*on_event)(struct callback_t *, event_param_t *);
-} callback_t;
-
-void callback_init(callback_t *pCallbacks, void *pContext) {
-    pCallbacks->pContext = pContext;
-    if (pCallbacks->on_event == NULL)
-        pCallbacks->on_event = no_op_handler;
-}
-```
+### Simplified API
+- Create library code that is easy to use with simplified APIs for starting up.
+- See bat_gatts_simple as an example of reusable code that keeps complexity in the library. 
+- Ensure that asynchronous calls are supplimented with appropriate waiting calls (xEventGroupWaitBits).
+E.g. See BLE_ERROR_BIT and BLE_SERVICE_STARTED_BIT, or BLE_DESC_ADDED_BIT.
 
 ### Error Handling Strategy
 - **ESP-IDF Error Codes**: Always use `esp_err_t` return types for functions that can fail
 - **Error Propagation**: Check and propagate errors using `ESP_ERROR_CHECK()` or custom error handling
 - **Logging**: Use structured logging with appropriate log levels (`ESP_LOGI`, `ESP_LOGE`, `ESP_LOGW`, `ESP_LOGD`)
 - **Custom Error Handler**: Use `ESP_ERROR_CHECK_RESTART()` for critical failures that should restart the system
-
-### Event-Driven Architecture
-- Use FreeRTOS event groups for synchronization between tasks
-- Implement state machines using event bits for complex workflows
-- Example pattern:
-```c
-EventGroupHandle_t event_group = xEventGroupCreate();
-EventBits_t bits = xEventGroupWaitBits(event_group, TARGET_BIT | ERROR_BIT, 
-    pdTRUE, pdFALSE, timeout);
-```
 
 ## Code Style Guidelines
 
@@ -65,6 +43,11 @@ EventBits_t bits = xEventGroupWaitBits(event_group, TARGET_BIT | ERROR_BIT,
 - **Variables**: Use descriptive names with context
   - Pointers: Use `p` prefix (e.g., `pContext`, `pCallbacks`)
   - Arrays/strings: Use descriptive names (e.g., `szAdvName`)
+
+### Code Formatting
+- **New lines**: Ensure that a new line is added when inserting new code.
+I've recently noticed that new lines are not being added when inserting new code.
+Pay careful attention to this, as it can lead to compilation errors.
 
 ### Function Design
 - **Single Responsibility**: Each function should have one clear purpose
@@ -192,3 +175,13 @@ In general do not build projects unless you are asked to do so.
 - **Peripheral Drivers**: Follow ESP-IDF driver patterns for hardware peripherals
 
 Remember to always refer to the latest ESP-IDF documentation and follow the established patterns in the existing codebase when implementing new features.
+
+### References:
+- **gattc**: [ESP-IDF GATT Client API](https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/bluetooth/esp_gattc_api.html)
+- **gatts**: [ESP-IDF GATT Server API](https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/bluetooth/esp_gatts_api.html)
+- **BLE Security**: [ESP-IDF BLE Security](https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/bluetooth/esp_ble_security.html)
+- **ESP-IDF Programming Guide**: [ESP-IDF Programming Guide](https://docs.espressif.com/projects/esp-idf/en/latest/esp32/get-started/index.html)
+- **ESP-IDF CMake Guide**: [ESP-IDF CMake Guide](https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-guides/cmake.html)
+- **ESP-IDF Logging**: [ESP-IDF Logging](https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/system/log.html) 
+- **ESP-IDF FreeRTOS**: [ESP-IDF FreeRTOS](https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/system/freertos.html)
+- **ESP-IDF BLE Examples**: [ESP-IDF BLE Examples](https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/bluetooth/esp_ble_examples.html)
