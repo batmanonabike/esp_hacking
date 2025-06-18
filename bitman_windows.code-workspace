@@ -19,9 +19,6 @@
             "path": "./ble_server"
         },
         {
-            "path": "./ble_server2"
-        },
-        {
             "path": "./ble_battery_server"
         },
         {
@@ -32,8 +29,8 @@
         },
         {
             "path": "./basic_esp_fsm"
-            },
-            {
+        },
+        {
             "path": "./ble_restart_server"
         },
         {

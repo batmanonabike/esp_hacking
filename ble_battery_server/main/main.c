@@ -1,177 +1,260 @@
+/**
+ * Battery Service BLE Server
+ * 
+ * Implements a standard BLE Battery Service (UUID: 0x180F)
+ * with Battery Level characteristic (UUID: 0x2A19)
+ * 
+ * c:\Users\mbrown\source\repos\_a\esp_hacking_10\ble_battery_server2\main\main.c
+ */
+
+#include <stdio.h>
 #include <string.h>
 #include "esp_log.h"
 #include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
 #include "freertos/event_groups.h"
+#include "freertos/timers.h"
 
 #include "bat_lib.h"
 #include "bat_config.h"
+#include "bat_ble_lib.h"
+#include "bat_gatts_simple.h"
 
-static const char *TAG = "ble_battery_server_app";
+static const char *TAG = "ble_battery_server";
 
-typedef struct app_context
+#define BATTERY_LEVEL_CHAR_UUID 0x2A19
+#define BATTERY_UPDATE_INTERVAL 10000
+
+// Simulation parameters
+#define BATTERY_LEVEL_MAX 100
+#define BATTERY_LEVEL_MIN 20
+#define BATTERY_DISCHARGE_STEP 1
+#define BATTERY_RECHARGE_STEP 5
+
+// Battery server context
+typedef struct {
+    bool discharging;               // Whether battery is discharging or recharging
+    uint8_t batteryLevel;           // Current battery level percentage (0-100)
+    bool notificationsEnabled;      // Whether notifications are enabled
+    TimerHandle_t updateTimer;      // Timer for periodic battery level updates
+} app_context_t;
+
+static app_context_t g_appContext = {0};
+static bat_gatts_server_t g_server = {0};
+
+static void battery_timer_callback(TimerHandle_t xTimer);
+static void start_battery_simulation(bat_gatts_server_t *pServer);
+static void stop_battery_simulation(bat_gatts_server_t *pServer);
+
+static void on_connect(bat_gatts_server_t *pServer, esp_ble_gatts_cb_param_t *pParam)
 {
-    const char *pszAdvName;
-    uint16_t battery_level_handle;
-    bat_ble_uuid128_t battery_level_uuid;
-    bat_ble_uuid128_t battery_service_uuid;
-
-} app_context;
-
-// Our battery service uses:
-// 0x180F - Battery Service UUID (specific to battery)
-// 0x2A19 - Battery Level Characteristic UUID (specific to battery)
-// 0x2902 - CCCD (generic - same UUID used by heart rate monitors, thermometers, etc.)
-//
-// The 0x2902 descriptor is simply a mechanism that allows clients to subscribe to notifications.
-// It's a general BLE feature that the battery service uses, but it's not specifically a battery thing.
-static void app_context_init(app_context *pContext)
-{
-    pContext->battery_level_handle = 0;
-    pContext->pszAdvName = "Bitmans Battery";
-
-    const char *pszBatteryLevelId = bat_get_battery_level_id();
-    const char *pszBatteryServiceId = bat_get_battery_server_id();
-    ESP_ERROR_CHECK(bat_ble_string4_to_uuid128(pszBatteryLevelId, &pContext->battery_level_uuid));
-    ESP_ERROR_CHECK(bat_ble_string4_to_uuid128(pszBatteryServiceId, &pContext->battery_service_uuid));
+    ESP_LOGI(TAG, "Client connected");
+    app_context_t *pAppContext = (app_context_t *)pServer->pContext;
+    
+    // Reset notification state
+    pAppContext->notificationsEnabled = false;
+    
+    // Start battery simulation
+    start_battery_simulation(pServer);
 }
 
-////////////////////////////////////////////////////////////////////////////////////////////////////
-// Gatts callbacks
-static void app_on_gatts_reg(bat_gatts_callbacks_t *pCb, esp_ble_gatts_cb_param_t *pParam)
+
+static void on_disconnect(bat_gatts_server_t *pServer, esp_ble_gatts_cb_param_t *pParam)
 {
-    app_context *pAppContext = (app_context *)pCb->pContext;
-    bat_gatts_create_service128(pCb->gatts_if, &pAppContext->battery_service_uuid);
+    ESP_LOGI(TAG, "Client disconnected, restarting advertising");
+    
+    // Stop battery simulation
+    stop_battery_simulation(pServer);
+    
+    // Auto restart advertising on disconnect
+    bat_ble_gap_start_advertising(pServer->pAdvParams);
 }
 
-static void app_on_gatts_create(bat_gatts_callbacks_t *pCb, esp_ble_gatts_cb_param_t *pParam)
+// Callback for characteristic reads
+static void on_read(bat_gatts_server_t *pServer, esp_ble_gatts_cb_param_t *pParam)
 {
-    // Here we create the characteristic for the battery level.
-    app_context *pAppContext = (app_context *)pCb->pContext;
-    bat_gatts_create_char128(
-        pCb->gatts_if, pCb->service_handle, &pAppContext->battery_level_uuid,
-        ESP_GATT_CHAR_PROP_BIT_READ | ESP_GATT_CHAR_PROP_BIT_NOTIFY, // TODO: handle notifications
-        ESP_GATT_PERM_READ);
-}
-
-static void app_on_gatts_add_char(bat_gatts_callbacks_t *pCb, esp_ble_gatts_cb_param_t *pParam)
-{
-    app_context *pAppContext = (app_context *)pCb->pContext;
-    if (bat_ble_uuid_try_match(&pParam->add_char.char_uuid, &pAppContext->battery_level_uuid))
+    uint16_t handle = pParam->read.handle;
+    app_context_t *pAppContext = (app_context_t *)pServer->pContext;
+    
+    // Check if read is for Battery Level characteristic
+    if (handle == pServer->charHandles[0]) 
     {
-        pAppContext->battery_level_handle = pParam->add_char.attr_handle;
-        ESP_LOGI(TAG, "Battery level characteristic added with handle: %d", pAppContext->battery_level_handle);
-
-        // Add CCCD so clients can enable notifications
-        bat_gatts_add_cccd(pCb->service_handle, pAppContext->battery_level_handle);
-    }
-
-    // TODO: delete/restart service if we fail to add the characteristic???
-}
-
-static void app_on_add_char_desc(bat_gatts_callbacks_t *pCb, esp_ble_gatts_cb_param_t *pParam)
-{
-    bat_gatts_start_service(pCb->service_handle);
-}
-
-static void app_on_gatts_start(bat_gatts_callbacks_t *pCb, esp_ble_gatts_cb_param_t *pParam)
-{
-    app_context *pAppContext = (app_context *)pCb->pContext;
-    bat_gatts_begin_advert_data_set128(pAppContext->pszAdvName, &pAppContext->battery_service_uuid);
-}
-
-static void app_on_gatts_connect(bat_gatts_callbacks_t *pCb, esp_ble_gatts_cb_param_t *pParam)
-{
-    bat_gatts_stop_advertising();
-
-    // You might want to cache the connection ID for later use for notifications,
-    // to send responses to the client, to manage the connection state,
-    // or to manage the connection state.
-}
-
-static void app_on_gatts_read(bat_gatts_callbacks_t *pCb, esp_ble_gatts_cb_param_t *pParam)
-{
-    app_context *pAppContext = (app_context *)pCb->pContext;
-
-    // This is a read request for the battery level characteristic
-    if (pParam->read.handle == pAppContext->battery_level_handle)
-    {
-        uint8_t battery_level = 42; // Simulated value
-        ESP_LOGI(TAG, "Sending battery level response: %d", battery_level);
-
-        bat_gatts_send_uint8(
-            pCb->gatts_if,
-            pParam->read.handle, pParam->read.conn_id, pParam->read.trans_id,
-            ESP_GATT_OK, battery_level);
+        ESP_LOGI(TAG, "Client read battery level: %d%%", pAppContext->batteryLevel);
     }
 }
 
-static void app_on_gatts_disconnect(bat_gatts_callbacks_t *pCb, esp_ble_gatts_cb_param_t *pParam)
+// Callback for descriptor writes (for CCCD)
+static void on_desc_write(bat_gatts_server_t *pServer, esp_ble_gatts_cb_param_t *pParam)
 {
-    app_context *pAppContext = (app_context *)pCb->pContext;
-    bat_gatts_begin_advert_data_set128(pAppContext->pszAdvName, &pAppContext->battery_service_uuid);
+    // Find which descriptor was written
+    uint16_t handle = pParam->write.handle;
+    app_context_t *pAppContext = (app_context_t *)pServer->pContext;
+    
+    // Check if it's CCCD for Battery Level characteristic
+    if (handle == pServer->descrHandles[0]) 
+    {
+        // CCCD write operations should have 2 bytes of data
+        if (pParam->write.len == 2) 
+        {
+            uint16_t descValue = pParam->write.value[0] | (pParam->write.value[1] << 8);
+            
+            // Check for notifications bit
+            if (descValue & BAT_CCCD_NOTIFICATION) 
+            {
+                ESP_LOGI(TAG, "Battery Level notifications enabled");
+                pAppContext->notificationsEnabled = true;
+                
+                // Send initial notification with current battery level
+                bat_gatts_notify(pServer, 0, &pAppContext->batteryLevel, sizeof(pAppContext->batteryLevel));
+            } 
+            else 
+            {
+                ESP_LOGI(TAG, "Battery Level notifications disabled");
+                pAppContext->notificationsEnabled = false;
+            }
+        }
+    }
 }
 
-////////////////////////////////////////////////////////////////////////////////////////////////////
-// Gap callbacks
-static void on_gaps_advert_data_set(bat_gaps_callbacks_t *pCb, esp_ble_gap_cb_param_t *pParam)
+// Timer callback function to update simulated battery level
+static void battery_timer_callback(TimerHandle_t xTimer)
 {
-    ESP_LOGI(TAG, "Advertising data set, starting advertising");
-    bat_gatts_start_advertising();
+    app_context_t *pAppContext = (app_context_t *)g_server.pContext;
+    
+    // Update battery level based on current state (discharging or recharging)
+    if (pAppContext->discharging) 
+    {
+        // Discharge battery
+        if (pAppContext->batteryLevel > BATTERY_LEVEL_MIN) 
+        {
+            pAppContext->batteryLevel -= BATTERY_DISCHARGE_STEP;
+            if (pAppContext->batteryLevel < BATTERY_LEVEL_MIN) 
+            {
+                pAppContext->batteryLevel = BATTERY_LEVEL_MIN;
+                pAppContext->discharging = false; // Start recharging
+            }
+        }
+    } 
+    else 
+    {
+        // Recharge battery
+        if (pAppContext->batteryLevel < BATTERY_LEVEL_MAX) 
+        {
+            pAppContext->batteryLevel += BATTERY_RECHARGE_STEP;
+            if (pAppContext->batteryLevel > BATTERY_LEVEL_MAX) 
+            {
+                pAppContext->batteryLevel = BATTERY_LEVEL_MAX;
+                pAppContext->discharging = true; // Start discharging
+            }
+        }
+    }
+    
+    ESP_LOGI(TAG, "Battery level updated: %d%%", pAppContext->batteryLevel);
+    
+    // Send notification if enabled
+    if (g_server.isConnected && pAppContext->notificationsEnabled) 
+    {
+        bat_gatts_notify(&g_server, 0, &pAppContext->batteryLevel, sizeof(pAppContext->batteryLevel));
+        ESP_LOGI(TAG, "Battery level notification sent: %d%%", pAppContext->batteryLevel);
+    }
 }
 
-////////////////////////////////////////////////////////////////////////////////////////////
-// As it stands: this  is a correct, minimal, read-only fake battery service.
-// Testable with Bluetooth LE Explorer (Windows) or similar app.
-// TODO: To be “fully functioning pretend battery”:
-// Add a simulated battery level that changes over time.
-// Implement notification logic and CCCD write handling.
-// Add a timer to update the battery level and send notifications if a client is subscribed.
-// Handle client connection/pairing.
-////////////////////////////////////////////////////////////////////////////////////////////
+static void start_battery_simulation(bat_gatts_server_t *pServer)
+{
+    ESP_LOGI(TAG, "Starting battery simulation");
+    app_context_t *pAppContext = (app_context_t *)pServer->pContext;
+    
+    // If timer doesn't exist, create it
+    if (pAppContext->updateTimer == NULL) 
+    {
+        pAppContext->updateTimer = xTimerCreate(
+            "battery_timer",
+            pdMS_TO_TICKS(BATTERY_UPDATE_INTERVAL),
+            pdTRUE, // Auto reload
+            0,      // Timer ID not used
+            battery_timer_callback
+        );
+    }
+    
+    if (pAppContext->updateTimer != NULL) 
+        xTimerStart(pAppContext->updateTimer, 0);
+}
+
+static void stop_battery_simulation(bat_gatts_server_t *pServer)
+{
+    ESP_LOGI(TAG, "Stopping battery simulation");
+    app_context_t *pAppContext = (app_context_t *)pServer->pContext;
+    
+    if (pAppContext->updateTimer != NULL) 
+        xTimerStop(pAppContext->updateTimer, 0);
+}
+
 void app_main(void)
 {
-    ESP_LOGI(TAG, "App starting");
-
-    bat_gatts_callbacks_t gatts_callbacks = {
-        .on_reg = app_on_gatts_reg,
-        .on_read = app_on_gatts_read,
-        .on_start = app_on_gatts_start,
-        .on_create = app_on_gatts_create,
-        .on_connect = app_on_gatts_connect,
-        .on_add_char = app_on_gatts_add_char,
-        .on_disconnect = app_on_gatts_disconnect,
-        .on_add_char_descr = app_on_add_char_desc,
-    };
-
-    bat_gaps_callbacks_t gaps_callbacks = {
-        .on_advert_data_set = on_gaps_advert_data_set,
-    };
-
+    ESP_LOGI(TAG, "Starting BLE Battery Service example");
+    
     ESP_ERROR_CHECK(bat_lib_init());
     ESP_ERROR_CHECK(bat_blink_init(-1));
-    ESP_ERROR_CHECK(bat_ble_server_init());
+    ESP_ERROR_CHECK(bat_ble_lib_init());
 
-    app_context appContext;
-    app_context_init(&appContext);
-    bat_ble_gaps_callbacks_init(&gaps_callbacks, &appContext);
-    bat_ble_gatts_callbacks_init(&gatts_callbacks, &appContext);
+    bat_set_blink_mode(BLINK_MODE_FAST);
 
-#define BAT_APP_ID 0x56
-    ESP_LOGI(TAG, "Register Gatts");
-    ESP_ERROR_CHECK(bat_gatts_register(BAT_APP_ID, &gatts_callbacks, &appContext));
+    g_appContext.updateTimer = NULL;
+    g_appContext.discharging = true; // Start in discharge mode
+    g_appContext.notificationsEnabled = false;
+    g_appContext.batteryLevel = BATTERY_LEVEL_MAX; // Start at 100%
+    
+    // Define Battery Level characteristic
+    bat_gatts_char_config_t charConfig = {
+        .uuid = BATTERY_LEVEL_CHAR_UUID,
+        .maxLen = sizeof(uint8_t),
+        .initValueLen = sizeof(uint8_t),
+        .pInitialValue = &g_appContext.batteryLevel,
+        .permissions = ESP_GATT_PERM_READ,
+        .properties = ESP_GATT_CHAR_PROP_BIT_READ | ESP_GATT_CHAR_PROP_BIT_NOTIFY,
+        .hasIndications = false,
+        .hasNotifications = true
+    };
+    
+    // Set up callbacks
+    bat_gatts_callbacks2_t callbacks = {
+        .onConnect = on_connect,
+        .onDisconnect = on_disconnect,
+        .onRead = on_read,
+        .onDescWrite = on_desc_write
+    };
+    
+    const int timeoutMs = 5000;
+    const char * pServiceUuid = "f0debc9a-7856-3412-1234-56785612561C"; 
+    ESP_ERROR_CHECK(bat_gatts_init(&g_server, &g_appContext, "Battery Monitor", 0x55, 
+                                  pServiceUuid, ESP_BLE_APPEARANCE_GENERIC_THERMOMETER, timeoutMs));
+    ESP_ERROR_CHECK(bat_gatts_create_service(&g_server, &charConfig, 1, timeoutMs));
+    ESP_ERROR_CHECK(bat_gatts_start(&g_server, &callbacks, timeoutMs));
 
+    ESP_LOGI(TAG, "BLE Battery Service running");
+    ESP_LOGI(TAG, "  - Battery Level characteristic (0x%04X): Read, Notify", BATTERY_LEVEL_CHAR_UUID);
+    
     bat_set_blink_mode(BLINK_MODE_BREATHING);
-    ESP_LOGI(TAG, "App running");
-    for (int counter = 180; counter > 0; counter--)
+    while (1)
     {
-        ESP_LOGI(TAG, "App counter: %d", counter);
-        vTaskDelay(1000 / portTICK_PERIOD_MS);
+        vTaskDelay(pdMS_TO_TICKS(1000));
+    }
+    bat_set_blink_mode(BLINK_MODE_BASIC);
+
+    // Clean up (this will only execute if the loop is exited)
+    stop_battery_simulation(&g_server);
+
+    if (g_appContext.updateTimer != NULL)
+    {
+        xTimerDelete(g_appContext.updateTimer, 0);
+        g_appContext.updateTimer = NULL;
     }
 
-    ESP_LOGI(TAG, "Exiting soon");
-    bat_set_blink_mode(BLINK_MODE_VERY_FAST);
-    vTaskDelay(5000 / portTICK_PERIOD_MS);
+    ESP_ERROR_CHECK(bat_gatts_stop(&g_server, timeoutMs));
+    ESP_ERROR_CHECK(bat_gatts_deinit(&g_server));
+    ESP_ERROR_CHECK(bat_ble_lib_deinit());
+    ESP_ERROR_CHECK(bat_blink_deinit());
+    ESP_ERROR_CHECK(bat_lib_deinit());
 
-    ESP_LOGI(TAG, "App restarting");
-    esp_restart();
+    ESP_LOGI(TAG, "BLE Battery Service example finished");
 }
