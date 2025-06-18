@@ -13,7 +13,6 @@
 #include "bat_ble.h"
 #include "bat_blink.h"
 #include "bat_ble_client.h"
-#include "bat_ble_server.h"
 #include "bat_wifi_logging.h"
 #include "bat_wifi_connect.h"
 #include "bat_ble_client_logging.h"
